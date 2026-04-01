@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import { AuthProvider } from "@/src/contexts/AuthContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
@@ -25,12 +26,14 @@ export default function RootLayout({
   return (
     <html lang="en" className="touch-manipulation">
       <body className="min-h-screen bg-[#020617] text-slate-100 overscroll-behavior-none">
-        <AuthProvider>
-          <LanguageProvider>
-            {children}
-            <Footer />
-          </LanguageProvider>
-        </AuthProvider>
+        <Suspense fallback={null}>
+          <AuthProvider>
+            <LanguageProvider>
+              {children}
+              <Footer />
+            </LanguageProvider>
+          </AuthProvider>
+        </Suspense>
       </body>
     </html>
   );
