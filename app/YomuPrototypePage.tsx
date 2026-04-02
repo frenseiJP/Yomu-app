@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Image as ImageIcon,
@@ -68,6 +68,14 @@ function labelForDisplayLang(
   return m[lang];
 }
 
+/** AI 返信直後に付与する、本文に即した語彙・次の3択 */
+type ChatTurnContext = {
+  highlightPhrases: { phrase: string; reading: string }[];
+  chipWords: { phrase: string; reading: string }[];
+  followUps: [string, string, string];
+  bestFollowUpIndex: number;
+};
+
 type Message = {
   id: number;
   role: Role;
@@ -79,6 +87,7 @@ type Message = {
   /** 初回ウェルカム・画像デモなど、トーン行を出すテンプレート用 */
   showToneMeta?: boolean;
   createdAt: string;
+  chatContext?: ChatTurnContext;
 };
 
 /** 単語帳の1件：日本語・かな(表示切替可)・ローマ字・訳(複数)・品詞・例文(AI生成) */
@@ -373,6 +382,29 @@ const PHRASE_READINGS: [string, string][] = [
   ["桜", "sakura"],
 ];
 
+const FALLBACK_VOCAB_CHIPS: { phrase: string; reading: string }[] = [
+  { phrase: "いただきます", reading: "Itadakimasu" },
+  { phrase: "お疲れ様", reading: "Otsukaresama" },
+  { phrase: "よろしくお願いします", reading: "yoroshiku onegaishimasu" },
+];
+
+/** フォロー3択の正解位置をランダム化（画面上で位置と正解が固定されないようにする） */
+function shuffleFollowUps(
+  texts: [string, string, string],
+  bestFollowUpIndex: number
+): { items: [string, string, string]; bestIdx: number } {
+  const safeBest = Math.min(2, Math.max(0, bestFollowUpIndex));
+  const entries = texts.map((t, i) => ({ t, isBest: i === safeBest }));
+  for (let i = entries.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [entries[i], entries[j]] = [entries[j], entries[i]];
+  }
+  return {
+    items: entries.map((e) => e.t) as [string, string, string],
+    bestIdx: entries.findIndex((e) => e.isBest),
+  };
+}
+
 function withFurigana(text: string): JSX.Element {
   const entries = Object.entries(FURIGANA_DICTIONARY);
   if (entries.length === 0) return <>{text}</>;
@@ -406,15 +438,26 @@ function withFurigana(text: string): JSX.Element {
 function renderMessageWithVocab(
   text: string,
   furiganaOn: boolean,
-  onWordTap: (phrase: string, reading: string) => void
+  onWordTap: (phrase: string, reading: string) => void,
+  extraPhrasePairs: [string, string][] = []
 ): JSX.Element {
   type Segment = { type: "text"; value: string } | { type: "vocab"; phrase: string; reading: string };
+  const seen = new Set<string>();
+  const merged: [string, string][] = [];
+  for (const [p, r] of [...extraPhrasePairs, ...PHRASE_READINGS]) {
+    const key = p.trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    merged.push([p, r]);
+  }
+  merged.sort((a, b) => b[0].length - a[0].length);
+
   const segments: Segment[] = [];
   let remaining = text;
 
   while (remaining.length > 0) {
     let found = false;
-    for (const [phrase, reading] of PHRASE_READINGS) {
+    for (const [phrase, reading] of merged) {
       const idx = remaining.indexOf(phrase);
       if (idx !== -1) {
         if (idx > 0) segments.push({ type: "text", value: remaining.slice(0, idx) });
@@ -599,6 +642,8 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
   const [imageName, setImageName] = useState<string | null>(null);
   const [vocabMenu, setVocabMenu] = useState<{ phrase: string; reading: string } | null>(null);
   const [vocabAdding, setVocabAdding] = useState(false);
+  const [contextLoadingId, setContextLoadingId] = useState<number | null>(null);
+  const [followUpFeedback, setFollowUpFeedback] = useState<null | "nice" | "ok">(null);
   const [currentTopic, setCurrentTopic] = useState("");
   const [activeView, setActiveView] = useState<TabView>(initialView);
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
@@ -1022,6 +1067,128 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
   const isLoading = isTyping;
   const canSend = input.trim().length > 0 && !isLoading;
 
+  const latestFollowUpContext = useMemo((): ChatTurnContext | null => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (
+        m.role === "assistant" &&
+        m.chatContext &&
+        m.chatContext.followUps?.length === 3
+      ) {
+        return m.chatContext;
+      }
+    }
+    return null;
+  }, [messages]);
+
+  const lastAssistantMessageId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant") return messages[i].id;
+    }
+    return null;
+  }, [messages]);
+
+  const enrichChatContext = useCallback(
+    async (assistantId: number, assistantText: string, userText: string) => {
+      setContextLoadingId(assistantId);
+      const defaults = getPrototypeCopy(appLang as Lang).uiText;
+      try {
+        const res = await fetch("/api/chat/context", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            assistantText,
+            userText,
+            language: appLang,
+          }),
+        });
+        const data = (await res.json()) as Record<string, unknown>;
+        if (!res.ok) throw new Error();
+
+        const rawFollow = Array.isArray(data.followUps)
+          ? (data.followUps as unknown[])
+              .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+              .map((s) => s.trim())
+          : [];
+        const tripletInput: [string, string, string] = [
+          rawFollow[0] || defaults.quickPrompt1,
+          rawFollow[1] || defaults.quickPrompt2,
+          rawFollow[2] || defaults.quickPrompt3,
+        ];
+        const rawBest =
+          typeof data.bestFollowUpIndex === "number"
+            ? Math.round(data.bestFollowUpIndex)
+            : 0;
+        const shuffled = shuffleFollowUps(tripletInput, rawBest);
+
+        const hpRaw = Array.isArray(data.highlightPhrases) ? data.highlightPhrases : [];
+        const normalizedHp = hpRaw
+          .filter(
+            (x): x is { phrase: string; reading?: string } =>
+              !!x &&
+              typeof x === "object" &&
+              typeof (x as { phrase?: unknown }).phrase === "string",
+          )
+          .map((x) => ({
+            phrase: String(x.phrase).trim(),
+            reading:
+              typeof x.reading === "string" && x.reading.trim()
+                ? x.reading.trim()
+                : String(x.phrase).trim(),
+          }))
+          .filter((x) => x.phrase.length > 0);
+
+        const cwRaw = Array.isArray(data.chipWords) ? data.chipWords : [];
+        let chipWords = cwRaw
+          .filter(
+            (x): x is { phrase: string; reading?: string } =>
+              !!x &&
+              typeof x === "object" &&
+              typeof (x as { phrase?: unknown }).phrase === "string",
+          )
+          .map((x) => ({
+            phrase: String(x.phrase).trim(),
+            reading:
+              typeof x.reading === "string" && x.reading.trim()
+                ? x.reading.trim()
+                : String(x.phrase).trim(),
+          }))
+          .filter((x) => x.phrase.length > 0);
+
+        let ci = 0;
+        while (chipWords.length < 3) {
+          const fromHp = normalizedHp[ci++];
+          const fb = FALLBACK_VOCAB_CHIPS[chipWords.length];
+          const next = fromHp ?? fb;
+          if (next) chipWords.push(next);
+          else break;
+        }
+        chipWords = chipWords.slice(0, 3);
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? {
+                  ...m,
+                  chatContext: {
+                    highlightPhrases: normalizedHp,
+                    chipWords,
+                    followUps: shuffled.items,
+                    bestFollowUpIndex: shuffled.bestIdx,
+                  },
+                }
+              : m,
+          ),
+        );
+      } catch {
+        /* 文脈付与に失敗しても会話本文はそのまま */
+      } finally {
+        setContextLoadingId((id) => (id === assistantId ? null : id));
+      }
+    },
+    [appLang],
+  );
+
   function buildClaudeMessages(userText: string) {
     const history = messages.slice(-6).map((m) => ({
       role: m.role,
@@ -1030,10 +1197,14 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
     return [...history, { role: "user" as const, content: userText }];
   }
 
-  const handleSend = async (raw: string) => {
+  const handleSend = async (
+    raw: string,
+    opts?: { preserveFollowUpFeedback?: boolean },
+  ) => {
     const text = raw.trim();
     if (!text || isTyping) return;
 
+    if (!opts?.preserveFollowUpFeedback) setFollowUpFeedback(null);
     const toneAtSend = politenessRef.current;
 
     const userMsg: Message = {
@@ -1073,6 +1244,8 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
       },
     ]);
 
+    const fetchErrText = getPrototypeCopy(appLang as Lang).uiText.chatFetchError;
+    let accumulated = "";
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -1086,16 +1259,14 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
 
       if (!res.ok || !res.body) {
         setIsTyping(false);
-        const errText = getPrototypeCopy(appLang as Lang).uiText.chatFetchError;
         setMessages((prev) =>
-          prev.map((m) => (m.id === assistantId ? { ...m, baseText: errText } : m))
+          prev.map((m) => (m.id === assistantId ? { ...m, baseText: fetchErrText } : m))
         );
         return;
       }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let accumulated = "";
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
@@ -1110,14 +1281,34 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
         );
       }
     } catch {
-      const errText = getPrototypeCopy(appLang as Lang).uiText.chatFetchError;
       setMessages((prev) =>
-        prev.map((m) => (m.id === assistantId ? { ...m, baseText: errText } : m))
+        prev.map((m) => (m.id === assistantId ? { ...m, baseText: fetchErrText } : m))
       );
     } finally {
       setIsTyping(false);
       controllerRef.current = null;
     }
+
+    if (
+      accumulated.trim().length > 16 &&
+      accumulated !== fetchErrText &&
+      !accumulated.includes("OPENAI_API_KEY")
+    ) {
+      void enrichChatContext(assistantId, accumulated, text);
+    }
+  };
+
+  const handleQuickSend = (prompt: string, choiceIndex: number) => {
+    if (
+      latestFollowUpContext &&
+      typeof latestFollowUpContext.bestFollowUpIndex === "number"
+    ) {
+      setFollowUpFeedback(
+        choiceIndex === latestFollowUpContext.bestFollowUpIndex ? "nice" : "ok",
+      );
+      window.setTimeout(() => setFollowUpFeedback(null), 4500);
+    }
+    void handleSend(prompt, { preserveFollowUpFeedback: true });
   };
 
   const handleImageSelect = (file: File) => {
@@ -2151,7 +2342,10 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                           {renderMessageWithVocab(
                             displayText,
                             furiganaOn,
-                            (phrase, reading) => setVocabMenu({ phrase, reading })
+                            (phrase, reading) => setVocabMenu({ phrase, reading }),
+                            (msg.chatContext?.highlightPhrases ?? []).map(
+                              (p) => [p.phrase, p.reading] as [string, string],
+                            ),
                           )}
                         </p>
                       ) : (
@@ -2186,18 +2380,19 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                             </p>
                           )}
                           <div className="mt-2 flex flex-wrap gap-1.5">
-                            {[
-                              ["いただきます", "Itadakimasu"],
-                              ["お疲れ様", "Otsukaresama"],
-                              ["よろしくお願いします", "yoroshiku onegaishimasu"],
-                            ].map(([w, reading]) => (
+                            {(msg.chatContext?.chipWords?.length === 3
+                              ? msg.chatContext.chipWords
+                              : FALLBACK_VOCAB_CHIPS
+                            ).map((chip, chipIdx) => (
                               <button
-                                key={w}
+                                key={`${chip.phrase}-${chipIdx}`}
                                 type="button"
-                                onClick={() => setVocabMenu({ phrase: w, reading })}
+                                onClick={() =>
+                                  setVocabMenu({ phrase: chip.phrase, reading: chip.reading })
+                                }
                                 className="btn-wa-hover rounded-full border border-yomu-glassBorder bg-yomu-glass px-3 py-1.5 text-[10px] text-slate-300 hover:border-wa-akane hover:text-slate-100"
                               >
-                                {w}
+                                {chip.phrase}
                               </button>
                             ))}
                           </div>
@@ -2223,17 +2418,36 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             </div>
 
             <div className="flex flex-shrink-0 flex-col pt-3 space-y-3 pb-safe sm:mt-5 sm:space-y-4">
+              {latestFollowUpContext && (
+                <p className="text-[10px] leading-snug text-slate-500">
+                  {uiText.chatSuggestedFollowUps}
+                </p>
+              )}
+              {contextLoadingId !== null &&
+                contextLoadingId === lastAssistantMessageId && (
+                  <p className="text-[10px] text-slate-500">{uiText.chatContextLoadingHint}</p>
+                )}
+              {followUpFeedback === "nice" && (
+                <p className="text-[10px] font-medium text-emerald-400/90">
+                  {uiText.chatFollowUpNice}
+                </p>
+              )}
+              {followUpFeedback === "ok" && (
+                <p className="text-[10px] text-slate-400">{uiText.chatFollowUpOk}</p>
+              )}
               <div className="flex flex-wrap gap-2 text-[11px] sm:gap-3">
-                {[
-                  uiText.quickPrompt1,
-                  uiText.quickPrompt2,
-                  uiText.quickPrompt3,
-                ].map((s) => (
+                {(
+                  latestFollowUpContext?.followUps ?? [
+                    uiText.quickPrompt1,
+                    uiText.quickPrompt2,
+                    uiText.quickPrompt3,
+                  ]
+                ).map((s, idx) => (
                   <button
-                    key={s}
+                    key={`${idx}-${s.slice(0, 32)}`}
                     type="button"
                     disabled={isLoading}
-                    onClick={() => handleSend(s)}
+                    onClick={() => handleQuickSend(s, idx)}
                     className="btn-wa-hover btn-wa-hover-ruri min-h-[44px] rounded-full border border-yomu-glassBorder bg-yomu-glass px-4 py-2.5 text-slate-300 backdrop-blur-sm hover:border-wa-ruri/50 hover:text-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:py-2"
                   >
                     {s}

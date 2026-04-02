@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/src/contexts/AuthContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import Footer from "@/components/Footer";
+import FeedbackButton from "@/components/FeedbackButton";
 
 export const metadata: Metadata = {
   title: "Yomu — Japanese learning coach",
@@ -30,6 +31,7 @@ export default function RootLayout({
           <AuthProvider>
             <LanguageProvider>
               {children}
+              <FeedbackButton />
               <Footer />
             </LanguageProvider>
           </AuthProvider>

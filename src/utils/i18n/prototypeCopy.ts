@@ -124,6 +124,11 @@ export type PrototypeUiText = {
   quickPrompt1: string;
   quickPrompt2: string;
   quickPrompt3: string;
+  /** 文脈に沿った3択フォロー表示時 */
+  chatSuggestedFollowUps: string;
+  chatFollowUpNice: string;
+  chatFollowUpOk: string;
+  chatContextLoadingHint: string;
   attachImageAria: string;
   imagePlaceholderLabel: string;
   tipLabel: string;
@@ -288,6 +293,11 @@ const UI_EN: PrototypeUiText = {
   quickPrompt1: "Meaning of Itadakimasu（いただきます）",
   quickPrompt2: "Explain Otsukaresama in English（お疲れ様）",
   quickPrompt3: "Keigo vs casual Japanese",
+  chatSuggestedFollowUps:
+    "Pick the best follow-up for this reply (one fits the thread best).",
+  chatFollowUpNice: "Nice — that continues the topic well.",
+  chatFollowUpOk: "Good question too. Another chip matched the thread a bit better.",
+  chatContextLoadingHint: "Updating suggestions…",
   attachImageAria: "Attach image",
   imagePlaceholderLabel: "Image placeholder:",
   tipLabel: "Tip:",
@@ -454,6 +464,11 @@ const UI_JA: PrototypeUiText = {
   quickPrompt1: "「いただきます」の意味を教えて",
   quickPrompt2: "「お疲れ様」を英語で説明して",
   quickPrompt3: "敬語とタメ口の違い",
+  chatSuggestedFollowUps:
+    "この返信に続く質問として、いちばん合うものを選んでみてください。",
+  chatFollowUpNice: "いいですね — 話の流れに合っています。",
+  chatFollowUpOk: "それもアリです。別の候補の方が、この返信により沿っていました。",
+  chatContextLoadingHint: "候補を更新しています…",
   attachImageAria: "画像を添付",
   imagePlaceholderLabel: "画像（プレースホルダー）:",
   tipLabel: "ヒント:",
@@ -619,6 +634,11 @@ const UI_KO: PrototypeUiText = {
   quickPrompt1: "「いただきます」의 의미 설명",
   quickPrompt2: "「お疲れ様」を 영어로 설명",
   quickPrompt3: "경어와 캐주얼 일본어 비교",
+  chatSuggestedFollowUps:
+    "이 답변에 이어질 질문 중 가장 알맞은 것을 골라 보세요.",
+  chatFollowUpNice: "좋아요 — 대화 흐름에 잘 맞습니다.",
+  chatFollowUpOk: "그것도 괜찮아요. 다른 칩이 답변과 조금 더 잘 맞았어요.",
+  chatContextLoadingHint: "추천을 불러오는 중…",
   attachImageAria: "이미지 첨부",
   imagePlaceholderLabel: "이미지(플레이스홀더):",
   tipLabel: "팁:",
@@ -780,6 +800,10 @@ const UI_ZH: PrototypeUiText = {
   quickPrompt1: "解释「いただきます」的含义",
   quickPrompt2: "用英语解释「お疲れ様」",
   quickPrompt3: "敬语与口语日语对比",
+  chatSuggestedFollowUps: "请选出最贴合这条回复的后续提问。",
+  chatFollowUpNice: "选得好 — 和话题衔接很自然。",
+  chatFollowUpOk: "也可以。另一个选项更贴近刚才的回复。",
+  chatContextLoadingHint: "正在更新建议…",
   attachImageAria: "添加图片",
   imagePlaceholderLabel: "图片（占位）:",
   tipLabel: "提示:",

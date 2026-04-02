@@ -1,6 +1,28 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+/** App Store / インストール広告などの URL から来た未ログインユーザーを先に /login へ誘導する */
+const INSTALL_FROM_VALUES = new Set([
+  "app_store",
+  "app-store",
+  "appstore",
+  "download",
+]);
+
+function installLandingWantsAuthFirst(url: URL): boolean {
+  const q = url.searchParams;
+  const from = q.get("from")?.toLowerCase();
+  if (from && INSTALL_FROM_VALUES.has(from)) return true;
+  const install = q.get("install");
+  return install === "1" || install === "true";
+}
+
+function copyCookies(from: NextResponse, to: NextResponse) {
+  from.cookies.getAll().forEach((cookie) => {
+    to.cookies.set(cookie.name, cookie.value);
+  });
+}
+
 /**
  * Next.js の Edge Middleware 用の Supabase クライアントを作成します。
  * リクエストの Cookie を読み、レスポンスに Cookie を書き込みます。
@@ -48,9 +70,30 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = "/chat";
       const redirectResponse = NextResponse.redirect(url);
-      response.cookies.getAll().forEach((cookie) => {
-        redirectResponse.cookies.set(cookie.name, cookie.value);
-      });
+      copyCookies(response, redirectResponse);
+      return redirectResponse;
+    }
+
+    if (
+      !user &&
+      request.nextUrl.pathname === "/" &&
+      installLandingWantsAuthFirst(request.nextUrl)
+    ) {
+      const loginUrl = new URL("/login", request.url);
+      const from = request.nextUrl.searchParams.get("from");
+      if (from) loginUrl.searchParams.set("from", from);
+      else loginUrl.searchParams.set("from", "app_store");
+      if (request.nextUrl.searchParams.get("install")) {
+        loginUrl.searchParams.set(
+          "install",
+          request.nextUrl.searchParams.get("install")!,
+        );
+      }
+      if (request.nextUrl.searchParams.get("signup") === "1") {
+        loginUrl.searchParams.set("intent", "signup");
+      }
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      copyCookies(response, redirectResponse);
       return redirectResponse;
     }
 

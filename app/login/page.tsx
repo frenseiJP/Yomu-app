@@ -39,6 +39,15 @@ export default function LoginPage() {
 
   const supabase = createClient();
 
+  // App Store 等のリンク（/login?intent=signup など）で登録タブを開く（useSearchParams よりビルド都合で search を直接読む）
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("intent") === "signup" || q.get("signup") === "1") {
+      setMode("signup");
+    }
+  }, []);
+
   useEffect(() => {
     const checkSession = async () => {
       try {
