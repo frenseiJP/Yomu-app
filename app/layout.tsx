@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { AuthProvider } from "@/src/contexts/AuthContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
@@ -31,6 +32,7 @@ export default function RootLayout({
           <AuthProvider>
             <LanguageProvider>
               {children}
+              <Analytics />
               <FeedbackButton />
               <Footer />
             </LanguageProvider>
