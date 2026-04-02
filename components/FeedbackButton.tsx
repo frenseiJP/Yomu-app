@@ -1,18 +1,40 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { getLangClient } from "@/src/utils/i18n/clientLang";
+import { t } from "@/src/utils/i18n/t";
+import type { Lang } from "@/src/utils/i18n/types";
 
 const FEEDBACK_FORM_URL = "あなたのGoogleフォームのURL";
 
 export default function FeedbackButton() {
+  const [lang, setLang] = useState<Lang>("en");
+
+  useEffect(() => {
+    setLang(getLangClient());
+    const onLangChanged = (event: Event) => {
+      const custom = event as CustomEvent<{ lang?: Lang }>;
+      const next = custom.detail?.lang;
+      setLang(next ?? getLangClient());
+    };
+    window.addEventListener("yomu:lang-changed", onLangChanged as EventListener);
+    const onVisibility = () => setLang(getLangClient());
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("yomu:lang-changed", onLangChanged as EventListener);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
   return (
     <a
       href={FEEDBACK_FORM_URL}
       target="_blank"
       rel="noopener noreferrer"
+      aria-label={t(lang, "feedbackButtonAria")}
       style={{
         position: "fixed",
-        bottom: "20px",
+        bottom: "calc(60px + env(safe-area-inset-bottom, 0px) + 20px)",
         right: "20px",
         backgroundColor: "#FF6B6B",
         color: "white",
@@ -34,7 +56,8 @@ export default function FeedbackButton() {
         e.currentTarget.style.transform = "scale(1)";
       }}
     >
-      <span>💬 バグ報告・感想はこちら</span>
+      <span aria-hidden>💬</span>
+      <span>{t(lang, "feedbackButtonLabel")}</span>
     </a>
   );
 }

@@ -63,6 +63,9 @@ export const DICTIONARY: Record<Lang, Record<string, string>> = {
     chatGreetingPrefix: "こんにちは、",
     chatGreetingSuffix: "さん",
     chatLogoutButton: "ログアウト",
+
+    feedbackButtonLabel: "バグ報告・感想はこちら",
+    feedbackButtonAria: "バグ報告や感想を送るフォームを開く",
   },
   en: {
     settingsTitle: "Settings",
@@ -125,6 +128,9 @@ export const DICTIONARY: Record<Lang, Record<string, string>> = {
     chatGreetingPrefix: "Hello,",
     chatGreetingSuffix: "",
     chatLogoutButton: "Log out",
+
+    feedbackButtonLabel: "Report bugs · Share your impressions",
+    feedbackButtonAria: "Open the form to report bugs or share your impressions",
   },
   ko: {
     settingsTitle: "설정",
@@ -189,6 +195,9 @@ export const DICTIONARY: Record<Lang, Record<string, string>> = {
     chatGreetingPrefix: "안녕하세요,",
     chatGreetingSuffix: "님",
     chatLogoutButton: "로그아웃",
+
+    feedbackButtonLabel: "버그 신고·소감 보내기",
+    feedbackButtonAria: "버그 신고나 소감을 보내는 폼 열기",
   },
   zh: {
     settingsTitle: "设置",
@@ -251,6 +260,9 @@ export const DICTIONARY: Record<Lang, Record<string, string>> = {
     chatGreetingPrefix: "你好，",
     chatGreetingSuffix: "",
     chatLogoutButton: "退出登录",
+
+    feedbackButtonLabel: "问题反馈与使用感想",
+    feedbackButtonAria: "打开反馈与感想表单",
   },
 };
 
