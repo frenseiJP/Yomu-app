@@ -79,16 +79,16 @@ export default function ChatPage() {
 
   if (checking) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#020617]">
+      <div className="flex min-h-screen min-h-[100dvh] items-center justify-center overflow-x-hidden bg-[#020617]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-pink-500/30 border-t-pink-400" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#020617]">
+    <div className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-[#020617]">
       {/* メイン画面用ヘッダー: パーソナライズ挨拶 + ログアウト */}
-      <header className="sticky top-0 z-[150] flex flex-shrink-0 items-center justify-between gap-3 border-b border-slate-800/60 bg-slate-950/95 px-4 py-3 backdrop-blur-xl sm:px-6">
+      <header className="sticky top-0 z-[150] flex flex-shrink-0 items-center justify-between gap-2 border-b border-slate-800/60 bg-slate-950/95 px-3 pb-3 pt-[max(12px,env(safe-area-inset-top,0px))] backdrop-blur-xl sm:gap-3 sm:px-6 sm:py-3 sm:pt-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-wa-ruri to-wa-asagi text-sm font-bold text-white shadow-lg">
             <BookOpen className="h-4 w-4" />

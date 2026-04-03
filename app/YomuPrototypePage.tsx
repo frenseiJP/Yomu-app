@@ -1519,7 +1519,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
 
   return (
     <div
-      className={`relative flex flex-col overflow-hidden bg-yomu-bg text-slate-100 antialiased ${embedded ? "min-h-0 flex-1" : "h-[100dvh] sm:h-screen"}`}
+      className={`relative flex w-full max-w-[100vw] flex-col overflow-x-hidden overflow-y-hidden bg-yomu-bg text-slate-100 antialiased ${embedded ? "min-h-0 min-h-[200px] flex-1" : "h-[100dvh] max-h-[100dvh] sm:h-screen sm:max-h-none"}`}
       style={{ background: BG }}
     >
       {/* メインエリア: ビューに応じて mission / record / chat を表示 */}
@@ -2339,14 +2339,14 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                       </div>
                     )}
                     <div
-                      className={`max-w-[78%] rounded-2xl px-4 py-3 shadow-glass ${
+                      className={`w-fit max-w-[min(92%,32rem)] rounded-2xl px-3 py-3 shadow-glass sm:px-4 ${
                         isAssistant
                           ? "rounded-bl-sm border border-yomu-glassBorder bg-yomu-glass text-slate-100 backdrop-blur-sm"
                           : "rounded-br-sm bg-gradient-to-br from-wa-ruri to-wa-asagi text-slate-50 shadow-glass"
                       }`}
                     >
                       {isAssistant ? (
-                        <p className="inline">
+                        <p className="inline break-words">
                           {renderMessageWithVocab(
                             displayText,
                             furiganaOn,
@@ -2357,7 +2357,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                           )}
                         </p>
                       ) : (
-                        <p>{displayText}</p>
+                        <p className="break-words">{displayText}</p>
                       )}
                       {isAssistant && (
                         <div className="mt-4 space-y-2.5 rounded-xl border border-yomu-glassBorder bg-yomu-glass/80 p-3.5 text-[11px] backdrop-blur-sm">
@@ -2615,13 +2615,13 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
         style={{ paddingTop: "10px" }}
         aria-label={uiText.ariaMainMenu}
       >
-        <div className="mx-auto flex max-w-3xl items-end justify-around gap-1 px-3">
+        <div className="mx-auto flex max-w-3xl items-end justify-around gap-0.5 px-2 sm:gap-1 sm:px-3">
           {/* ホーム（Daily Mission） */}
           <motion.button
             type="button"
             onClick={() => setActiveView("mission")}
             onPointerDown={() => setActiveView("mission")}
-            className={`flex min-h-[52px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:text-[11px] ${
+            className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
               activeView === "mission" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
             }`}
             animate={activeView === "mission" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
@@ -2636,7 +2636,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             type="button"
             onClick={() => setActiveView("community")}
             onPointerDown={() => setActiveView("community")}
-            className={`flex min-h-[52px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:text-[11px] ${
+            className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
               activeView === "community" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
             }`}
             animate={activeView === "community" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
@@ -2651,7 +2651,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             type="button"
             onClick={() => setActiveView("chat")}
             onPointerDown={() => setActiveView("chat")}
-            className="relative flex min-h-[64px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center"
+            className="relative flex min-h-[56px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center sm:min-h-[64px]"
             animate={
               activeView === "chat"
                 ? { y: -6, scale: 1.12 }
@@ -2685,7 +2685,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
               <MessageCircle className="h-5 w-5 text-slate-50 sm:h-5 sm:w-5" />
             </motion.div>
             <span
-              className={`pointer-events-none mt-1 text-[10px] font-semibold sm:text-[11px] ${
+              className={`pointer-events-none mt-0.5 text-[9px] font-semibold leading-tight sm:mt-1 sm:text-[11px] ${
                 activeView === "chat" ? "text-wa-asagi" : "text-slate-300"
               }`}
             >
@@ -2698,7 +2698,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             type="button"
             onClick={() => setActiveView("record")}
             onPointerDown={() => setActiveView("record")}
-            className={`flex min-h-[52px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:text-[11px] ${
+            className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
               activeView === "record" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
             }`}
             animate={activeView === "record" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
@@ -2708,12 +2708,12 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             <span className="pointer-events-none">{uiText.record}</span>
           </motion.button>
 
-          {/* 設定（小さめ／PC優先） */}
+          {/* 設定（スマホでも利用可能） */}
           <motion.button
             type="button"
             onClick={() => setActiveView("settings")}
             onPointerDown={() => setActiveView("settings")}
-            className={`hidden min-h-[52px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:flex sm:text-[11px] ${
+            className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
               activeView === "settings" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
             }`}
             animate={activeView === "settings" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}

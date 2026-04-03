@@ -45,7 +45,7 @@ export default function FeedbackButton() {
       className="fixed z-[1000] max-w-[min(calc(100vw-1.5rem),17rem)] touch-manipulation sm:max-w-none"
       style={{
         top: topOffset,
-        right: "12px",
+        right: "max(12px, env(safe-area-inset-right, 0px))",
         backgroundColor: "#FF6B6B",
         color: "white",
         padding: "10px 14px",

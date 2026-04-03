@@ -194,22 +194,22 @@ export default function RecordPage() {
     favoriteCount ?? (isLoading ? null : /* fallback */ 0);
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 pb-24 p-4 font-sans">
+    <div className="min-h-screen min-h-[100dvh] overflow-x-hidden bg-[#020617] p-3 pb-24 font-sans text-slate-100 sm:p-4 pl-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))]">
       {/* 1. デジタル日本庭園セクション (Hero) */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-slate-900 to-[#020617] p-8 mb-6 border border-slate-800">
+      <section className="relative mb-6 overflow-hidden rounded-3xl border border-slate-800 bg-gradient-to-b from-slate-900 to-[#020617] p-5 sm:p-8">
         <div className="flex flex-col items-center justify-center py-10">
           {/* 植物の成長ビジュアル */}
           <motion.div
             animate={{ y: [0, -10, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className={`text-8xl mb-4 filter drop-shadow-2xl ${season.shadow}`}
+            className={`mb-4 text-6xl filter drop-shadow-2xl sm:text-8xl ${season.shadow}`}
           >
             {season.icon}
           </motion.div>
 
           {/* 和柄風プログレスサークル */}
           <div className="relative flex items-center justify-center">
-            <svg className="w-48 h-48 transform -rotate-90">
+            <svg className="h-40 w-40 -rotate-90 transform sm:h-48 sm:w-48">
               <circle
                 cx="96"
                 cy="96"

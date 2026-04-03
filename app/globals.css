@@ -13,8 +13,11 @@
 }
 
 @layer base {
+  html {
+    overflow-x: hidden;
+  }
   body {
-    @apply antialiased;
+    @apply min-h-screen min-h-[100dvh] overflow-x-hidden antialiased;
     font-family: var(--font-noto-sans);
   }
 }

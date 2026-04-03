@@ -15,7 +15,7 @@ export default function AffiliateSection() {
       role="region"
       aria-label="Recommended textbook"
     >
-      <div className="mx-auto flex h-[60px] w-full max-w-5xl items-center gap-2 px-2 sm:gap-3 sm:px-4">
+      <div className="mx-auto flex h-[60px] w-full max-w-5xl items-center gap-2 pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))] sm:gap-3 sm:pl-[max(1rem,env(safe-area-inset-left,0px))] sm:pr-[max(1rem,env(safe-area-inset-right,0px))]">
         <BookOpen
           className="h-5 w-5 flex-shrink-0 text-slate-700 sm:h-6 sm:w-6"
           aria-hidden

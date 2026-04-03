@@ -140,14 +140,14 @@ export default function LoginPage() {
 
   if (checkingSession) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#020617]">
+      <div className="flex min-h-screen min-h-[100dvh] items-center justify-center overflow-x-hidden bg-[#020617]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-pink-500/30 border-t-pink-400" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#020617] px-4 py-8">
+    <div className="flex min-h-screen min-h-[100dvh] flex-col items-center justify-center overflow-x-hidden bg-[#020617] px-4 py-8 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] pt-[max(2rem,env(safe-area-inset-top,0px))]">
       <Link
         href="/"
         className="mb-8 flex items-center gap-2 text-slate-400 transition hover:text-slate-200"
