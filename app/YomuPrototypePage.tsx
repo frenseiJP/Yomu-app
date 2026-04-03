@@ -2647,9 +2647,31 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             }
             transition={{ type: "spring", stiffness: 420, damping: 22 }}
           >
-            <div className="pointer-events-none flex items-center justify-center rounded-full bg-gradient-to-br from-wa-ruri to-wa-asagi p-3 shadow-glass ring-2 ring-wa-asagi/60">
+            <motion.div
+              className="pointer-events-none flex items-center justify-center rounded-full bg-gradient-to-br from-wa-ruri to-wa-asagi p-3 shadow-glass ring-2 ring-wa-asagi/60"
+              animate={
+                activeView === "chat"
+                  ? {
+                      scale: 1,
+                      boxShadow: "0 12px 40px rgba(56, 189, 248, 0.25)",
+                    }
+                  : {
+                      scale: [1, 1.06, 1],
+                      boxShadow: [
+                        "0 8px 24px rgba(236, 72, 153, 0.35)",
+                        "0 10px 32px rgba(125, 211, 252, 0.4)",
+                        "0 8px 24px rgba(236, 72, 153, 0.35)",
+                      ],
+                    }
+              }
+              transition={
+                activeView === "chat"
+                  ? { duration: 0.25 }
+                  : { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
+              }
+            >
               <MessageCircle className="h-5 w-5 text-slate-50 sm:h-5 sm:w-5" />
-            </div>
+            </motion.div>
             <span
               className={`pointer-events-none mt-1 text-[10px] font-semibold sm:text-[11px] ${
                 activeView === "chat" ? "text-wa-asagi" : "text-slate-300"

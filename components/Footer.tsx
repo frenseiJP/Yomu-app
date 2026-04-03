@@ -15,6 +15,9 @@ export default function Footer() {
           <Link className="text-pink-200 hover:text-pink-100" href="/contact">
             お問い合わせ
           </Link>
+          <Link className="text-pink-200 hover:text-pink-100" href="/feedback">
+            感想
+          </Link>
         </nav>
       </div>
     </footer>

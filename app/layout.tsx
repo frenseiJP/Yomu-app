@@ -6,7 +6,7 @@ import { AuthProvider } from "@/src/contexts/AuthContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import Footer from "@/components/Footer";
 import FeedbackButton from "@/components/FeedbackButton";
-import AffiliateSection from "@/components/AffiliateSection";
+import AffiliateShell from "@/components/AffiliateShell";
 
 export const metadata: Metadata = {
   title: "Yomu — Japanese learning coach",
@@ -36,7 +36,7 @@ export default function RootLayout({
               <Analytics />
               <FeedbackButton />
               <Footer />
-              <AffiliateSection />
+              <AffiliateShell />
             </LanguageProvider>
           </AuthProvider>
         </Suspense>

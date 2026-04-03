@@ -44,6 +44,12 @@ export default function ContactPage() {
           </h2>
           <ul className="mt-3 list-inside list-disc space-y-2 text-sm text-slate-200">
             <li>
+              <Link href="/feedback" className="text-pink-300 hover:text-pink-200">
+                感想
+              </Link>
+              （フィードバック・ご意見）
+            </li>
+            <li>
               <Link href="/privacy" className="text-pink-300 hover:text-pink-200">
                 プライバシーポリシー
               </Link>

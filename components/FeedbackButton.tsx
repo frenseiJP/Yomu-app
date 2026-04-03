@@ -1,14 +1,24 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { getLangClient } from "@/src/utils/i18n/clientLang";
 import { t } from "@/src/utils/i18n/t";
 import type { Lang } from "@/src/utils/i18n/types";
-
-const FEEDBACK_FORM_URL = "あなたのGoogleフォームのURL";
+import { FEEDBACK_FORM_URL } from "@/lib/feedbackFormUrl";
 
 export default function FeedbackButton() {
+  const pathname = usePathname();
   const [lang, setLang] = useState<Lang>("en");
+
+  /** /chat は固定ヘッダー分だけ下げて、右上で被らないようにする */
+  const topOffset = useMemo(() => {
+    const isChatRoute = pathname === "/chat" || pathname.startsWith("/chat/");
+    if (isChatRoute) {
+      return "calc(env(safe-area-inset-top, 0px) + 4.35rem)";
+    }
+    return "calc(env(safe-area-inset-top, 0px) + 12px)";
+  }, [pathname]);
 
   useEffect(() => {
     setLang(getLangClient());
@@ -32,22 +42,22 @@ export default function FeedbackButton() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label={t(lang, "feedbackButtonAria")}
+      className="fixed z-[1000] max-w-[min(calc(100vw-1.5rem),17rem)] touch-manipulation sm:max-w-none"
       style={{
-        position: "fixed",
-        bottom: "calc(60px + env(safe-area-inset-bottom, 0px) + 20px)",
-        right: "20px",
+        top: topOffset,
+        right: "12px",
         backgroundColor: "#FF6B6B",
         color: "white",
-        padding: "12px 24px",
+        padding: "10px 14px",
         borderRadius: "30px",
         fontWeight: "bold",
         boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
-        zIndex: 1000,
         textDecoration: "none",
         display: "flex",
         alignItems: "center",
-        gap: "8px",
+        gap: "6px",
         transition: "transform 0.2s",
+        fontSize: "12px",
       }}
       onMouseOver={(e) => {
         e.currentTarget.style.transform = "scale(1.05)";
@@ -56,8 +66,12 @@ export default function FeedbackButton() {
         e.currentTarget.style.transform = "scale(1)";
       }}
     >
-      <span aria-hidden>💬</span>
-      <span>{t(lang, "feedbackButtonLabel")}</span>
+      <span aria-hidden className="flex-shrink-0">
+        💬
+      </span>
+      <span className="min-w-0 text-[11px] leading-snug line-clamp-1 sm:line-clamp-none sm:text-sm sm:leading-normal">
+        {t(lang, "feedbackButtonLabel")}
+      </span>
     </a>
   );
 }
