@@ -3,13 +3,14 @@
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import AffiliateSection from "@/components/AffiliateSection";
+import { isAffiliateBarVisibleForPath } from "@/lib/affiliateVisibility";
 
 /**
  * チャット画面ではアフィリエイトバーを出さず、入力・タブ・音声ボタンの操作を邪魔しないようにする。
  */
 export default function AffiliateShell() {
   const pathname = usePathname();
-  const hideAffiliate = pathname === "/chat" || pathname.startsWith("/chat/");
+  const hideAffiliate = !isAffiliateBarVisibleForPath(pathname);
 
   useEffect(() => {
     if (hideAffiliate) {

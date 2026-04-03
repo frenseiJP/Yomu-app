@@ -10,7 +10,7 @@ const AMAZON_URL = "https://www.amazon.co.jp";
 export default function AffiliateSection() {
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-[950] border-t border-slate-200/90 bg-[rgba(255,255,255,0.9)] backdrop-blur-sm"
+      className="fixed bottom-0 left-0 right-0 z-[880] border-t border-slate-200/90 bg-[rgba(255,255,255,0.9)] backdrop-blur-sm"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       role="region"
       aria-label="Recommended textbook"

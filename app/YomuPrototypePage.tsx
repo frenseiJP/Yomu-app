@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Image as ImageIcon,
@@ -42,6 +43,7 @@ import {
   normalizeRegion,
   type Region,
 } from "@/src/utils/region/region";
+import { isAffiliateBarVisibleForPath } from "@/lib/affiliateVisibility";
 
 type Role = "user" | "assistant";
 type Politeness = "casual" | "neutral" | "business";
@@ -595,6 +597,13 @@ type YomuPrototypePageProps = {
 };
 
 export default function YomuPrototypePage({ initialView = "mission", embedded = false }: YomuPrototypePageProps = {}) {
+  const pathname = usePathname() || "";
+  const affiliateBarVisible = isAffiliateBarVisibleForPath(pathname);
+  /** 下部タブをアフィリエイトバーより上に置く＋本文の余白 */
+  const mainBottomPadding = affiliateBarVisible
+    ? "calc(72px + 60px + env(safe-area-inset-bottom, 0px))"
+    : "72px";
+
   const [messages, setMessages] = useState<Message[]>(() => [
     buildWelcomeMessage(getLangClient()),
   ]);
@@ -1394,7 +1403,6 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
     speak(text);
   };
 
-  const navHeight = "72px"; // bottom nav + safe area padding
 
   // コミュニティ投稿一覧を取得
   useEffect(() => {
@@ -1517,7 +1525,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
       {/* メインエリア: ビューに応じて mission / record / chat を表示 */}
       <main
         className={`relative z-0 min-h-0 flex-1 overflow-x-hidden ${activeView === "chat" ? "flex flex-col overflow-hidden" : "overflow-y-auto"}`}
-        style={{ paddingBottom: navHeight }}
+        style={{ paddingBottom: mainBottomPadding }}
       >
         {/* 初回・Daily Mission: 全画面表示 */}
         {activeView === "mission" && (
@@ -2599,7 +2607,11 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
 
       {/* 画面下部固定メニューバー（タップで確実に反応するよう pointer-events-auto と onPointerDown を使用） */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-[200] isolate border-t border-slate-800/60 bg-slate-950 backdrop-blur-xl pb-safe pointer-events-auto"
+        className={`fixed left-0 right-0 z-[960] isolate border-t border-slate-800/60 bg-slate-950 backdrop-blur-xl pb-safe pointer-events-auto ${
+          affiliateBarVisible
+            ? "bottom-[calc(60px+env(safe-area-inset-bottom,0px))]"
+            : "bottom-0"
+        }`}
         style={{ paddingTop: "10px" }}
         aria-label={uiText.ariaMainMenu}
       >
