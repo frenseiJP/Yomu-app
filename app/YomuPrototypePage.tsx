@@ -1534,8 +1534,8 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
 
   return (
     <div
-      className={`relative flex w-full max-w-[100vw] flex-col overflow-x-hidden overflow-y-hidden antialiased ${isLightTheme ? "frensei-theme-light bg-slate-50 text-slate-900" : "bg-yomu-bg text-slate-100"} ${embedded ? "min-h-0 min-h-[200px] flex-1" : "h-[100dvh] max-h-[100dvh] sm:h-screen sm:max-h-none"}`}
-      style={{ background: isLightTheme ? "#f8fafc" : BG }}
+      className={`relative flex w-full max-w-[100vw] flex-col overflow-x-hidden overflow-y-hidden antialiased ${isLightTheme ? "frensei-theme-light bg-white text-neutral-900" : "bg-yomu-bg text-slate-100"} ${embedded ? "min-h-0 min-h-[200px] flex-1" : "h-[100dvh] max-h-[100dvh] sm:h-screen sm:max-h-none"}`}
+      style={{ background: isLightTheme ? "#ffffff" : BG }}
     >
       {/* メインエリア: ビューに応じて mission / record / chat を表示 */}
       <main
@@ -1968,43 +1968,43 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
         {activeView === "settings" && (
           <div className="mx-auto flex max-w-3xl flex-1 flex-col gap-5 px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
             <header className="mb-1">
-              <h1 className={`font-wa-serif text-lg font-semibold sm:text-xl ${isLightTheme ? "text-slate-900" : "text-slate-50"}`}>
+              <h1 className={`font-wa-serif text-lg font-semibold sm:text-xl ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>
                 {settingsText.title}
               </h1>
-              <p className={`mt-1 text-[11px] sm:text-xs ${isLightTheme ? "text-slate-600" : "text-slate-400"}`}>
+              <p className={`mt-1 text-[11px] sm:text-xs ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
                 {settingsText.subtitle}
               </p>
             </header>
 
             {/* 表示 / 言語 / 地域設定 */}
-            <section className={`space-y-2 rounded-2xl p-3 backdrop-blur-xl sm:p-4 ${isLightTheme ? "border border-slate-200/90 bg-white shadow-sm" : "border border-slate-800/70 bg-slate-950/80 shadow-glass"}`}>
-              <p className={`px-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${isLightTheme ? "text-slate-500" : "text-slate-500"}`}>
+            <section className={`space-y-2 rounded-2xl p-3 backdrop-blur-xl sm:p-4 ${isLightTheme ? "border border-neutral-200 bg-white shadow-sm" : "border border-slate-800/70 bg-slate-950/80 shadow-glass"}`}>
+              <p className={`px-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>
                 {settingsText.section}
               </p>
 
-              <div className={`space-y-3 rounded-2xl p-1.5 ${isLightTheme ? "bg-slate-100/80" : "bg-slate-900/40"}`}>
-                <div className={`rounded-xl px-3 py-2.5 ${isLightTheme ? "bg-white/90 border border-slate-200" : "bg-slate-900/50"}`}>
-                  <p className={`text-sm font-medium ${isLightTheme ? "text-slate-900" : "text-slate-50"}`}>{settingsText.appearance}</p>
-                  <p className={`mt-0.5 text-[11px] ${isLightTheme ? "text-slate-600" : "text-slate-400"}`}>{settingsText.appearanceDesc}</p>
+              <div className={`space-y-3 rounded-2xl p-1.5 ${isLightTheme ? "bg-neutral-50" : "bg-slate-900/40"}`}>
+                <div className={`rounded-xl px-3 py-2.5 ${isLightTheme ? "border border-neutral-200 bg-white" : "bg-slate-900/50"}`}>
+                  <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{settingsText.appearance}</p>
+                  <p className={`mt-0.5 text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>{settingsText.appearanceDesc}</p>
                   <div className="mt-2 flex gap-2">
                     <button
                       type="button"
                       onClick={() => setUiTheme("dark")}
-                      className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${uiTheme === "dark" ? "bg-slate-900 text-white" : isLightTheme ? "border border-slate-300 bg-white text-slate-700" : "bg-slate-800/70 text-slate-300"}`}
+                      className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${uiTheme === "dark" ? "bg-neutral-900 text-white" : isLightTheme ? "border border-neutral-300 bg-white text-neutral-700" : "bg-slate-800/70 text-slate-300"}`}
                     >
                       {settingsText.themeDark}
                     </button>
                     <button
                       type="button"
                       onClick={() => setUiTheme("light")}
-                      className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${uiTheme === "light" ? "bg-wa-ruri text-white" : isLightTheme ? "border border-slate-300 bg-white text-slate-700" : "bg-slate-800/70 text-slate-300"}`}
+                      className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${uiTheme === "light" ? "bg-neutral-900 text-white" : isLightTheme ? "border border-neutral-300 bg-white text-neutral-700" : "bg-slate-800/70 text-slate-300"}`}
                     >
                       {settingsText.themeLight}
                     </button>
                   </div>
                 </div>
                 {profileSettingsLoading ? (
-                  <p className={`px-3 py-4 text-[12px] ${isLightTheme ? "text-slate-600" : "text-slate-400"}`}>
+                  <p className={`px-3 py-4 text-[12px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
                     {uiText.loadingProfileSettings}
                   </p>
                 ) : (
