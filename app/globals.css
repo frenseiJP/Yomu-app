@@ -65,3 +65,46 @@
   background: rgba(2, 6, 23, 0.75);
   border: 1px solid rgba(148, 163, 184, 0.1);
 }
+
+/* 画面トーン: ライト（白基調） */
+.frensei-theme-light {
+  color: rgb(15 23 42);
+}
+
+.frensei-theme-light .glass-panel {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.frensei-theme-light .glass-input {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+/* YomuPrototypePage 全体をライト時に白基調へ寄せる */
+.frensei-theme-light :is(
+    [class*="bg-slate-950"],
+    [class*="bg-slate-900"],
+    [class*="bg-yomu-glass"],
+    [class*="from-slate-950"],
+    [class*="via-slate-950"],
+    [class*="to-slate-950"]
+  ) {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.frensei-theme-light :is([class*="border-slate-8"], [class*="border-slate-7"]) {
+  border-color: rgba(148, 163, 184, 0.35) !important;
+}
+
+.frensei-theme-light :is([class*="text-slate-50"], [class*="text-slate-100"], [class*="text-slate-200"]) {
+  color: rgb(15 23 42) !important;
+}
+
+.frensei-theme-light :is([class*="text-slate-300"], [class*="text-slate-400"]) {
+  color: rgb(71 85 105) !important;
+}
+
+.frensei-theme-light :is([class*="text-slate-500"], [class*="text-slate-600"]) {
+  color: rgb(100 116 139) !important;
+}
