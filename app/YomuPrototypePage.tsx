@@ -2013,20 +2013,26 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                     <button
                       type="button"
                       onClick={() => setChoiceSheet("language")}
-                      className="flex w-full items-center gap-3 rounded-xl bg-slate-900/50 px-3 py-2.5 text-left transition hover:bg-slate-800/50"
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                        isLightTheme
+                          ? "border border-neutral-200 bg-[#f8f7f4] hover:bg-[#f3f1ed]"
+                          : "bg-slate-900/50 hover:bg-slate-800/50"
+                      }`}
                     >
-                      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-slate-800/80 text-slate-200">
+                      <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${
+                        isLightTheme ? "bg-[#f0eee8] text-neutral-700" : "bg-slate-800/80 text-slate-200"
+                      }`}>
                         <Languages className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-slate-50">{settingsText.basicLanguage}</p>
-                        <p className="text-[11px] text-slate-400">{settingsText.basicLanguageDesc}</p>
+                        <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{settingsText.basicLanguage}</p>
+                        <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>{settingsText.basicLanguageDesc}</p>
                       </div>
-                      <span className="flex max-w-[45%] flex-shrink-0 items-center gap-1 text-xs text-slate-200">
+                      <span className={`flex max-w-[45%] flex-shrink-0 items-center gap-1 text-xs ${isLightTheme ? "text-neutral-700" : "text-slate-200"}`}>
                         <span className="truncate">
                           {labelForDisplayLang(draftDisplayLanguage, uiText)}
                         </span>
-                        <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-500" aria-hidden />
+                        <ChevronRight className={`h-4 w-4 flex-shrink-0 ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`} aria-hidden />
                       </span>
                     </button>
 
@@ -2037,20 +2043,26 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                         setRegionChoiceApplyImmediate(false);
                         setChoiceSheet("region");
                       }}
-                      className="flex w-full items-center gap-3 rounded-xl bg-slate-900/50 px-3 py-2.5 text-left transition hover:bg-slate-800/50"
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                        isLightTheme
+                          ? "border border-neutral-200 bg-[#f8f7f4] hover:bg-[#f3f1ed]"
+                          : "bg-slate-900/50 hover:bg-slate-800/50"
+                      }`}
                     >
-                      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-slate-800/80 text-slate-200">
+                      <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${
+                        isLightTheme ? "bg-[#f0eee8] text-neutral-700" : "bg-slate-800/80 text-slate-200"
+                      }`}>
                         <Globe className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-slate-50">{settingsText.region}</p>
-                        <p className="text-[11px] text-slate-400">{settingsText.regionDesc}</p>
+                        <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{settingsText.region}</p>
+                        <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>{settingsText.regionDesc}</p>
                       </div>
-                      <span className="flex max-w-[45%] flex-shrink-0 items-center gap-1 text-xs text-slate-200">
+                      <span className={`flex max-w-[45%] flex-shrink-0 items-center gap-1 text-xs ${isLightTheme ? "text-neutral-700" : "text-slate-200"}`}>
                         <span className="truncate">
                           {regionLabelForLang(draftRegion, appLang as Lang)}
                         </span>
-                        <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-500" aria-hidden />
+                        <ChevronRight className={`h-4 w-4 flex-shrink-0 ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`} aria-hidden />
                       </span>
                     </button>
 
@@ -2069,19 +2081,19 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             </section>
 
             {/* 学習設定 */}
-            <section className="space-y-2 rounded-2xl border border-slate-800/70 bg-slate-950/80 p-3 shadow-glass backdrop-blur-xl sm:p-4">
-              <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            <section className={`space-y-2 rounded-2xl p-3 backdrop-blur-xl sm:p-4 ${isLightTheme ? "border border-neutral-200 bg-white shadow-sm" : "border border-slate-800/70 bg-slate-950/80 shadow-glass"}`}>
+              <p className={`px-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>
                 {uiText.learningSectionTitle}
               </p>
-              <div className="space-y-1 rounded-2xl bg-slate-900/40 p-1.5">
+              <div className={`space-y-1 rounded-2xl p-1.5 ${isLightTheme ? "bg-[#f8f7f4]" : "bg-slate-900/40"}`}>
                 {/* ふりがな表示 */}
-                <div className="flex items-center gap-3 rounded-xl bg-slate-900/50 px-3 py-2.5">
-                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-slate-800/80 text-slate-200">
+                <div className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${isLightTheme ? "border border-neutral-200 bg-white" : "bg-slate-900/50"}`}>
+                  <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${isLightTheme ? "bg-[#f0eee8] text-neutral-700" : "bg-slate-800/80 text-slate-200"}`}>
                     <BookOpen className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-50">{uiText.furigana}</p>
-                    <p className="text-[11px] text-slate-400">
+                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{uiText.furigana}</p>
+                    <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
                       {uiText.furiganaSettingDesc}
                     </p>
                   </div>
@@ -2102,15 +2114,15 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                 </div>
 
                 {/* 翻訳表示 */}
-                <div className="flex items-center gap-3 rounded-xl bg-slate-900/50 px-3 py-2.5">
-                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-slate-800/80 text-slate-200">
+                <div className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${isLightTheme ? "border border-neutral-200 bg-white" : "bg-slate-900/50"}`}>
+                  <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${isLightTheme ? "bg-[#f0eee8] text-neutral-700" : "bg-slate-800/80 text-slate-200"}`}>
                     <Eye className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-50">
+                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>
                       {uiText.showTranslationsTitle}
                     </p>
-                    <p className="text-[11px] text-slate-400">
+                    <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
                       {uiText.showTranslationsDesc}
                     </p>
                   </div>
@@ -2135,22 +2147,22 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             </section>
 
             {/* 音声設定 */}
-            <section className="space-y-2 rounded-2xl border border-slate-800/70 bg-slate-950/80 p-3 shadow-glass backdrop-blur-xl sm:p-4">
-              <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            <section className={`space-y-2 rounded-2xl p-3 backdrop-blur-xl sm:p-4 ${isLightTheme ? "border border-neutral-200 bg-white shadow-sm" : "border border-slate-800/70 bg-slate-950/80 shadow-glass"}`}>
+              <p className={`px-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>
                 {uiText.voiceSectionTitle}
               </p>
-              <div className="rounded-2xl bg-slate-900/40 p-1.5">
-                <div className="flex items-center gap-3 rounded-xl bg-slate-900/50 px-3 py-3">
-                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-slate-800/80 text-slate-200">
+              <div className={`rounded-2xl p-1.5 ${isLightTheme ? "bg-[#f8f7f4]" : "bg-slate-900/40"}`}>
+                <div className={`flex items-center gap-3 rounded-xl px-3 py-3 ${isLightTheme ? "border border-neutral-200 bg-white" : "bg-slate-900/50"}`}>
+                  <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${isLightTheme ? "bg-[#f0eee8] text-neutral-700" : "bg-slate-800/80 text-slate-200"}`}>
                     <Volume2 className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-50">{uiText.speechRateTitle}</p>
-                    <p className="text-[11px] text-slate-400">
+                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{uiText.speechRateTitle}</p>
+                    <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
                       {uiText.speechRateDesc}
                     </p>
                     <div className="mt-2 flex items-center gap-2">
-                      <span className="text-[10px] text-slate-500">{uiText.slower}</span>
+                      <span className={`text-[10px] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>{uiText.slower}</span>
                       <input
                         type="range"
                         min={0.6}
@@ -2160,7 +2172,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                         onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
                         className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-slate-800 accent-wa-ruri"
                       />
-                      <span className="text-[10px] text-slate-500">{uiText.faster}</span>
+                      <span className={`text-[10px] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>{uiText.faster}</span>
                     </div>
                   </div>
                 </div>
@@ -2168,21 +2180,23 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             </section>
 
             {/* アプリについて */}
-            <section className="space-y-2 rounded-2xl border border-slate-800/70 bg-slate-950/80 p-3 shadow-glass backdrop-blur-xl sm:p-4">
-              <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            <section className={`space-y-2 rounded-2xl p-3 backdrop-blur-xl sm:p-4 ${isLightTheme ? "border border-neutral-200 bg-white shadow-sm" : "border border-slate-800/70 bg-slate-950/80 shadow-glass"}`}>
+              <p className={`px-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>
                 {uiText.aboutSectionTitle}
               </p>
-              <div className="divide-y divide-slate-800/80 rounded-2xl bg-slate-900/40">
+              <div className={`divide-y rounded-2xl ${isLightTheme ? "divide-neutral-200 bg-[#f8f7f4]" : "divide-slate-800/80 bg-slate-900/40"}`}>
                 <a
                   href="mailto:support@yomu-app.example.com"
-                  className="flex w-full cursor-pointer items-center gap-3 px-3 py-3 text-left hover:bg-slate-900/80 active:bg-slate-800/80"
+                  className={`flex w-full cursor-pointer items-center gap-3 px-3 py-3 text-left ${
+                    isLightTheme ? "hover:bg-[#f3f1ed] active:bg-[#eeece6]" : "hover:bg-slate-900/80 active:bg-slate-800/80"
+                  }`}
                 >
-                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-slate-800/80 text-slate-200">
+                  <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${isLightTheme ? "bg-[#f0eee8] text-neutral-700" : "bg-slate-800/80 text-slate-200"}`}>
                     <Mail className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-50">{uiText.contactTitle}</p>
-                    <p className="text-[11px] text-slate-400">
+                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{uiText.contactTitle}</p>
+                    <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
                       {uiText.contactDesc}
                     </p>
                   </div>
@@ -2191,14 +2205,16 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                   href="/terms"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex w-full cursor-pointer items-center gap-3 px-3 py-3 text-left hover:bg-slate-900/80 active:bg-slate-800/80"
+                  className={`flex w-full cursor-pointer items-center gap-3 px-3 py-3 text-left ${
+                    isLightTheme ? "hover:bg-[#f3f1ed] active:bg-[#eeece6]" : "hover:bg-slate-900/80 active:bg-slate-800/80"
+                  }`}
                 >
-                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-slate-800/80 text-slate-200">
+                  <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${isLightTheme ? "bg-[#f0eee8] text-neutral-700" : "bg-slate-800/80 text-slate-200"}`}>
                     <FileText className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-50">{uiText.termsTitle}</p>
-                    <p className="text-[11px] text-slate-400">
+                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{uiText.termsTitle}</p>
+                    <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
                       {uiText.termsDesc}
                     </p>
                   </div>
@@ -2207,14 +2223,16 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                   href="/privacy"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex w-full cursor-pointer items-center gap-3 px-3 py-3 text-left hover:bg-slate-900/80 active:bg-slate-800/80"
+                  className={`flex w-full cursor-pointer items-center gap-3 px-3 py-3 text-left ${
+                    isLightTheme ? "hover:bg-[#f3f1ed] active:bg-[#eeece6]" : "hover:bg-slate-900/80 active:bg-slate-800/80"
+                  }`}
                 >
-                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-slate-800/80 text-slate-200">
+                  <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${isLightTheme ? "bg-[#f0eee8] text-neutral-700" : "bg-slate-800/80 text-slate-200"}`}>
                     <Shield className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-50">{uiText.privacyTitle}</p>
-                    <p className="text-[11px] text-slate-400">
+                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{uiText.privacyTitle}</p>
+                    <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
                       {uiText.privacyDesc}
                     </p>
                   </div>
@@ -2460,7 +2478,38 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
               <div ref={bottomRef} />
             </div>
 
-            <div className="flex flex-shrink-0 flex-col pt-3 pb-safe sm:mt-5">
+            <div className="flex flex-shrink-0 flex-col pb-safe pt-3 sm:mt-5">
+              <div className="mb-2 flex flex-wrap gap-2 text-[11px] sm:mb-3 sm:gap-3">
+                {(
+                  latestFollowUpContext?.followUps ?? [
+                    uiText.quickPrompt1,
+                    uiText.quickPrompt2,
+                    uiText.quickPrompt3,
+                  ]
+                ).map((s, idx) => (
+                  <button
+                    key={`${idx}-${s.slice(0, 32)}`}
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => handleQuickSend(s, idx)}
+                    className="btn-wa-hover btn-wa-hover-ruri min-h-[40px] rounded-full border border-yomu-glassBorder bg-yomu-glass px-4 py-2 text-slate-300 backdrop-blur-sm hover:border-wa-ruri/50 hover:text-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              {contextLoadingId !== null &&
+                contextLoadingId === lastAssistantMessageId && (
+                  <p className="mb-2 text-[10px] text-slate-500">{uiText.chatContextLoadingHint}</p>
+                )}
+              {followUpFeedback === "nice" && (
+                <p className="mb-2 text-[10px] font-medium text-emerald-400/90">
+                  {uiText.chatFollowUpNice}
+                </p>
+              )}
+              {followUpFeedback === "ok" && (
+                <p className="mb-2 text-[10px] text-slate-400">{uiText.chatFollowUpOk}</p>
+              )}
               <div className="glass-input flex items-end gap-2 rounded-2xl px-3 py-2.5 shadow-glass sm:gap-3 sm:px-4 sm:py-3">
                 <button
                   type="button"
