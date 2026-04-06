@@ -1,6 +1,13 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Footer() {
+  const pathname = usePathname() || "";
+  const isChatRoute = pathname === "/chat" || pathname.startsWith("/chat/");
+  if (isChatRoute) return null;
+
   return (
     <footer className="border-t border-pink-400/30 bg-[#020617]">
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-center gap-3 px-4 py-4 text-xs text-slate-300 sm:justify-between sm:gap-4 sm:px-6 lg:px-8 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))]">

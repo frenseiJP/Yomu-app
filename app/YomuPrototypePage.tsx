@@ -2425,43 +2425,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
               <div ref={bottomRef} />
             </div>
 
-            <div className="flex flex-shrink-0 flex-col pt-3 space-y-3 pb-safe sm:mt-5 sm:space-y-4">
-              {latestFollowUpContext && (
-                <p className="text-[10px] leading-snug text-slate-500">
-                  {uiText.chatSuggestedFollowUps}
-                </p>
-              )}
-              {contextLoadingId !== null &&
-                contextLoadingId === lastAssistantMessageId && (
-                  <p className="text-[10px] text-slate-500">{uiText.chatContextLoadingHint}</p>
-                )}
-              {followUpFeedback === "nice" && (
-                <p className="text-[10px] font-medium text-emerald-400/90">
-                  {uiText.chatFollowUpNice}
-                </p>
-              )}
-              {followUpFeedback === "ok" && (
-                <p className="text-[10px] text-slate-400">{uiText.chatFollowUpOk}</p>
-              )}
-              <div className="flex flex-wrap gap-2 text-[11px] sm:gap-3">
-                {(
-                  latestFollowUpContext?.followUps ?? [
-                    uiText.quickPrompt1,
-                    uiText.quickPrompt2,
-                    uiText.quickPrompt3,
-                  ]
-                ).map((s, idx) => (
-                  <button
-                    key={`${idx}-${s.slice(0, 32)}`}
-                    type="button"
-                    disabled={isLoading}
-                    onClick={() => handleQuickSend(s, idx)}
-                    className="btn-wa-hover btn-wa-hover-ruri min-h-[44px] rounded-full border border-yomu-glassBorder bg-yomu-glass px-4 py-2.5 text-slate-300 backdrop-blur-sm hover:border-wa-ruri/50 hover:text-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:py-2"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
+            <div className="flex flex-shrink-0 flex-col pt-3 pb-safe sm:mt-5">
               <div className="glass-input flex items-end gap-2 rounded-2xl px-3 py-2.5 shadow-glass sm:gap-3 sm:px-4 sm:py-3">
                 <button
                   type="button"
