@@ -6,7 +6,6 @@ import { AuthProvider } from "@/src/contexts/AuthContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import Footer from "@/components/Footer";
 import FeedbackButton from "@/components/FeedbackButton";
-import AffiliateShell from "@/components/AffiliateShell";
 
 export const metadata: Metadata = {
   title: "Yomu — Japanese learning coach",
@@ -28,7 +27,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="touch-manipulation">
-      <body className="bg-[#020617] pb-[calc(60px+env(safe-area-inset-bottom,0px))] text-slate-100 overscroll-behavior-none">
+      <body className="bg-[#020617] pb-[env(safe-area-inset-bottom,0px)] text-slate-100 overscroll-behavior-none">
         <Suspense fallback={null}>
           <AuthProvider>
             <LanguageProvider>
@@ -36,7 +35,6 @@ export default function RootLayout({
               <Analytics />
               <FeedbackButton />
               <Footer />
-              <AffiliateShell />
             </LanguageProvider>
           </AuthProvider>
         </Suspense>

@@ -14,6 +14,8 @@ import {
   Users,
   Settings,
   ClipboardList,
+  Compass,
+  MoreHorizontal,
   Languages,
   Eye,
   Mail,
@@ -51,6 +53,8 @@ import {
   type UiTheme,
 } from "@/src/utils/theme/theme";
 import { isAffiliateBarVisibleForPath } from "@/lib/affiliateVisibility";
+import { buildSeasonalProgressState } from "@/lib/progress/seasonal";
+import SeasonalProgressCard from "@/components/progress/SeasonalProgressCard";
 import {
   buildCoachContext,
   completeMissionTask,
@@ -96,7 +100,7 @@ import { recommendCandidatesForMessage, saveCandidateToVocabulary } from "@/lib/
 
 type Role = "user" | "assistant";
 type Politeness = "casual" | "neutral" | "business";
-type TabView = "mission" | "record" | "chat" | "community" | "settings";
+type TabView = "mission" | "record" | "chat" | "community" | "settings" | "more";
 type DisplayLangRaw = "ja" | "en" | "ko" | "zh";
 
 const JLPT_LEVELS = ["N5", "N4", "N3", "N2", "N1"] as const;
@@ -1791,6 +1795,18 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
     () => listTopicPracticeResultsByUser(habitUserId).slice(0, 3),
     [habitUserId, stats.totalTopicPractices],
   );
+  const seasonalState = useMemo(
+    () =>
+      buildSeasonalProgressState({
+        streak: stats.streak,
+        recentActivityCount: streakDays.filter(Boolean).length,
+        missionDoneCount: getProgressSnapshot(habitUserId).missionsCompletedCount,
+        reviewDoneCount: getProgressSnapshot(habitUserId).reviewsCompletedCount,
+        chatCount: getProgressSnapshot(habitUserId).totalChatMessages,
+        topicCount: stats.totalTopicPractices,
+      }),
+    [habitUserId, stats, streakDays],
+  );
 
   return (
     <div
@@ -1833,21 +1849,46 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                   onOpenChat={(prefill) => createNewSession(prefill)}
                 />
                 <ProgressCard stats={stats} ui={uiText} isLightTheme={isLightTheme} />
+                <div className="rounded-2xl border border-slate-800/60 bg-slate-950/70 p-3">
+                  <p className="text-[11px] text-slate-400">Continue learning</p>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = chatSessions[0];
+                        if (next) openSession(next.id);
+                        else createNewSession();
+                        setActiveView("chat");
+                      }}
+                      className="rounded-lg bg-wa-ruri/25 px-3 py-2 text-xs text-slate-100"
+                    >
+                      Continue Chat
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveView("record")}
+                      className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200"
+                    >
+                      Open Progress
+                    </button>
+                  </div>
+                </div>
+                <SeasonalProgressCard state={seasonalState} compact />
               </div>
             ) : null}
           </div>
         )}
 
-        {/* 記録: 成長の記録室 */}
+        {/* Progress: seasonal growth journey */}
         {activeView === "record" && (
           <div className="mx-auto flex h-full max-w-5xl flex-1 flex-col overflow-y-auto px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
             <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h1 className="font-wa-serif text-lg font-semibold text-slate-50 sm:text-xl">
-                  {uiText.growthLogTitle}
+                  Progress
                 </h1>
                 <p className="mt-1 text-[11px] text-slate-400 sm:text-xs">
-                  {uiText.growthLogSubtitle}
+                  Seasonal story of your Japanese growth
                 </p>
               </div>
               <div className="flex flex-shrink-0 items-center gap-2 rounded-full border border-yomu-glassBorder bg-yomu-glass px-2 py-1.5 text-[11px] backdrop-blur-sm sm:py-1">
@@ -1868,6 +1909,8 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                 </select>
               </div>
             </header>
+
+            <SeasonalProgressCard state={seasonalState} />
 
             <section className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
@@ -2112,135 +2155,80 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
           </div>
         )}
 
-        {/* コミュニティ: 日本語・英語の両方を投稿できるフィード */}
+        {/* Topic: guided expression practice */}
         {activeView === "community" && (
           <div className="mx-auto flex max-w-5xl flex-1 flex-col gap-4 px-3 py-4 sm:gap-5 sm:px-5 sm:py-6 lg:px-8 lg:py-6">
             <header className="space-y-1">
               <h1 className="font-wa-serif text-lg font-semibold text-slate-50 sm:text-xl">
-                {uiText.community}
+                Topic
               </h1>
               <p className="text-[11px] text-slate-400 sm:text-xs">
-                {uiText.communitySubtitle}
+                Guided Japanese expression practice. Calm, focused, one-screen flow.
               </p>
             </header>
-
-            {/* 投稿フォーム */}
-            <section className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-[0_22px_80px_rgba(0,0,0,0.9)] backdrop-blur-xl sm:p-5">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4 text-wa-ruri" />
-                  <span className="font-wa-serif text-[11px] font-semibold tracking-[0.18em] text-slate-400">
-                    {uiText.newPostBadge}
-                  </span>
-                </div>
-                <span className="text-[10px] text-slate-500">
-                  {uiText.signedInOnly}
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-slate-300">
-                    {uiText.communityLabelJa}
-                  </label>
-                  <textarea
-                    value={communityJa}
-                    onChange={(e) => setCommunityJa(e.target.value)}
-                    rows={3}
-                    placeholder={uiText.communityPlaceholderJa}
-                    className="w-full resize-none rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-[13px] text-slate-100 placeholder:text-slate-500 focus:border-wa-ruri focus:outline-none focus:ring-1 focus:ring-wa-ruri/60"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-slate-300">
-                    {uiText.communityLabelEn}
-                  </label>
-                  <textarea
-                    value={communityEn}
-                    onChange={(e) => setCommunityEn(e.target.value)}
-                    rows={3}
-                    placeholder={uiText.communityPlaceholderEn}
-                    className="w-full resize-none rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-[13px] text-slate-100 placeholder:text-slate-500 focus:border-wa-ruri focus:outline-none focus:ring-1 focus:ring-wa-ruri/60"
-                  />
-                </div>
-                {communityError && (
-                  <p className="text-[11px] text-rose-400">{communityError}</p>
-                )}
-                <div className="mt-1 flex items-center justify-between gap-3">
-                  <p className="text-[11px] text-slate-500">
-                    {uiText.communityFormFooterHint}
-                  </p>
+            <section className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+              <p className="text-xs text-slate-400">Pick a topic and practice in chat.</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {TOPIC_PROMPTS.slice(0, 6).map((topic) => (
                   <button
+                    key={topic.id}
                     type="button"
-                    disabled={
-                      communityLoading ||
-                      !communityJa.trim() ||
-                      !communityEn.trim()
-                    }
-                    onClick={handleCommunitySubmit}
-                    className="btn-wa-hover btn-wa-hover-ruri inline-flex items-center gap-2 rounded-xl bg-wa-ruri px-4 py-2.5 text-[12px] font-medium text-slate-50 shadow-glass disabled:cursor-not-allowed disabled:bg-wa-hai/50 disabled:text-slate-300"
+                    onClick={() => {
+                      setActiveView("chat");
+                      setTopicSelectorMode("hidden");
+                      setActiveTopicPrompt(topic);
+                      let sid = currentSessionId;
+                      if (!sid) {
+                        const created = startNewChatSession(habitUserId, "Topic Practice");
+                        sid = created.id;
+                        setCurrentSessionId(created.id);
+                        setChatSessions(getSessions(habitUserId));
+                      }
+                      const guide = buildTopicGuideMessage(topic);
+                      addAssistantMessage(habitUserId, sid, guide);
+                      setMessages((prev) => [
+                        ...prev,
+                        {
+                          id: Date.now() + Math.floor(Math.random() * 1000),
+                          role: "assistant",
+                          baseText: guide,
+                          createdAt: new Date().toISOString(),
+                          topicLabel: "Topic Practice",
+                        },
+                      ]);
+                    }}
+                    className="rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-2 text-left"
                   >
-                    {communityLoading ? uiText.posting : uiText.post}
+                    <p className="text-xs font-medium text-slate-100">{topic.title}</p>
+                    <p className="mt-0.5 line-clamp-2 text-[11px] text-slate-400">{topic.prompt}</p>
                   </button>
-                </div>
+                ))}
               </div>
             </section>
+          </div>
+        )}
 
-            {/* 投稿フィード */}
-            <section className="space-y-3">
-              {communityLoading && communityPosts.length === 0 && (
-                <p className="text-[12px] text-slate-400">{uiText.loadingPosts}</p>
-              )}
-              {!communityLoading && communityPosts.length === 0 && !communityError && (
-                <p className="text-[12px] text-slate-500">
-                  {uiText.noPostsYet}
-                </p>
-              )}
-              {communityPosts.map((post) => (
-                <article
-                  key={post.id}
-                  className="rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-950/80 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.85)] backdrop-blur-xl sm:p-5"
-                >
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/80 text-[11px] text-slate-300">
-                        JP
-                      </div>
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/80 text-[11px] text-slate-300">
-                        EN
-                      </div>
-                    </div>
-                    <span className="text-[10px] text-slate-500">
-                      {new Date(post.created_at).toLocaleString(dateLocale, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                  <div className="space-y-3 text-[13px] leading-relaxed text-slate-200">
-                    <div className="space-y-1.5">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                        {uiText.communityLabelJa}
-                      </p>
-                      <p className="whitespace-pre-wrap text-slate-100">
-                        {post.japanese}
-                      </p>
-                    </div>
-                    <div className="h-px w-full bg-gradient-to-r from-slate-800/0 via-slate-700/70 to-slate-800/0" />
-                    <div className="space-y-1.5">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                        {uiText.communityLabelEn}
-                      </p>
-                      <p className="whitespace-pre-wrap text-slate-200">
-                        {post.english}
-                      </p>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </section>
+        {activeView === "more" && (
+          <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col gap-3 overflow-y-auto px-4 py-6">
+            <h1 className="font-wa-serif text-lg font-semibold text-slate-50">More</h1>
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = "/vocabulary";
+              }}
+              className="rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left"
+            >
+              <p className="text-sm text-slate-100">Vocabulary</p>
+              <p className="mt-0.5 text-xs text-slate-400">Your personal learning library</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveView("settings")}
+              className="rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left"
+            >
+              <p className="text-sm text-slate-100">Settings</p>
+              <p className="mt-0.5 text-xs text-slate-400">Language, tone, region and app preferences</p>
+            </button>
           </div>
         )}
 
@@ -3084,7 +3072,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             <span className="pointer-events-none">{uiText.home}</span>
           </motion.button>
 
-          {/* コミュニティ */}
+          {/* Topic */}
           <motion.button
             type="button"
             onClick={() => setActiveView("community")}
@@ -3095,8 +3083,8 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             animate={activeView === "community" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
           >
-            <Users className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
-            <span className="pointer-events-none">{uiText.community}</span>
+            <Compass className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
+            <span className="pointer-events-none">Topic</span>
           </motion.button>
 
           {/* 中央：チャット（強調） */}
@@ -3146,7 +3134,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             </span>
           </motion.button>
 
-          {/* 記録 */}
+          {/* Progress */}
           <motion.button
             type="button"
             onClick={() => setActiveView("record")}
@@ -3158,22 +3146,22 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
           >
             <ClipboardList className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
-            <span className="pointer-events-none">{uiText.record}</span>
+            <span className="pointer-events-none">Progress</span>
           </motion.button>
 
-          {/* 設定（スマホでも利用可能） */}
+          {/* More */}
           <motion.button
             type="button"
-            onClick={() => setActiveView("settings")}
-            onPointerDown={() => setActiveView("settings")}
+            onClick={() => setActiveView("more")}
+            onPointerDown={() => setActiveView("more")}
             className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
-              activeView === "settings" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
+              activeView === "more" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
             }`}
-            animate={activeView === "settings" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
+            animate={activeView === "more" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
           >
-            <Settings className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
-            <span className="pointer-events-none">{uiText.settings}</span>
+            <MoreHorizontal className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
+            <span className="pointer-events-none">More</span>
           </motion.button>
         </div>
       </nav>
