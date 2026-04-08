@@ -23,6 +23,8 @@ import {
   ChevronRight,
   Check,
   Globe,
+  PanelLeft,
+  PlusCircle,
 } from "lucide-react";
 import { createClient as createAuthClient } from "@/src/utils/supabase/client";
 import { isMissingTableError } from "@/src/utils/supabase/schema-errors";
@@ -49,6 +51,41 @@ import {
   type UiTheme,
 } from "@/src/utils/theme/theme";
 import { isAffiliateBarVisibleForPath } from "@/lib/affiliateVisibility";
+import {
+  buildCoachContext,
+  completeMissionTask,
+  getDueReviews,
+  getOrCreateDailyMission,
+  getUserStats,
+  isMissionFullyComplete,
+  recordChatUsed,
+  recordMissionCompleted,
+  type HabitDailyMission,
+  type DueReviews,
+  type UserStats,
+  activeDaysToWeekDots,
+  getProgressSnapshot,
+  tryCompleteMissionFromChat,
+} from "@/lib/habit";
+import DailyMissionCard from "@/components/habit/DailyMissionCard";
+import ReviewCard from "@/components/habit/ReviewCard";
+import ProgressCard from "@/components/habit/ProgressCard";
+import type { ChatMessage as StoredChatMessage, ChatSession as StoredChatSession } from "@/lib/chat/types";
+import {
+  addAssistantMessage,
+  addUserMessage,
+  getMessages as getStoredMessages,
+  getOrCreateUserId,
+  getSessions,
+  removeSession,
+  startNewChatSession,
+} from "@/lib/chat/service";
+import SessionDrawer from "@/components/chat/SessionDrawer";
+import TopicSelector from "@/components/topic/TopicSelector";
+import TopicActions from "@/components/topic/TopicActions";
+import { buildTopicFeedbackMessage, buildTopicGuideMessage } from "@/components/topic/TopicMessageTemplate";
+import { TOPIC_PROMPTS, generateTopicFeedback, saveTopicPracticeResult } from "@/lib/topic/service";
+import type { TopicPrompt, TopicFeedback } from "@/lib/topic/types";
 
 type Role = "user" | "assistant";
 type Politeness = "casual" | "neutral" | "business";
@@ -95,7 +132,25 @@ type Message = {
   showToneMeta?: boolean;
   createdAt: string;
   chatContext?: ChatTurnContext;
+  topicLabel?: string;
+  topicFeedback?: {
+    topicId: string;
+    userAnswer: string;
+    correctedAnswer: string;
+    explanation: string;
+    alternativeExamples: string[];
+    saved?: boolean;
+  };
 };
+
+function toViewMessages(rows: StoredChatMessage[]): Message[] {
+  return rows.map((m, i) => ({
+    id: Date.now() + i,
+    role: m.role,
+    baseText: m.content,
+    createdAt: m.createdAt,
+  }));
+}
 
 /** 単語帳の1件：日本語・かな(表示切替可)・ローマ字・訳(複数)・品詞・例文(AI生成) */
 type VocabItem = {
@@ -666,12 +721,58 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
   const [communityError, setCommunityError] = useState<string | null>(null);
   const [communityJa, setCommunityJa] = useState("");
   const [communityEn, setCommunityEn] = useState("");
+  const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
+  const [chatSessions, setChatSessions] = useState<StoredChatSession[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [topicSelectorMode, setTopicSelectorMode] = useState<"entry" | "topic_list" | "hidden">("entry");
+  const [activeTopicPrompt, setActiveTopicPrompt] = useState<TopicPrompt | null>(null);
+  const [habitUserId, setHabitUserId] = useState("guest");
+  const [dailyMission, setDailyMission] = useState<HabitDailyMission | null>(null);
+  const [dueReviews, setDueReviews] = useState<DueReviews>({ words: [], mistakes: [] });
+  const [stats, setStats] = useState<UserStats>({
+    streak: 0,
+    totalWords: 0,
+    totalMistakes: 0,
+    totalSessions: 0,
+    mistakesFixed: 0,
+  });
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const politenessRef = useRef<Politeness>("casual");
   const { settingsText, uiText } = useMemo(
     () => getPrototypeCopy(appLang as Lang),
     [appLang],
   );
+
+  const refreshHabitData = useCallback((userId: string) => {
+    const m = getOrCreateDailyMission(userId);
+    const r = getDueReviews(userId);
+    const s = getUserStats(userId);
+    setDailyMission(m);
+    setDueReviews(r);
+    setStats(s);
+    const p = getProgressSnapshot(userId);
+    setStreakDays(activeDaysToWeekDots(p.activeDays));
+    setMissionCompleted(isMissionFullyComplete(m));
+  }, []);
+
+  const refreshChatSessions = useCallback((userId: string) => {
+    const rows = getSessions(userId);
+    setChatSessions(rows);
+    if (rows.length === 0) {
+      const created = startNewChatSession(userId);
+      setChatSessions([created]);
+      setCurrentSessionId(created.id);
+      setMessages([buildWelcomeMessage(appLang as Lang)]);
+      return;
+    }
+    if (!currentSessionId || !rows.some((s) => s.id === currentSessionId)) {
+      const sid = rows[0].id;
+      setCurrentSessionId(sid);
+      const ms = getStoredMessages(userId, sid);
+      setMessages(ms.length ? toViewMessages(ms) : [buildWelcomeMessage(appLang as Lang)]);
+      setTopicSelectorMode(ms.length > 0 ? "hidden" : "entry");
+    }
+  }, [appLang, currentSessionId]);
 
   const dateLocale = useMemo(
     () => dateLocaleForLang(appLang as Lang),
@@ -689,6 +790,34 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
   useEffect(() => {
     setUiTheme(getStoredUiTheme());
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const init = async () => {
+      try {
+        const localUid = getOrCreateUserId();
+        const supabase = createAuthClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        const uid = user?.id ?? localUid;
+        if (!mounted) return;
+        setHabitUserId(uid);
+        refreshHabitData(uid);
+        refreshChatSessions(uid);
+      } catch {
+        if (!mounted) return;
+        const uid = getOrCreateUserId();
+        setHabitUserId(uid);
+        refreshHabitData(uid);
+        refreshChatSessions(uid);
+      }
+    };
+    void init();
+    return () => {
+      mounted = false;
+    };
+  }, [refreshHabitData, refreshChatSessions]);
 
   useEffect(() => {
     setStoredUiTheme(uiTheme);
@@ -1227,6 +1356,13 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
   ) => {
     const text = raw.trim();
     if (!text || isTyping) return;
+    let sessionId = currentSessionId;
+    if (!sessionId) {
+      const created = startNewChatSession(habitUserId, text);
+      sessionId = created.id;
+      setCurrentSessionId(created.id);
+      setChatSessions(getSessions(habitUserId));
+    }
 
     if (!opts?.preserveFollowUpFeedback) setFollowUpFeedback(null);
     const toneAtSend = politenessRef.current;
@@ -1238,17 +1374,19 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, userMsg]);
+    recordChatUsed(habitUserId);
+    addUserMessage(habitUserId, sessionId, text);
     setInput("");
     setIsTyping(true);
+    setTopicSelectorMode("hidden");
 
-    if (!missionCompleted && messageMatchesMission(text)) {
-      setMissionCompleted(true);
-      const dayIndex = new Date().getDay();
-      setStreakDays((prev) => {
-        const next = [...prev];
-        next[dayIndex] = true;
-        return next;
-      });
+    if (dailyMission) {
+      const updated = tryCompleteMissionFromChat(habitUserId, dailyMission, text);
+      setDailyMission(updated);
+      if (isMissionFullyComplete(updated)) {
+        recordMissionCompleted(habitUserId);
+      }
+      setMissionCompleted(isMissionFullyComplete(updated));
     }
 
     if (controllerRef.current) controllerRef.current.abort();
@@ -1270,6 +1408,47 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
 
     const fetchErrText = getPrototypeCopy(appLang as Lang).uiText.chatFetchError;
     let accumulated = "";
+
+    // Topic Practice mode: generate structured coaching feedback inside chat.
+    if (activeTopicPrompt) {
+      try {
+        const feedback: TopicFeedback = await generateTopicFeedback(
+          activeTopicPrompt,
+          text,
+          appLang as "ja" | "en" | "ko" | "zh",
+        );
+        const topicMessage = buildTopicFeedbackMessage(feedback);
+        addAssistantMessage(habitUserId, sessionId, topicMessage);
+        setChatSessions(getSessions(habitUserId));
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? {
+                  ...m,
+                  baseText: topicMessage,
+                  topicLabel: "Topic Practice",
+                  topicFeedback: {
+                    topicId: activeTopicPrompt.id,
+                    userAnswer: text,
+                    correctedAnswer: feedback.correctedAnswer,
+                    explanation: feedback.explanation,
+                    alternativeExamples: feedback.alternativeExamples,
+                  },
+                }
+              : m,
+          ),
+        );
+      } catch {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, baseText: fetchErrText } : m)),
+        );
+      } finally {
+        setIsTyping(false);
+        controllerRef.current = null;
+        refreshHabitData(habitUserId);
+      }
+      return;
+    }
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -1277,12 +1456,15 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
           messages: buildClaudeMessages(text),
           tone: toneAtSend,
           language: appLang,
+          coachContext: buildCoachContext(habitUserId),
         }),
         signal: controller.signal,
       });
 
       if (!res.ok || !res.body) {
         setIsTyping(false);
+        addAssistantMessage(habitUserId, sessionId, fetchErrText);
+        setChatSessions(getSessions(habitUserId));
         setMessages((prev) =>
           prev.map((m) => (m.id === assistantId ? { ...m, baseText: fetchErrText } : m))
         );
@@ -1305,6 +1487,8 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
         );
       }
     } catch {
+      addAssistantMessage(habitUserId, sessionId, fetchErrText);
+      setChatSessions(getSessions(habitUserId));
       setMessages((prev) =>
         prev.map((m) => (m.id === assistantId ? { ...m, baseText: fetchErrText } : m))
       );
@@ -1319,7 +1503,10 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
       !accumulated.includes("OPENAI_API_KEY")
     ) {
       void enrichChatContext(assistantId, accumulated, text);
+      addAssistantMessage(habitUserId, sessionId, accumulated);
+      setChatSessions(getSessions(habitUserId));
     }
+    refreshHabitData(habitUserId);
   };
 
   const handleQuickSend = (prompt: string, choiceIndex: number) => {
@@ -1334,6 +1521,41 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
     }
     void handleSend(prompt, { preserveFollowUpFeedback: true });
   };
+
+  const openSession = useCallback((sessionId: string) => {
+    setCurrentSessionId(sessionId);
+    const rows = getStoredMessages(habitUserId, sessionId);
+    setMessages(rows.length ? toViewMessages(rows) : [buildWelcomeMessage(appLang as Lang)]);
+    setTopicSelectorMode(rows.length > 0 ? "hidden" : "entry");
+    setActiveTopicPrompt(null);
+    setSessionDrawerOpen(false);
+    setActiveView("chat");
+  }, [appLang, habitUserId]);
+
+  const createNewSession = useCallback((prefill?: string) => {
+    const s = startNewChatSession(habitUserId, prefill);
+    setCurrentSessionId(s.id);
+    setChatSessions(getSessions(habitUserId));
+    setMessages([buildWelcomeMessage(appLang as Lang)]);
+    setTopicSelectorMode("entry");
+    setActiveTopicPrompt(null);
+    setInput(prefill ?? "");
+    setSessionDrawerOpen(false);
+    setActiveView("chat");
+  }, [appLang, habitUserId]);
+
+  const deleteSessionById = useCallback((sessionId: string) => {
+    removeSession(habitUserId, sessionId);
+    const rows = getSessions(habitUserId);
+    setChatSessions(rows);
+    if (currentSessionId === sessionId) {
+      if (rows[0]) {
+        openSession(rows[0].id);
+      } else {
+        createNewSession();
+      }
+    }
+  }, [createNewSession, currentSessionId, habitUserId, openSession]);
 
   const handleImageSelect = (file: File) => {
     const { uiText: chatUi } = getPrototypeCopy(appLang as Lang);
@@ -1545,6 +1767,36 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
         {/* 初回・Daily Mission: 全画面表示 */}
         {activeView === "mission" && (
           <div className="mx-auto flex min-h-full max-w-lg flex-col justify-center px-4 py-8 sm:px-6 sm:py-12">
+            {dailyMission ? (
+              <div className="mb-4 space-y-3">
+                <DailyMissionCard
+                  mission={dailyMission}
+                  ui={uiText}
+                  isLightTheme={isLightTheme}
+                  allComplete={isMissionFullyComplete(dailyMission)}
+                  onOpenChat={() => createNewSession(dailyMission.tasks.find((t) => !t.completed)?.instruction)}
+                  onToggleTask={(taskId) => {
+                    const next = completeMissionTask(habitUserId, dailyMission.date, taskId);
+                    if (!next) return;
+                    setDailyMission(next);
+                    if (isMissionFullyComplete(next)) {
+                      recordMissionCompleted(habitUserId);
+                    }
+                    refreshHabitData(habitUserId);
+                  }}
+                />
+                <ReviewCard
+                  userId={habitUserId}
+                  words={dueReviews.words}
+                  mistakes={dueReviews.mistakes}
+                  ui={uiText}
+                  isLightTheme={isLightTheme}
+                  onUpdated={() => refreshHabitData(habitUserId)}
+                  onOpenChat={(prefill) => createNewSession(prefill)}
+                />
+                <ProgressCard stats={stats} ui={uiText} isLightTheme={isLightTheme} />
+              </div>
+            ) : null}
             <section
               className={
                 missionCompleted
@@ -1592,7 +1844,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
               </div>
               <button
                 type="button"
-                onClick={() => setActiveView("chat")}
+                onClick={() => createNewSession()}
                 className="btn-wa-hover btn-wa-hover-ruri mt-8 w-full rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 py-3.5 text-sm font-medium text-slate-100 shadow-glass hover:bg-wa-ruri/30"
               >
                 {uiText.askInChat}
@@ -2247,13 +2499,28 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
           <div className="flex min-h-0 w-full max-w-6xl flex-1 flex-col gap-3 px-3 py-4 sm:gap-4 sm:px-5 sm:py-6 lg:mx-auto lg:gap-4 lg:px-8 lg:py-6">
             <header className="flex flex-shrink-0 items-center justify-between gap-3">
               <div className="flex min-w-0 flex-1 items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSessionDrawerOpen(true)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700/80 bg-slate-900/70 text-slate-300"
+                  aria-label="Open sessions"
+                >
+                  <PanelLeft className="h-4 w-4" />
+                </button>
                 <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-wa-ruri to-wa-asagi text-sm font-bold text-white shadow-glass">
                   Y
                 </div>
                 <p className="font-wa-serif truncate text-sm font-semibold text-slate-50 sm:text-base">
-                  {uiText.japaneseChat}
+                  {chatSessions.find((s) => s.id === currentSessionId)?.title ?? uiText.japaneseChat}
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={() => createNewSession()}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/70 px-2.5 py-2 text-xs text-slate-200"
+              >
+                <PlusCircle className="h-3.5 w-3.5" /> New
+              </button>
             </header>
 
             <section className="glass-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-800/50 p-3 backdrop-blur-xl sm:p-5 lg:p-6">
@@ -2398,6 +2665,11 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                           : "rounded-br-sm bg-gradient-to-br from-wa-ruri to-wa-asagi text-slate-50 shadow-glass"
                       }`}
                     >
+                      {isAssistant && msg.topicLabel ? (
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300/90">
+                          {msg.topicLabel}
+                        </p>
+                      ) : null}
                       {isAssistant ? (
                         <p className="inline break-words">
                           {renderMessageWithVocab(
@@ -2412,6 +2684,50 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                       ) : (
                         <p className="break-words">{displayText}</p>
                       )}
+                      {isAssistant && msg.topicFeedback ? (
+                        <TopicActions
+                          saved={Boolean(msg.topicFeedback.saved)}
+                          onSave={() => {
+                            if (!currentSessionId) return;
+                            saveTopicPracticeResult(
+                              habitUserId,
+                              currentSessionId,
+                              msg.topicFeedback!.topicId,
+                              {
+                                correctedAnswer: msg.topicFeedback!.correctedAnswer,
+                                explanation: msg.topicFeedback!.explanation,
+                                alternativeExamples: msg.topicFeedback!.alternativeExamples,
+                                encouragement: "Saved. Keep going at your pace.",
+                              },
+                              msg.topicFeedback!.userAnswer,
+                            );
+                            setMessages((prev) =>
+                              prev.map((m2) =>
+                                m2.id === msg.id && m2.topicFeedback
+                                  ? {
+                                      ...m2,
+                                      topicFeedback: { ...m2.topicFeedback, saved: true },
+                                    }
+                                  : m2,
+                              ),
+                            );
+                          }}
+                          onTryAgain={() => {
+                            if (!activeTopicPrompt) return;
+                            setInput("");
+                            setMessages((prev) => [
+                              ...prev,
+                              {
+                                id: Date.now() + 99,
+                                role: "assistant",
+                                baseText: `Try one more for the same topic 👇\n${activeTopicPrompt.prompt}`,
+                                createdAt: new Date().toISOString(),
+                                topicLabel: "Topic Practice",
+                              },
+                            ]);
+                          }}
+                        />
+                      ) : null}
                       {isAssistant && (
                         <div className="mt-4 space-y-2.5 rounded-xl border border-yomu-glassBorder bg-yomu-glass/80 p-3.5 text-[11px] backdrop-blur-sm">
                           {msg.culturalNote && (
@@ -2479,6 +2795,47 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             </div>
 
             <div className="flex flex-shrink-0 flex-col pb-safe pt-3 sm:mt-5">
+              {topicSelectorMode !== "hidden" ? (
+                <TopicSelector
+                  mode={topicSelectorMode === "topic_list" ? "topic_list" : "entry"}
+                  topics={TOPIC_PROMPTS}
+                  showContinueLast={chatSessions.length > 1}
+                  onDailyMission={() => setActiveView("mission")}
+                  onTopicPractice={() => setTopicSelectorMode("topic_list")}
+                  onFreeChat={() => {
+                    setTopicSelectorMode("hidden");
+                    setActiveTopicPrompt(null);
+                  }}
+                  onContinueLast={() => {
+                    const next = chatSessions.find((s) => s.id !== currentSessionId) ?? chatSessions[0];
+                    if (next) openSession(next.id);
+                  }}
+                  onSelectTopic={(topic) => {
+                    setActiveTopicPrompt(topic);
+                    setTopicSelectorMode("hidden");
+                    const guide = buildTopicGuideMessage(topic);
+                    let sid = currentSessionId;
+                    if (!sid) {
+                      const created = startNewChatSession(habitUserId, "Topic Practice");
+                      sid = created.id;
+                      setCurrentSessionId(created.id);
+                      setChatSessions(getSessions(habitUserId));
+                    }
+                    addAssistantMessage(habitUserId, sid, guide);
+                    setChatSessions(getSessions(habitUserId));
+                    setMessages((prev) => [
+                      ...prev,
+                      {
+                        id: Date.now() + 77,
+                        role: "assistant",
+                        baseText: guide,
+                        createdAt: new Date().toISOString(),
+                        topicLabel: "Topic Practice",
+                      },
+                    ]);
+                  }}
+                />
+              ) : null}
               <div className="mb-2 flex flex-wrap gap-2 text-[11px] sm:mb-3 sm:gap-3">
                 {(
                   latestFollowUpContext?.followUps ?? [
@@ -2652,6 +3009,16 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
           </div>
         </div>
       )}
+
+      <SessionDrawer
+        open={sessionDrawerOpen}
+        sessions={chatSessions}
+        activeId={currentSessionId}
+        onClose={() => setSessionDrawerOpen(false)}
+        onNewChat={() => createNewSession()}
+        onOpenSession={openSession}
+        onDeleteSession={deleteSessionById}
+      />
 
       {/* 画面下部固定メニューバー（タップで確実に反応するよう pointer-events-auto と onPointerDown を使用） */}
       <nav

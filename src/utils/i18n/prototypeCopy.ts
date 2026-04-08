@@ -163,6 +163,23 @@ export type PrototypeUiText = {
   alertSignInReset: string;
   alertDisplayResetOk: string;
   alertSignInCommunityPost: string;
+  /** Daily habit loop */
+  habitMissionTitle: string;
+  habitTaskLabel: string;
+  habitMarkDone: string;
+  habitReviewTitle: string;
+  habitReviewCount: string;
+  habitReviewWordPrompt: string;
+  habitReviewMistakePrompt: string;
+  habitGotIt: string;
+  habitAgain: string;
+  habitProgressTitle: string;
+  habitStreakLine: string;
+  habitWordsLine: string;
+  habitMistakesLine: string;
+  habitFixedLine: string;
+  habitStartMission: string;
+  habitReviewNow: string;
 };
 
 const SETTINGS_EN: PrototypeSettingsText = {
@@ -342,6 +359,22 @@ const UI_EN: PrototypeUiText = {
   alertDisplayResetOk:
     "Display language reset to your first language! 🌸",
   alertSignInCommunityPost: "Sign in to post to the community.",
+  habitMissionTitle: "Today's mission",
+  habitTaskLabel: "Task",
+  habitMarkDone: "Done",
+  habitReviewTitle: "Review",
+  habitReviewCount: "You have {n} items to review today",
+  habitReviewWordPrompt: "Recall this word — what does it mean or when would you use it?",
+  habitReviewMistakePrompt: "Rewrite this more naturally:",
+  habitGotIt: "Got it",
+  habitAgain: "Not yet",
+  habitProgressTitle: "Your progress",
+  habitStreakLine: "{n} day streak",
+  habitWordsLine: "{n} words saved",
+  habitMistakesLine: "{n} mistake notes",
+  habitFixedLine: "{n} reviews cleared",
+  habitStartMission: "Open chat",
+  habitReviewNow: "Review now",
 };
 
 const SETTINGS_JA: PrototypeSettingsText = {
@@ -516,6 +549,22 @@ const UI_JA: PrototypeUiText = {
   alertSignInReset: "リセットするにはサインインしてください。",
   alertDisplayResetOk: "表示言語を開始言語に合わせました！🌸",
   alertSignInCommunityPost: "コミュニティに投稿するにはサインインしてください。",
+  habitMissionTitle: "今日のミッション",
+  habitTaskLabel: "タスク",
+  habitMarkDone: "完了",
+  habitReviewTitle: "復習",
+  habitReviewCount: "今日の復習が {n} 件あります",
+  habitReviewWordPrompt: "この語の意味や、使う場面を思い出してみましょう。",
+  habitReviewMistakePrompt: "より自然な日本語に直してみましょう:",
+  habitGotIt: "できた",
+  habitAgain: "もう一度",
+  habitProgressTitle: "進捗",
+  habitStreakLine: "連続 {n} 日",
+  habitWordsLine: "保存した語 {n}",
+  habitMistakesLine: "ミスメモ {n}",
+  habitFixedLine: "復習クリア {n}",
+  habitStartMission: "チャットで始める",
+  habitReviewNow: "復習する",
 };
 
 const SETTINGS_KO: PrototypeSettingsText = {
@@ -690,6 +739,22 @@ const UI_KO: PrototypeUiText = {
   alertSignInReset: "초기화하려면 로그인하세요.",
   alertDisplayResetOk: "표시 언어를 시작 언어에 맞췄습니다! 🌸",
   alertSignInCommunityPost: "커뮤니티에 게시하려면 로그인하세요.",
+  habitMissionTitle: "오늘의 미션",
+  habitTaskLabel: "과제",
+  habitMarkDone: "완료",
+  habitReviewTitle: "복습",
+  habitReviewCount: "오늘 복습할 항목이 {n}개 있어요",
+  habitReviewWordPrompt: "이 단어의 뜻이나 쓰는 상황을 떠올려 보세요.",
+  habitReviewMistakePrompt: "더 자연스러운 일본어로 고쳐 보세요:",
+  habitGotIt: "알겠어요",
+  habitAgain: "다시 볼게요",
+  habitProgressTitle: "진행 상황",
+  habitStreakLine: "연속 {n}일",
+  habitWordsLine: "저장한 단어 {n}개",
+  habitMistakesLine: "실수 메모 {n}개",
+  habitFixedLine: "복습 완료 {n}회",
+  habitStartMission: "채팅으로 시작",
+  habitReviewNow: "지금 복습",
 };
 
 const SETTINGS_ZH: PrototypeSettingsText = {
@@ -859,6 +924,22 @@ const UI_ZH: PrototypeUiText = {
   alertSignInReset: "登录后即可重置。",
   alertDisplayResetOk: "显示语言已与起始语言对齐！🌸",
   alertSignInCommunityPost: "登录后即可发布到社区。",
+  habitMissionTitle: "今日任务",
+  habitTaskLabel: "步骤",
+  habitMarkDone: "完成",
+  habitReviewTitle: "复习",
+  habitReviewCount: "今天有 {n} 项待复习",
+  habitReviewWordPrompt: "回忆这个词的意思或使用场景。",
+  habitReviewMistakePrompt: "把它改得更自然：",
+  habitGotIt: "掌握了",
+  habitAgain: "再练一次",
+  habitProgressTitle: "进度",
+  habitStreakLine: "连续 {n} 天",
+  habitWordsLine: "已保存 {n} 个词",
+  habitMistakesLine: "错误笔记 {n} 条",
+  habitFixedLine: "复习过关 {n} 次",
+  habitStartMission: "去聊天开始",
+  habitReviewNow: "现在复习",
 };
 
 const SETTINGS_BY_LANG: Record<Lang, PrototypeSettingsText> = {

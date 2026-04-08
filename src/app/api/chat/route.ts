@@ -1,4 +1,39 @@
+import type { CoachContextPayload } from "@/lib/habit/types";
+import { formatCoachContextForSystem } from "@/lib/habit/coach";
+
 const OPENAI_MODEL = "gpt-4o-mini";
+
+function parseCoachContextPayload(raw: unknown): CoachContextPayload | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const streak = typeof o.streak === "number" && Number.isFinite(o.streak) ? o.streak : 0;
+  const lastMissionSummary =
+    typeof o.lastMissionSummary === "string" ? o.lastMissionSummary.slice(0, 800) : "";
+  const lastSummary = typeof o.lastSummary === "string" ? o.lastSummary.slice(0, 500) : "";
+  const coachToneNote =
+    typeof o.coachToneNote === "string" ? o.coachToneNote.slice(0, 600) : "";
+  let recentMistakes: CoachContextPayload["recentMistakes"] = [];
+  if (Array.isArray(o.recentMistakes)) {
+    recentMistakes = o.recentMistakes
+      .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+      .slice(0, 5)
+      .map((m) => ({
+        original: typeof m.original === "string" ? m.original.slice(0, 200) : "",
+        corrected: typeof m.corrected === "string" ? m.corrected.slice(0, 200) : "",
+        explanation: typeof m.explanation === "string" ? m.explanation.slice(0, 300) : "",
+      }))
+      .filter((m) => m.original.length > 0);
+  }
+  return {
+    recentMistakes,
+    streak,
+    lastMissionSummary,
+    lastSummary,
+    coachToneNote:
+      coachToneNote ||
+      "You are a calm, supportive Japanese coach. Be encouraging without being loud.",
+  };
+}
 
 /** モデルが日本語システム文に引きずられないよう、核は英語で記述 */
 const BASE_SYSTEM_CORE = `
@@ -120,10 +155,11 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const body = await req.json().catch(() => ({}));
-  const { messages, tone, language: languageFromClient } = body as {
+  const { messages, tone, language: languageFromClient, coachContext } = body as {
     messages?: unknown;
     tone?: unknown;
     language?: unknown;
+    coachContext?: unknown;
   };
   const toneKey =
     typeof tone === "string" && (tone === "casual" || tone === "neutral" || tone === "business")
@@ -142,13 +178,15 @@ export async function POST(req: Request): Promise<Response> {
 
   const toneInstruction = getToneInstruction(uiLang, toneKey);
   const languageBlock = buildOutputLanguageBlock(uiLang);
+  const coachAppendix = formatCoachContextForSystem(parseCoachContextPayload(coachContext));
   const systemPrompt =
     languageBlock +
     "\n\n" +
     toneInstruction +
     "\n\n" +
     BASE_SYSTEM_CORE +
-    (uiLang === "ja" ? "\n" + BASE_SYSTEM_JA_EXTRA : "");
+    (uiLang === "ja" ? "\n" + BASE_SYSTEM_JA_EXTRA : "") +
+    coachAppendix;
 
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
