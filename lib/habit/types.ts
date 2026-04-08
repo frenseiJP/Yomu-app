@@ -62,6 +62,7 @@ export interface UserStats {
   totalMistakes: number;
   totalSessions: number;
   mistakesFixed: number;
+  totalTopicPractices: number;
 }
 
 export interface MissionStore {

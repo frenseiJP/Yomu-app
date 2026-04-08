@@ -2,6 +2,7 @@ import type { UserProgressV1, UserStats } from "@/lib/habit/types";
 import { readHabitJson, writeHabitJson } from "@/lib/habit/storage";
 import { recordsStorage } from "@/src/features/records/storage";
 import { todayYmd, addDaysYmd, toYmd } from "@/lib/habit/date";
+import { listTopicPracticeResultsByUser } from "@/lib/topic/service";
 
 const KIND = "progress_v1";
 
@@ -83,12 +84,15 @@ export function getUserStats(userId: string): UserStats {
     /* ignore */
   }
 
+  const topicPractices = listTopicPracticeResultsByUser(userId).length;
+
   return {
     streak: computeStreak(p.activeDays),
     totalWords: Math.max(savedWords, legacyWords),
     totalMistakes: mistakes,
     totalSessions: p.learningDays.length,
     mistakesFixed: p.mistakesFixedCount,
+    totalTopicPractices: topicPractices,
   };
 }
 

@@ -84,7 +84,12 @@ import SessionDrawer from "@/components/chat/SessionDrawer";
 import TopicSelector from "@/components/topic/TopicSelector";
 import TopicActions from "@/components/topic/TopicActions";
 import { buildTopicFeedbackMessage, buildTopicGuideMessage } from "@/components/topic/TopicMessageTemplate";
-import { TOPIC_PROMPTS, generateTopicFeedback, saveTopicPracticeResult } from "@/lib/topic/service";
+import {
+  TOPIC_PROMPTS,
+  generateTopicFeedback,
+  listTopicPracticeResultsByUser,
+  saveTopicPracticeResult,
+} from "@/lib/topic/service";
 import type { TopicPrompt, TopicFeedback } from "@/lib/topic/types";
 
 type Role = "user" | "assistant";
@@ -735,6 +740,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
     totalMistakes: 0,
     totalSessions: 0,
     mistakesFixed: 0,
+    totalTopicPractices: 0,
   });
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const politenessRef = useRef<Politeness>("casual");
@@ -1754,6 +1760,11 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
     return pts.map((p) => `${p.x},${p.y}`).join(" ");
   })();
 
+  const recentTopicResults = useMemo(
+    () => listTopicPracticeResultsByUser(habitUserId).slice(0, 3),
+    [habitUserId, stats.totalTopicPractices],
+  );
+
   return (
     <div
       className={`relative flex w-full max-w-[100vw] flex-col overflow-x-hidden overflow-y-hidden antialiased ${isLightTheme ? "frensei-theme-light bg-white text-neutral-900" : "bg-yomu-bg text-slate-100"} ${embedded ? "min-h-0 min-h-[200px] flex-1" : "h-[100dvh] max-h-[100dvh] sm:h-screen sm:max-h-none"}`}
@@ -1761,7 +1772,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
     >
       {/* メインエリア: ビューに応じて mission / record / chat を表示 */}
       <main
-        className={`relative z-0 min-h-0 flex-1 overflow-x-hidden ${activeView === "chat" ? "flex flex-col overflow-hidden" : "overflow-y-auto"}`}
+        className="relative z-0 min-h-0 flex-1 overflow-x-hidden flex flex-col overflow-hidden"
         style={{ paddingBottom: mainBottomPadding }}
       >
         {/* 初回・Daily Mission: 全画面表示 */}
@@ -1855,7 +1866,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
 
         {/* 記録: 成長の記録室 */}
         {activeView === "record" && (
-          <div className="mx-auto flex max-w-5xl flex-1 flex-col gap-5 px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
+          <div className="mx-auto flex h-full max-w-5xl flex-1 flex-col overflow-y-auto px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
             <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h1 className="font-wa-serif text-lg font-semibold text-slate-50 sm:text-xl">
@@ -1883,6 +1894,49 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                 </select>
               </div>
             </header>
+
+            <section className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Topic Practice
+                </p>
+                {recentTopicResults.length === 0 ? (
+                  <p className="mt-2 text-[12px] text-slate-400">
+                    まだ Topic Practice の保存がありません。
+                  </p>
+                ) : (
+                  <ul className="mt-2 space-y-1.5">
+                    {recentTopicResults.map((r) => (
+                      <li key={r.id} className="rounded-lg bg-slate-900/60 px-2.5 py-2 text-[12px] text-slate-300">
+                        <p className="line-clamp-1 text-slate-100">{r.userAnswer}</p>
+                        <p className="mt-1 line-clamp-1 text-[11px] text-slate-500">{r.correctedAnswer}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Vocabulary / Review
+                </p>
+                <p className="mt-2 text-[13px] text-slate-300">
+                  Due reviews: {dueReviews.words.length + dueReviews.mistakes.length}
+                </p>
+                <p className="mt-1 text-[12px] text-slate-400">
+                  Quick access to your personal learning library.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.href = "/vocabulary";
+                  }}
+                  className="mt-3 inline-flex rounded-xl bg-wa-ruri px-3 py-2 text-xs font-medium text-white"
+                >
+                  Open Vocabulary
+                </button>
+              </div>
+            </section>
 
             {vocab.length === 0 && !missionCompleted ? (
               // Empty state
@@ -2218,7 +2272,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
 
         {/* 設定: 表示やトーンの調整 */}
         {activeView === "settings" && (
-          <div className="mx-auto flex max-w-3xl flex-1 flex-col gap-5 px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
+          <div className="mx-auto flex h-full max-w-3xl flex-1 flex-col overflow-y-auto px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
             <header className="mb-1">
               <h1 className={`font-wa-serif text-lg font-semibold sm:text-xl ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>
                 {settingsText.title}
