@@ -33,10 +33,11 @@ export function createVocabularyFromCorrection(params: {
   correctedSentence: string;
   meaning?: string;
   sourceSessionId?: string;
+  sourceMessageId?: string;
   userId?: string;
 }): VocabularyItem {
   return handleSaveVocabularyItem({
-    type: "phrase",
+    type: "correction",
     term: params.correctedSentence,
     meaning: params.meaning ?? "Correction from your practice",
     exampleSentence: params.correctedSentence,
@@ -45,6 +46,7 @@ export function createVocabularyFromCorrection(params: {
     mistakeNote: "Saved from correction",
     sourceType: "chat",
     sourceSessionId: params.sourceSessionId,
+    sourceMessageId: params.sourceMessageId,
     tags: ["correction"],
     reviewStatus: "new",
     nextReviewDate: new Date().toISOString().slice(0, 10),

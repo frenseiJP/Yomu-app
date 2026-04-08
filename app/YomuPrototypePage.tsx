@@ -91,6 +91,8 @@ import {
   saveTopicPracticeResult,
 } from "@/lib/topic/service";
 import type { TopicPrompt, TopicFeedback } from "@/lib/topic/types";
+import type { SaveCandidate } from "@/lib/save-candidates/types";
+import { recommendCandidatesForMessage, saveCandidateToVocabulary } from "@/lib/save-candidates/service";
 
 type Role = "user" | "assistant";
 type Politeness = "casual" | "neutral" | "business";
@@ -123,6 +125,7 @@ type ChatTurnContext = {
   chipWords: { phrase: string; reading: string }[];
   followUps: [string, string, string];
   bestFollowUpIndex: number;
+  saveCandidates?: SaveCandidate[];
 };
 
 type Message = {
@@ -558,6 +561,20 @@ function renderMessageWithVocab(
       )}
     </>
   );
+}
+
+function guessCorrectedSentence(userText: string, assistantText: string): string | undefined {
+  const lines = assistantText
+    .split(/\n|。|！|!|？|\?/)
+    .map((s) => s.trim())
+    .filter((s) => /[ぁ-んァ-ン一-龯]/.test(s) && s.length >= 4 && s.length <= 60);
+  const normalizedUser = userText.replace(/\s+/g, "");
+  const candidate = lines.find((line) => {
+    const normalized = line.replace(/\s+/g, "");
+    if (normalized === normalizedUser) return false;
+    return /です|ます|ません|でしょう|ください|でした/.test(line);
+  });
+  return candidate;
 }
 
 /** プロトタイプ設定保存用。部分 upsert だと display_name 等が NULL になり DB エラーになるため、既存行は update のみ。 */
@@ -1325,6 +1342,14 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
         }
         chipWords = chipWords.slice(0, 3);
 
+        const saveCandidates = recommendCandidatesForMessage({
+          aiMessageContent: assistantText,
+          userMessageContent: userText,
+          correctedSentence: guessCorrectedSentence(userText, assistantText),
+          messageId: String(assistantId),
+          sessionId: currentSessionId ?? undefined,
+        });
+
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
@@ -1335,6 +1360,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                     chipWords,
                     followUps: shuffled.items,
                     bestFollowUpIndex: shuffled.bestIdx,
+                    saveCandidates,
                   },
                 }
               : m,
@@ -1346,7 +1372,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
         setContextLoadingId((id) => (id === assistantId ? null : id));
       }
     },
-    [appLang],
+    [appLang, currentSessionId],
   );
 
   function buildClaudeMessages(userText: string) {
@@ -1809,59 +1835,6 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                 <ProgressCard stats={stats} ui={uiText} isLightTheme={isLightTheme} />
               </div>
             ) : null}
-            <section
-              className={
-                missionCompleted
-                  ? "rounded-2xl border border-emerald-500/40 bg-emerald-950/30 p-6 shadow-glass backdrop-blur-xl sm:p-8"
-                  : "rounded-2xl border border-slate-800/50 bg-slate-950/60 p-6 shadow-glass backdrop-blur-xl sm:p-8"
-              }
-            >
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-wa-ruri" />
-                  <Sparkles className="h-4 w-4 text-wa-kinari/90" />
-                  <span className="font-wa-serif text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                    {uiText.dailyMission}
-                  </span>
-                </div>
-                {missionCompleted && (
-                  <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-300">
-                    <CheckCircle2 className="h-4 w-4" /> {uiText.missionCompleted}
-                  </span>
-                )}
-              </div>
-              <p className="font-wa-serif text-base leading-relaxed text-slate-100 sm:text-lg">
-                {todaysMission.title}
-              </p>
-              <p className="mt-4 text-sm leading-relaxed text-slate-400">
-                {todaysMission.cultureTip}
-              </p>
-              <div className="mt-6 flex items-center gap-2">
-                <span className="text-xs text-slate-500">{uiText.thisWeek}</span>
-                {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                  <div
-                    key={i}
-                    className={
-                      streakDays[i]
-                        ? "h-3 w-3 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]"
-                        : "h-3 w-3 rounded-full bg-slate-700/80"
-                    }
-                    title={
-                      i === new Date().getDay()
-                        ? uiText.streakToday
-                        : uiText.streakDayOtherTemplate.replace("{n}", String(i + 1))
-                    }
-                  />
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => createNewSession()}
-                className="btn-wa-hover btn-wa-hover-ruri mt-8 w-full rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 py-3.5 text-sm font-medium text-slate-100 shadow-glass hover:bg-wa-ruri/30"
-              >
-                {uiText.askInChat}
-              </button>
-            </section>
           </div>
         )}
 
@@ -2822,23 +2795,53 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                               {msg.tipsNote}
                             </p>
                           )}
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {(msg.chatContext?.chipWords?.length === 3
-                              ? msg.chatContext.chipWords
-                              : FALLBACK_VOCAB_CHIPS
-                            ).map((chip, chipIdx) => (
-                              <button
-                                key={`${chip.phrase}-${chipIdx}`}
-                                type="button"
-                                onClick={() =>
-                                  setVocabMenu({ phrase: chip.phrase, reading: chip.reading })
-                                }
-                                className="btn-wa-hover rounded-full border border-yomu-glassBorder bg-yomu-glass px-3 py-1.5 text-[10px] text-slate-300 hover:border-wa-akane hover:text-slate-100"
-                              >
-                                {chip.phrase}
-                              </button>
-                            ))}
-                          </div>
+                          {msg.chatContext?.saveCandidates?.length ? (
+                            <div className="mt-2 space-y-2">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                                Recommended to save
+                              </p>
+                              {msg.chatContext.saveCandidates.map((cand) => (
+                                <div
+                                  key={cand.id}
+                                  className="rounded-lg border border-slate-700/70 bg-slate-900/70 px-2.5 py-2"
+                                >
+                                  <p className="text-[10px] font-semibold text-slate-400">{cand.label}</p>
+                                  <p className="mt-0.5 text-[12px] text-slate-100">{cand.primaryText}</p>
+                                  {cand.secondaryText ? (
+                                    <p className="mt-0.5 text-[10px] text-slate-400">{cand.secondaryText}</p>
+                                  ) : null}
+                                  {cand.explanation ? (
+                                    <p className="mt-0.5 text-[10px] text-slate-500">{cand.explanation}</p>
+                                  ) : null}
+                                  <button
+                                    type="button"
+                                    disabled={cand.alreadySaved}
+                                    onClick={() => {
+                                      saveCandidateToVocabulary(cand);
+                                      setMessages((prev) =>
+                                        prev.map((m2) =>
+                                          m2.id === msg.id && m2.chatContext?.saveCandidates
+                                            ? {
+                                                ...m2,
+                                                chatContext: {
+                                                  ...m2.chatContext,
+                                                  saveCandidates: m2.chatContext.saveCandidates.map((c2) =>
+                                                    c2.id === cand.id ? { ...c2, alreadySaved: true } : c2,
+                                                  ),
+                                                },
+                                              }
+                                            : m2,
+                                        ),
+                                      );
+                                    }}
+                                    className="mt-2 rounded-md border border-wa-ruri/50 bg-wa-ruri/20 px-2.5 py-1 text-[10px] font-medium text-slate-100 disabled:border-slate-700 disabled:bg-slate-800/70 disabled:text-slate-500"
+                                  >
+                                    {cand.alreadySaved ? "Saved" : "Save"}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
                         </div>
                       )}
                     </div>

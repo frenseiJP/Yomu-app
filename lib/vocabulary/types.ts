@@ -1,4 +1,4 @@
-export type VocabularyItemType = "word" | "phrase";
+export type VocabularyItemType = "word" | "phrase" | "correction";
 export type VocabularySourceType = "chat" | "topic" | "review" | "manual";
 export type VocabularyReviewStatus = "new" | "learning" | "reviewed";
 
@@ -8,8 +8,8 @@ export interface VocabularyItem {
   type: VocabularyItemType;
   term: string;
   reading?: string;
-  meaning: string;
-  exampleSentence: string;
+  meaning?: string;
+  exampleSentence?: string;
   exampleTranslation?: string;
   userSentence?: string;
   correctedSentence?: string;
@@ -18,6 +18,7 @@ export interface VocabularyItem {
   topicCategory?: string;
   sourceType: VocabularySourceType;
   sourceSessionId?: string;
+  sourceMessageId?: string;
   tags: string[];
   reviewStatus: VocabularyReviewStatus;
   nextReviewDate?: string;

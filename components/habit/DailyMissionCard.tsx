@@ -66,7 +66,7 @@ export default function DailyMissionCard({
         {mission.tasks.map((task, i) => (
           <li
             key={task.id}
-            className={`flex gap-2 rounded-xl border px-3 py-2.5 text-left text-sm ${
+            className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 text-left text-sm ${
               isLightTheme
                 ? "border-neutral-200 bg-[#f8f7f4]"
                 : "border-slate-800/70 bg-slate-900/40"
@@ -92,6 +92,20 @@ export default function DailyMissionCard({
               </p>
               <p className={`mt-0.5 leading-snug ${titleCls}`}>{task.instruction}</p>
             </div>
+            <button
+              type="button"
+              onClick={() => onToggleTask(task.id)}
+              disabled={task.completed}
+              className={`ml-1 rounded-lg px-2 py-1 text-[10px] font-medium ${
+                task.completed
+                  ? "bg-emerald-500/20 text-emerald-300"
+                  : isLightTheme
+                    ? "border border-neutral-300 bg-white text-neutral-700"
+                    : "border border-slate-600 bg-slate-900 text-slate-200"
+              }`}
+            >
+              {task.completed ? ui.missionCompleted : ui.habitMarkDone}
+            </button>
           </li>
         ))}
       </ol>
