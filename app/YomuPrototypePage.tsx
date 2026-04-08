@@ -676,6 +676,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
   const [isTyping, setIsTyping] = useState(false);
   const [politeness, setPoliteness] = useState<Politeness>("casual");
   const [furiganaOn, setFuriganaOn] = useState(true);
+  const [chatSettingsOpen, setChatSettingsOpen] = useState(false);
   const [jlptLevel, setJlptLevel] = useState<(typeof JLPT_LEVELS)[number]>("N3");
   const [showTranslations, setShowTranslations] = useState(true);
   const [speechRate, setSpeechRate] = useState(1);
@@ -2550,8 +2551,8 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
 
         {/* チャット: 入力欄は常に画面下部に固定、ログのみスクロール */}
         {activeView === "chat" && (
-          <div className="flex min-h-0 w-full max-w-6xl flex-1 flex-col gap-3 px-3 py-4 sm:gap-4 sm:px-5 sm:py-6 lg:mx-auto lg:gap-4 lg:px-8 lg:py-6">
-            <header className="flex flex-shrink-0 items-center justify-between gap-3">
+          <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-2 px-2 py-2 sm:gap-3 sm:px-3 sm:py-3 lg:px-4">
+            <header className="flex flex-shrink-0 items-center justify-between gap-2">
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <button
                   type="button"
@@ -2568,17 +2569,27 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                   {chatSessions.find((s) => s.id === currentSessionId)?.title ?? uiText.japaneseChat}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => createNewSession()}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/70 px-2.5 py-2 text-xs text-slate-200"
-              >
-                <PlusCircle className="h-3.5 w-3.5" /> New
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setChatSettingsOpen((v) => !v)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/70 px-2.5 py-2 text-xs text-slate-200"
+                >
+                  ⚙ Settings
+                </button>
+                <button
+                  type="button"
+                  onClick={() => createNewSession()}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/70 px-2.5 py-2 text-xs text-slate-200"
+                >
+                  <PlusCircle className="h-3.5 w-3.5" /> New
+                </button>
+              </div>
             </header>
 
-            <section className="glass-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-800/50 p-3 backdrop-blur-xl sm:p-5 lg:p-6">
-            <div className="mb-4 flex flex-shrink-0 flex-col gap-3 border-b border-yomu-glassBorder pb-3 sm:mb-5 sm:flex-row sm:items-center sm:justify-between sm:pb-4">
+            <section className="glass-panel relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-800/40 p-2 backdrop-blur-xl sm:p-3">
+            {chatSettingsOpen ? (
+            <div className="mb-2 flex flex-shrink-0 flex-col gap-2 rounded-xl border border-yomu-glassBorder bg-slate-900/50 p-2.5 sm:mb-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-0.5">
                 <p className="font-wa-serif text-xs font-medium text-slate-100 sm:text-sm">
                   {uiText.coachLine}
@@ -2674,8 +2685,9 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                 </button>
               </div>
             </div>
+            ) : null}
 
-            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden pr-1 text-[13px] leading-relaxed">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overflow-x-hidden px-1 pb-20 pt-1 text-[14px] leading-relaxed sm:space-y-4 sm:pb-24">
               {messages.map((msg) => {
                 const isAssistant = msg.role === "assistant";
                 const toneForMessage = isAssistant
@@ -2713,10 +2725,10 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                       </div>
                     )}
                     <div
-                      className={`w-fit max-w-[min(92%,32rem)] rounded-2xl px-3 py-3 shadow-glass sm:px-4 ${
+                      className={`w-fit max-w-[min(90%,50rem)] rounded-2xl px-3 py-2.5 sm:px-4 ${
                         isAssistant
-                          ? "rounded-bl-sm border border-yomu-glassBorder bg-yomu-glass text-slate-100 backdrop-blur-sm"
-                          : "rounded-br-sm bg-gradient-to-br from-wa-ruri to-wa-asagi text-slate-50 shadow-glass"
+                          ? "rounded-bl-sm border border-slate-700/70 bg-slate-800/75 text-slate-100"
+                          : "rounded-br-sm border border-wa-ruri/40 bg-wa-ruri/25 text-slate-50"
                       }`}
                     >
                       {isAssistant && msg.topicLabel ? (
@@ -2890,38 +2902,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                   }}
                 />
               ) : null}
-              <div className="mb-2 flex flex-wrap gap-2 text-[11px] sm:mb-3 sm:gap-3">
-                {(
-                  latestFollowUpContext?.followUps ?? [
-                    uiText.quickPrompt1,
-                    uiText.quickPrompt2,
-                    uiText.quickPrompt3,
-                  ]
-                ).map((s, idx) => (
-                  <button
-                    key={`${idx}-${s.slice(0, 32)}`}
-                    type="button"
-                    disabled={isLoading}
-                    onClick={() => handleQuickSend(s, idx)}
-                    className="btn-wa-hover btn-wa-hover-ruri min-h-[40px] rounded-full border border-yomu-glassBorder bg-yomu-glass px-4 py-2 text-slate-300 backdrop-blur-sm hover:border-wa-ruri/50 hover:text-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-              {contextLoadingId !== null &&
-                contextLoadingId === lastAssistantMessageId && (
-                  <p className="mb-2 text-[10px] text-slate-500">{uiText.chatContextLoadingHint}</p>
-                )}
-              {followUpFeedback === "nice" && (
-                <p className="mb-2 text-[10px] font-medium text-emerald-400/90">
-                  {uiText.chatFollowUpNice}
-                </p>
-              )}
-              {followUpFeedback === "ok" && (
-                <p className="mb-2 text-[10px] text-slate-400">{uiText.chatFollowUpOk}</p>
-              )}
-              <div className="glass-input flex items-end gap-2 rounded-2xl px-3 py-2.5 shadow-glass sm:gap-3 sm:px-4 sm:py-3">
+              <div className="glass-input absolute inset-x-2 bottom-2 flex items-end gap-2 rounded-2xl border border-slate-700/70 bg-slate-950/90 px-3 py-2 shadow-glass sm:inset-x-3 sm:bottom-3 sm:gap-3 sm:px-4 sm:py-3">
                 <button
                   type="button"
                   className="btn-wa-hover btn-wa-hover-ruri flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-yomu-glassBorder bg-yomu-glass text-slate-300 hover:border-wa-ruri hover:text-slate-50 sm:h-9 sm:w-9"
