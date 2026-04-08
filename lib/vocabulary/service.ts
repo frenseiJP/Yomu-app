@@ -129,11 +129,11 @@ function topicToPseudoItem(r: TopicPracticeResult, userId: string): VocabularyIt
     exampleSentence: r.correctedAnswer,
     userSentence: r.userAnswer,
     correctedSentence: r.correctedAnswer,
-    aiComment: r.encouragement,
+    aiComment: r.explanation,
     sourceType: "topic",
     tags: ["topic_practice"],
     reviewStatus: "learning",
     createdAt: r.createdAt,
-    updatedAt: r.updatedAt,
+    updatedAt: r.createdAt,
   };
 }
