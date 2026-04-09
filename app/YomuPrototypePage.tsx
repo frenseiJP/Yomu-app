@@ -73,7 +73,6 @@ import {
 } from "@/lib/habit";
 import DailyMissionCard from "@/components/habit/DailyMissionCard";
 import ReviewCard from "@/components/habit/ReviewCard";
-import ProgressCard from "@/components/habit/ProgressCard";
 import type { ChatMessage as StoredChatMessage, ChatSession as StoredChatSession } from "@/lib/chat/types";
 import {
   addAssistantMessage,
@@ -1820,9 +1819,9 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
       >
         {/* 初回・Daily Mission: 全画面表示 */}
         {activeView === "mission" && (
-          <div className="mx-auto flex min-h-full max-w-lg flex-col justify-center px-4 py-8 sm:px-6 sm:py-12">
+          <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
             {dailyMission ? (
-              <div className="mb-4 space-y-3">
+              <div className="space-y-3 pb-4">
                 <DailyMissionCard
                   mission={dailyMission}
                   ui={uiText}
@@ -1848,32 +1847,6 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                   onUpdated={() => refreshHabitData(habitUserId)}
                   onOpenChat={(prefill) => createNewSession(prefill)}
                 />
-                <ProgressCard stats={stats} ui={uiText} isLightTheme={isLightTheme} />
-                <div className="rounded-2xl border border-slate-800/60 bg-slate-950/70 p-3">
-                  <p className="text-[11px] text-slate-400">Continue learning</p>
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = chatSessions[0];
-                        if (next) openSession(next.id);
-                        else createNewSession();
-                        setActiveView("chat");
-                      }}
-                      className="rounded-lg bg-wa-ruri/25 px-3 py-2 text-xs text-slate-100"
-                    >
-                      Continue Chat
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveView("record")}
-                      className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200"
-                    >
-                      Open Progress
-                    </button>
-                  </div>
-                </div>
-                <SeasonalProgressCard state={seasonalState} compact />
               </div>
             ) : null}
           </div>
@@ -2155,55 +2128,112 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
           </div>
         )}
 
-        {/* Topic: guided expression practice */}
+        {/* Topic tab: share Japanese + English (community board); stays on this screen after post */}
         {activeView === "community" && (
-          <div className="mx-auto flex max-w-5xl flex-1 flex-col gap-4 px-3 py-4 sm:gap-5 sm:px-5 sm:py-6 lg:px-8 lg:py-6">
+          <div className="mx-auto flex h-full max-w-5xl flex-1 flex-col gap-4 overflow-y-auto px-3 py-4 sm:gap-5 sm:px-5 sm:py-6 lg:px-8 lg:py-6">
             <header className="space-y-1">
               <h1 className="font-wa-serif text-lg font-semibold text-slate-50 sm:text-xl">
                 Topic
               </h1>
               <p className="text-[11px] text-slate-400 sm:text-xs">
-                Guided Japanese expression practice. Calm, focused, one-screen flow.
+                {uiText.communitySubtitle}
               </p>
             </header>
-            <section className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
-              <p className="text-xs text-slate-400">Pick a topic and practice in chat.</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {TOPIC_PROMPTS.slice(0, 6).map((topic) => (
-                  <button
-                    key={topic.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveView("chat");
-                      setTopicSelectorMode("hidden");
-                      setActiveTopicPrompt(topic);
-                      let sid = currentSessionId;
-                      if (!sid) {
-                        const created = startNewChatSession(habitUserId, "Topic Practice");
-                        sid = created.id;
-                        setCurrentSessionId(created.id);
-                        setChatSessions(getSessions(habitUserId));
-                      }
-                      const guide = buildTopicGuideMessage(topic);
-                      addAssistantMessage(habitUserId, sid, guide);
-                      setMessages((prev) => [
-                        ...prev,
-                        {
-                          id: Date.now() + Math.floor(Math.random() * 1000),
-                          role: "assistant",
-                          baseText: guide,
-                          createdAt: new Date().toISOString(),
-                          topicLabel: "Topic Practice",
-                        },
-                      ]);
-                    }}
-                    className="rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-2 text-left"
-                  >
-                    <p className="text-xs font-medium text-slate-100">{topic.title}</p>
-                    <p className="mt-0.5 line-clamp-2 text-[11px] text-slate-400">{topic.prompt}</p>
-                  </button>
-                ))}
+
+            <section className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-[0_22px_80px_rgba(0,0,0,0.9)] backdrop-blur-xl sm:p-5">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-wa-ruri" />
+                  <span className="font-wa-serif text-[11px] font-semibold tracking-[0.18em] text-slate-400">
+                    {uiText.newPostBadge}
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-500">{uiText.signedInOnly}</span>
               </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-slate-300">{uiText.communityLabelJa}</label>
+                  <textarea
+                    value={communityJa}
+                    onChange={(e) => setCommunityJa(e.target.value)}
+                    rows={3}
+                    placeholder={uiText.communityPlaceholderJa}
+                    className="w-full resize-none rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-[13px] text-slate-100 placeholder:text-slate-500 focus:border-wa-ruri focus:outline-none focus:ring-1 focus:ring-wa-ruri/60"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-slate-300">{uiText.communityLabelEn}</label>
+                  <textarea
+                    value={communityEn}
+                    onChange={(e) => setCommunityEn(e.target.value)}
+                    rows={3}
+                    placeholder={uiText.communityPlaceholderEn}
+                    className="w-full resize-none rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-[13px] text-slate-100 placeholder:text-slate-500 focus:border-wa-ruri focus:outline-none focus:ring-1 focus:ring-wa-ruri/60"
+                  />
+                </div>
+                {communityError && <p className="text-[11px] text-rose-400">{communityError}</p>}
+                <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-[11px] text-slate-500">{uiText.communityFormFooterHint}</p>
+                  <button
+                    type="button"
+                    disabled={communityLoading || !communityJa.trim() || !communityEn.trim()}
+                    onClick={handleCommunitySubmit}
+                    className="btn-wa-hover btn-wa-hover-ruri inline-flex items-center justify-center gap-2 rounded-xl bg-wa-ruri px-4 py-2.5 text-[12px] font-medium text-slate-50 shadow-glass disabled:cursor-not-allowed disabled:bg-wa-hai/50 disabled:text-slate-300"
+                  >
+                    {communityLoading ? uiText.posting : uiText.post}
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-3 pb-4">
+              {communityLoading && communityPosts.length === 0 && (
+                <p className="text-[12px] text-slate-400">{uiText.loadingPosts}</p>
+              )}
+              {!communityLoading && communityPosts.length === 0 && !communityError && (
+                <p className="text-[12px] text-slate-500">{uiText.noPostsYet}</p>
+              )}
+              {communityPosts.map((post) => (
+                <article
+                  key={post.id}
+                  className="rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-950/80 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.85)] backdrop-blur-xl sm:p-5"
+                >
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/80 text-[11px] text-slate-300">
+                        JP
+                      </div>
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/80 text-[11px] text-slate-300">
+                        EN
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-slate-500">
+                      {new Date(post.created_at).toLocaleString(dateLocale, {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                  <div className="space-y-3 text-[13px] leading-relaxed text-slate-200">
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                        {uiText.communityLabelJa}
+                      </p>
+                      <p className="whitespace-pre-wrap text-slate-100">{post.japanese}</p>
+                    </div>
+                    <div className="h-px w-full bg-gradient-to-r from-slate-800/0 via-slate-700/70 to-slate-800/0" />
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                        {uiText.communityLabelEn}
+                      </p>
+                      <p className="whitespace-pre-wrap text-slate-200">{post.english}</p>
+                    </div>
+                  </div>
+                </article>
+              ))}
             </section>
           </div>
         )}

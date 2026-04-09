@@ -1,7 +1,7 @@
 "use client";
 
 import { Target, Sparkles, CheckCircle2 } from "lucide-react";
-import type { HabitDailyMission, MissionTask } from "@/lib/habit/types";
+import type { HabitDailyMission } from "@/lib/habit/types";
 import type { PrototypeUiText } from "@/src/utils/i18n/prototypeCopy";
 
 type Props = {
@@ -12,21 +12,6 @@ type Props = {
   onOpenChat: () => void;
   allComplete: boolean;
 };
-
-function taskTypeLabel(t: MissionTask["type"], ui: PrototypeUiText): string {
-  switch (t) {
-    case "speak":
-      return ui.habitTaskLabel;
-    case "correct":
-      return ui.habitTaskLabel;
-    case "recall":
-      return ui.habitTaskLabel;
-    case "create_sentence":
-      return ui.habitTaskLabel;
-    default:
-      return ui.habitTaskLabel;
-  }
-}
 
 export default function DailyMissionCard({
   mission,
@@ -62,41 +47,51 @@ export default function DailyMissionCard({
         )}
       </div>
       <p className={`text-[11px] ${subCls}`}>{mission.date}</p>
-      <ol className="mt-3 space-y-2">
-        {mission.tasks.map((task, i) => (
+      <ol className="mt-3 list-none space-y-2.5">
+        {mission.tasks.slice(0, 3).map((task, i) => (
           <li
             key={task.id}
-            className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 text-left text-sm ${
+            className={`flex flex-col gap-2 rounded-xl border px-3 py-3 text-left text-sm sm:flex-row sm:items-start sm:gap-3 ${
               isLightTheme
                 ? "border-neutral-200 bg-[#f8f7f4]"
                 : "border-slate-800/70 bg-slate-900/40"
             }`}
           >
-            <button
-              type="button"
-              onClick={() => onToggleTask(task.id)}
-              className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border text-[10px] ${
-                task.completed
-                  ? "border-emerald-500/60 bg-emerald-500/20 text-emerald-300"
-                  : isLightTheme
-                    ? "border-neutral-300 bg-white text-neutral-400"
-                    : "border-slate-600 bg-slate-900 text-slate-500"
-              }`}
-              aria-label={ui.habitMarkDone}
-            >
-              {task.completed ? "✓" : ""}
-            </button>
-            <div className="min-w-0 flex-1">
-              <p className={`text-[10px] font-medium uppercase tracking-wide opacity-70 ${subCls}`}>
-                {i + 1}. {taskTypeLabel(task.type, ui)}
-              </p>
-              <p className={`mt-0.5 leading-snug ${titleCls}`}>{task.instruction}</p>
+            <div className="flex w-full items-start gap-2 sm:min-w-0 sm:flex-1">
+              <span
+                className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                  isLightTheme ? "bg-neutral-200 text-neutral-800" : "bg-slate-800 text-slate-200"
+                }`}
+                aria-hidden
+              >
+                {i + 1}
+              </span>
+              <button
+                type="button"
+                onClick={() => onToggleTask(task.id)}
+                className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border text-[10px] ${
+                  task.completed
+                    ? "border-emerald-500/60 bg-emerald-500/20 text-emerald-300"
+                    : isLightTheme
+                      ? "border-neutral-300 bg-white text-neutral-400"
+                      : "border-slate-600 bg-slate-900 text-slate-500"
+                }`}
+                aria-label={ui.habitMarkDone}
+              >
+                {task.completed ? "✓" : ""}
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className={`text-[10px] font-medium uppercase tracking-wide opacity-70 ${subCls}`}>
+                  {ui.habitTaskLabel} {i + 1} / 3
+                </p>
+                <p className={`mt-1 text-[13px] leading-relaxed sm:text-sm ${titleCls}`}>{task.instruction}</p>
+              </div>
             </div>
             <button
               type="button"
               onClick={() => onToggleTask(task.id)}
               disabled={task.completed}
-              className={`ml-1 rounded-lg px-2 py-1 text-[10px] font-medium ${
+              className={`w-full flex-shrink-0 rounded-lg px-3 py-2 text-[11px] font-medium sm:w-auto sm:self-start ${
                 task.completed
                   ? "bg-emerald-500/20 text-emerald-300"
                   : isLightTheme

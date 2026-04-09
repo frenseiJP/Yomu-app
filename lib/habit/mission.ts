@@ -123,14 +123,17 @@ export function getOrCreateDailyMission(userId: string): HabitDailyMission {
   const today = todayYmd();
   const store = readHabitJson<MissionStore>(KIND, userId, { byDate: {} });
   const existing = store.byDate[today];
-  if (existing && existing.tasks?.length) return existing;
+  // Require exactly 3 tasks so the home UI always shows Task 1–3 reliably.
+  if (existing && Array.isArray(existing.tasks) && existing.tasks.length === 3) {
+    return existing;
+  }
 
   const mission: HabitDailyMission = {
-    id: generateRecordId("dmission"),
+    id: existing?.id ?? generateRecordId("dmission"),
     userId,
     date: today,
     tasks: generateTasks(userId),
-    createdAt: new Date().toISOString(),
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
   };
   store.byDate[today] = mission;
   writeHabitJson(KIND, userId, store);
