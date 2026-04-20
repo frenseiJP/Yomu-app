@@ -5,7 +5,6 @@ import "./globals.css";
 import { AuthProvider } from "@/src/contexts/AuthContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import Footer from "@/components/Footer";
-import MobileAppBridge from "@/components/MobileAppBridge";
 
 export const metadata: Metadata = {
   title: "Yomu — Japanese learning coach",
@@ -44,7 +43,6 @@ export default function RootLayout({
             <LanguageProvider>
               {children}
               <Analytics />
-              <MobileAppBridge />
               <Footer />
             </LanguageProvider>
           </AuthProvider>

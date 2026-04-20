@@ -2,11 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
-};
-
 function isLineInAppBrowser(ua: string): boolean {
   return /Line\/|LIFF|NAVER\(inapp/i.test(ua);
 }
@@ -16,7 +11,6 @@ function isIos(ua: string): boolean {
 }
 
 export default function MobileAppBridge() {
-  const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isLine, setIsLine] = useState(false);
   const [isIosLine, setIsIosLine] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -29,9 +23,10 @@ export default function MobileAppBridge() {
     setIsIosLine(line && isIos(ua));
     setDismissed(window.sessionStorage.getItem("line_notice_dismissed") === "1");
 
+    // Suppress browser-native "Add to Home Screen" prompt.
+    // We do not show a custom install button either.
     const onBeforeInstall = (e: Event) => {
       e.preventDefault();
-      setInstallEvt(e as BeforeInstallPromptEvent);
     };
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
 
@@ -47,9 +42,8 @@ export default function MobileAppBridge() {
   }, []);
 
   const showLineHint = isLine && !dismissed;
-  const showInstall = Boolean(installEvt);
 
-  const canShow = showLineHint || showInstall;
+  const canShow = showLineHint;
   const hint = useMemo(() => {
     if (isIosLine) {
       return "LINE内ブラウザだと操作しづらいです。右上メニューから Safari で開くと使いやすくなります。";
@@ -82,20 +76,6 @@ export default function MobileAppBridge() {
             className="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white"
           >
             外部ブラウザで開く
-          </button>
-        ) : null}
-        {showInstall ? (
-          <button
-            type="button"
-            onClick={async () => {
-              if (!installEvt) return;
-              await installEvt.prompt();
-              await installEvt.userChoice.catch(() => null);
-              setInstallEvt(null);
-            }}
-            className="rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white"
-          >
-            ホーム画面に追加
           </button>
         ) : null}
         {showLineHint ? (
