@@ -5,11 +5,22 @@ import "./globals.css";
 import { AuthProvider } from "@/src/contexts/AuthContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import Footer from "@/components/Footer";
-import FeedbackButton from "@/components/FeedbackButton";
+import MobileAppBridge from "@/components/MobileAppBridge";
 
 export const metadata: Metadata = {
   title: "Yomu — Japanese learning coach",
   description: "Yomu: learn Japanese and culture with AI.",
+  applicationName: "Frensei",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icons/icon-192.svg",
+    apple: "/icons/icon-192.svg",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Frensei",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {
@@ -33,7 +44,7 @@ export default function RootLayout({
             <LanguageProvider>
               {children}
               <Analytics />
-              <FeedbackButton />
+              <MobileAppBridge />
               <Footer />
             </LanguageProvider>
           </AuthProvider>

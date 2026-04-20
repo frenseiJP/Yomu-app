@@ -1,2 +1,5 @@
-export { default } from "@/src/app/community/new/page";
+import { redirect } from "next/navigation";
 
+export default function CommunityNewRedirectPage() {
+  redirect("/topic");
+}

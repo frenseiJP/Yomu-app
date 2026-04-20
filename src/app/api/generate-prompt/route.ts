@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { createClient } from "@/src/utils/supabase/server";
+import { consumeRateLimit, getClientIp } from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -50,7 +51,23 @@ async function generatePromptWithOpenAI(apiKey: string): Promise<{
   return { title_jp, title_en };
 }
 
-export async function POST(): Promise<Response> {
+export async function POST(req: Request): Promise<Response> {
+  const ip = getClientIp(req);
+  const rl = await consumeRateLimit({
+    key: `generate_prompt:${ip}`,
+    limit: 8,
+    windowMs: 60_000,
+  });
+  if (!rl.ok) {
+    return Response.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: { "retry-after": String(rl.retryAfterSec) },
+      },
+    );
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return Response.json({ error: "OPENAI_API_KEY is missing" }, { status: 500 });
@@ -74,15 +91,7 @@ export async function POST(): Promise<Response> {
     title_en = generated.title_en;
   } catch (error) {
     console.error("OpenAI prompt generation failed:", error);
-    return Response.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to generate prompt with OpenAI",
-      },
-      { status: 500 }
-    );
+    return Response.json({ error: "Failed to generate prompt with OpenAI" }, { status: 500 });
   }
 
   const scheduled_date = new Date().toISOString().split("T")[0];
@@ -101,7 +110,7 @@ export async function POST(): Promise<Response> {
 
   if (error) {
     console.error("Supabase upsert to prompts failed:", error);
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: "Failed to save prompt" }, { status: 500 });
   }
 
   return Response.json(data);

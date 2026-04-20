@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
+import { consumeRateLimit, getClientIp } from "@/lib/security/rateLimit";
 
 const MODEL = "gpt-4o-mini";
+const MAX_ASSISTANT_TEXT_CHARS = 20_000;
+const MAX_USER_TEXT_CHARS = 2_000;
 
 type UiLang = "ja" | "en" | "zh" | "ko";
 
@@ -48,9 +51,25 @@ function parseFollowUps(raw: unknown): string[] {
 }
 
 /**
- * アシスタント返信に即した語彙ハイライト・チップ・次の3択フォローを生成する。
+ * アシスタント返信に即した語彙ハイライトと次の3択フォローを生成する。
  */
 export async function POST(req: Request): Promise<Response> {
+  const ip = getClientIp(req);
+  const rl = await consumeRateLimit({
+    key: `chat_context:${ip}`,
+    limit: 40,
+    windowMs: 60_000,
+  });
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: { "retry-after": String(rl.retryAfterSec) },
+      },
+    );
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -61,11 +80,16 @@ export async function POST(req: Request): Promise<Response> {
 
   const body = await req.json().catch(() => ({}));
   const assistantText =
-    typeof body.assistantText === "string" ? body.assistantText.trim() : "";
-  const userText = typeof body.userText === "string" ? body.userText.trim() : "";
+    typeof body.assistantText === "string"
+      ? body.assistantText.trim().slice(0, MAX_ASSISTANT_TEXT_CHARS)
+      : "";
+  const userText =
+    typeof body.userText === "string"
+      ? body.userText.trim().slice(0, MAX_USER_TEXT_CHARS)
+      : "";
   const uiLang = normalizeUiLang(body.language);
 
-  if (!assistantText || assistantText.length > 32000) {
+  if (!assistantText) {
     return NextResponse.json({ error: "assistantText required" }, { status: 400 });
   }
 
@@ -74,7 +98,6 @@ export async function POST(req: Request): Promise<Response> {
   const instruction = [
     "Return ONLY one JSON object (no markdown) with keys:",
     "highlightPhrases: array of {phrase, reading} — 3 to 8 Japanese words or short phrases that appear verbatim in the assistant reply OR are clearly the focal teaching term in that reply (e.g. user asked about 三択 → include 三択).",
-    "chipWords: array of exactly 3 {phrase, reading} — best vocabulary from this turn for tap-to-save chips; should match important terms from the reply.",
     "followUps: array of exactly 3 short strings — possible NEXT user messages to continue the lesson, written entirely in "
       + langName +
       ".",
@@ -97,7 +120,7 @@ export async function POST(req: Request): Promise<Response> {
         {
           role: "system",
           content:
-            "You output compact JSON only. Keys: highlightPhrases, chipWords, followUps, bestFollowUpIndex.",
+            "You output compact JSON only. Keys: highlightPhrases, followUps, bestFollowUpIndex.",
         },
         {
           role: "user",
@@ -113,9 +136,8 @@ export async function POST(req: Request): Promise<Response> {
   });
 
   if (!openaiRes.ok) {
-    const t = await openaiRes.text().catch(() => "");
     return NextResponse.json(
-      { error: t || "OpenAI request failed" },
+      { error: "OpenAI request failed" },
       { status: 502 },
     );
   }
@@ -132,7 +154,6 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const highlightPhrases = parsePhrases(parsed.highlightPhrases, 8);
-  let chipWords = parsePhrases(parsed.chipWords, 3);
   const followUps = parseFollowUps(parsed.followUps);
   let bestFollowUpIndex =
     typeof parsed.bestFollowUpIndex === "number"
@@ -147,17 +168,8 @@ export async function POST(req: Request): Promise<Response> {
   }
   if (bestFollowUpIndex >= followUps.length) bestFollowUpIndex = 0;
 
-  while (chipWords.length < 3) {
-    const h = highlightPhrases[chipWords.length];
-    if (h) chipWords.push(h);
-    else if (highlightPhrases[0]) chipWords.push(highlightPhrases[0]);
-    else break;
-  }
-  chipWords = chipWords.slice(0, 3);
-
   return NextResponse.json({
     highlightPhrases,
-    chipWords,
     followUps,
     bestFollowUpIndex,
   });

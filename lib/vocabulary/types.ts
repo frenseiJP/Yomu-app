@@ -26,9 +26,11 @@ export interface VocabularyItem {
   updatedAt: string;
 }
 
+/** List filters: All / Word / Phrase / Review. Corrections appear in All (type badge). */
+export type VocabularyListCategory = "all" | "word" | "phrase" | "review";
+
 export interface VocabularyFilterState {
   query: string;
-  type: "all" | VocabularyItemType;
+  category: VocabularyListCategory;
   tag: string;
-  reviewStatus: "all" | VocabularyReviewStatus | "due";
 }

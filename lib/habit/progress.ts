@@ -3,6 +3,7 @@ import { readHabitJson, writeHabitJson } from "@/lib/habit/storage";
 import { recordsStorage } from "@/src/features/records/storage";
 import { todayYmd, addDaysYmd, toYmd } from "@/lib/habit/date";
 import { listTopicPracticeResultsByUser } from "@/lib/topic/service";
+import { readLegacyUiVocab } from "@/lib/vocabulary/legacyStorage";
 
 const KIND = "progress_v1";
 
@@ -73,13 +74,7 @@ export function getUserStats(userId: string): UserStats {
 
   let legacyWords = 0;
   try {
-    if (typeof window !== "undefined") {
-      const raw = window.localStorage.getItem("yomu_my_vocab");
-      if (raw) {
-        const arr = JSON.parse(raw) as unknown[];
-        legacyWords = Array.isArray(arr) ? arr.length : 0;
-      }
-    }
+    legacyWords = readLegacyUiVocab(userId).length;
   } catch {
     /* ignore */
   }

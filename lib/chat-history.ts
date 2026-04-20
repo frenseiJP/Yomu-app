@@ -2,6 +2,7 @@
  * チャット履歴の型定義と localStorage 永続化
  * Yomu - 日本文化AIコーチ
  */
+import { getOrCreateUserId } from "@/lib/chat/service";
 
 export type ChatMessage = {
   id: string;
@@ -19,14 +20,24 @@ export type ChatSession = {
   updatedAt: string;
 };
 
-const STORAGE_KEY = "yomu_chat_history";
+const LEGACY_STORAGE_KEY = "yomu_chat_history";
+function storageKey(): string {
+  return `frensei:chat-history:v1:${getOrCreateUserId()}`;
+}
 
 function getStored(): ChatSession[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as ChatSession[];
+    const scopedKey = storageKey();
+    const scopedRaw = localStorage.getItem(scopedKey);
+    if (scopedRaw) {
+      const parsed = JSON.parse(scopedRaw) as ChatSession[];
+      return Array.isArray(parsed) ? parsed : [];
+    }
+    const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!legacyRaw) return [];
+    localStorage.setItem(scopedKey, legacyRaw);
+    const parsed = JSON.parse(legacyRaw) as ChatSession[];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -36,7 +47,7 @@ function getStored(): ChatSession[] {
 function setStored(sessions: ChatSession[]) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+    localStorage.setItem(storageKey(), JSON.stringify(sessions));
   } catch {
     // ignore
   }

@@ -3,35 +3,25 @@ import { generateRecordId } from "@/src/features/records/storage/helpers";
 import type { HabitDailyMission, MissionStore, MissionTask } from "@/lib/habit/types";
 import { readHabitJson, writeHabitJson } from "@/lib/habit/storage";
 import { todayYmd } from "@/lib/habit/date";
+import { readLegacyUiVocab } from "@/lib/vocabulary/legacyStorage";
 
 const KIND = "missions_v1";
 
-/** Legacy vocab from YomuPrototypePage localStorage */
-const LEGACY_VOCAB_KEY = "yomu_my_vocab";
-
-function readLegacyVocab(): { word: string; meaning: string }[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(LEGACY_VOCAB_KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw) as unknown[];
-    if (!Array.isArray(arr)) return [];
-    return arr
-      .map((row) => {
-        const o = row as Record<string, unknown>;
-        const word = typeof o.word === "string" ? o.word : "";
-        const meaning =
-          typeof o.romaji === "string"
-            ? o.romaji
-            : Array.isArray(o.translations) && typeof o.translations[0] === "string"
-              ? String(o.translations[0])
-              : "";
-        return { word, meaning };
-      })
-      .filter((x) => x.word.length > 0);
-  } catch {
-    return [];
-  }
+function readLegacyVocab(userId: string): { word: string; meaning: string }[] {
+  const arr = readLegacyUiVocab(userId);
+  return arr
+    .map((row) => {
+      const o = row as Record<string, unknown>;
+      const word = typeof o.word === "string" ? o.word : "";
+      const meaning =
+        typeof o.romaji === "string"
+          ? o.romaji
+          : Array.isArray(o.translations) && typeof o.translations[0] === "string"
+            ? String(o.translations[0])
+            : "";
+      return { word, meaning };
+    })
+    .filter((x) => x.word.length > 0);
 }
 
 const BEGINNER_TASKS: Omit<MissionTask, "id" | "completed">[] = [
@@ -61,7 +51,7 @@ function newTask(partial: Omit<MissionTask, "id" | "completed">): MissionTask {
 function generateTasks(userId: string): MissionTask[] {
   const mistakes = recordsStorage.mistakeLogs.getAllByUser(userId);
   const words = recordsStorage.savedWords.getAllByUser(userId);
-  const legacy = readLegacyVocab();
+  const legacy = readLegacyVocab(userId);
 
   const tasks: MissionTask[] = [];
 

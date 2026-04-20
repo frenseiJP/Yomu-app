@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { getLangClient } from "@/src/utils/i18n/clientLang";
 import { t } from "@/src/utils/i18n/t";
 import type { Lang } from "@/src/utils/i18n/types";
-import { FEEDBACK_FORM_URL } from "@/lib/feedbackFormUrl";
 
 export default function FeedbackButton() {
   const pathname = usePathname();
@@ -36,11 +35,13 @@ export default function FeedbackButton() {
     };
   }, []);
 
+  if (pathname === "/feedback") {
+    return null;
+  }
+
   return (
     <a
-      href={FEEDBACK_FORM_URL}
-      target="_blank"
-      rel="noopener noreferrer"
+      href="/feedback"
       aria-label={t(lang, "feedbackButtonAria")}
       className="fixed z-[1000] max-w-[min(calc(100vw-1.5rem),17rem)] touch-manipulation sm:max-w-none"
       style={{

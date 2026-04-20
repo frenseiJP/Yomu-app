@@ -1,4 +1,6 @@
 import OpenAI from "openai";
+import { consumeRateLimit, getClientIp } from "@/lib/security/rateLimit";
+import { getUnauthorizedResponseIfNeeded } from "@/lib/security/authGate";
 
 export const runtime = "nodejs";
 
@@ -13,7 +15,26 @@ const USER_PROMPT = `今日のお題を1つ決め、次の2つのキーだけを
 
 JSON 以外の説明文やマークダウンは付けないでください。`;
 
-export async function POST(): Promise<Response> {
+export async function POST(req: Request): Promise<Response> {
+  const ip = getClientIp(req);
+  const rl = await consumeRateLimit({
+    key: `openai_generate_prompt:${ip}`,
+    limit: 8,
+    windowMs: 60_000,
+  });
+  if (!rl.ok) {
+    return Response.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: { "retry-after": String(rl.retryAfterSec) },
+      },
+    );
+  }
+
+  const unauthorized = await getUnauthorizedResponseIfNeeded("openai_generate_prompt");
+  if (unauthorized) return unauthorized;
+
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return Response.json(
@@ -83,8 +104,6 @@ export async function POST(): Promise<Response> {
 
     return Response.json({ title_jp, title_en });
   } catch (e) {
-    const message =
-      e instanceof Error ? e.message : "OpenAI API の呼び出しに失敗しました。";
-    return Response.json({ error: message }, { status: 502 });
+    return Response.json({ error: "OpenAI API の呼び出しに失敗しました。" }, { status: 502 });
   }
 }

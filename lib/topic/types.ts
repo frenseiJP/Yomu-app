@@ -16,6 +16,8 @@ export interface TopicPrompt {
   id: string;
   title: string;
   prompt: string;
+  /** Short hero line for the Topic tab (e.g. “How do you apologize?”). */
+  dailyQuestion?: string;
   category: TopicCategory;
   difficulty: TopicDifficulty;
 }
@@ -36,5 +38,8 @@ export interface TopicFeedback {
   correctedAnswer: string;
   explanation: string;
   alternativeExamples: string[];
+  /** Short encouragement in the learner UI language. */
   encouragement: string;
+  /** Fictional "other learners" example sentences (Japanese), same topic. */
+  otherLearnerExamples: string[];
 }

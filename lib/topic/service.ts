@@ -7,6 +7,7 @@ export const TOPIC_PROMPTS: TopicPrompt[] = [
   {
     id: "apology_late",
     title: "Apologizing politely",
+    dailyQuestion: "How do you apologize?",
     prompt: "How would you apologize in Japanese if you are late for a meeting?",
     category: "apology",
     difficulty: "beginner",
@@ -114,6 +115,11 @@ function fallback(userAnswer: string): TopicFeedback {
       "お待たせしてしまい、すみません。",
     ],
     encouragement: "Good effort. This is a more natural and polite version.",
+    otherLearnerExamples: [
+      "本日はご迷惑をおかけして申し訳ございません。",
+      "遅刻してしまい、心よりお詫び申し上げます。",
+      "急な用事が入り、遅れてしまいました。すみません。",
+    ],
   };
 }
 
@@ -127,11 +133,12 @@ export async function generateTopicFeedback(
       "You are a Japanese coach.",
       "Return ONLY valid JSON (no markdown).",
       "JSON schema:",
-      '{"correctedAnswer":"...","explanation":"...","alternativeExamples":["...","..."],"encouragement":"..."}',
+      '{"correctedAnswer":"...","explanation":"...","alternativeExamples":["...","..."],"encouragement":"...","otherLearnerExamples":["...","...","..."]}',
       "Rules:",
       "- concise",
-      "- 2 or 3 alternative examples",
-      "- encouraging calm tone",
+      "- 2 or 3 alternativeExamples: natural Japanese for the SAME topic (not translations of the user line only)",
+      "- otherLearnerExamples: exactly 3 short plausible Japanese sentences other learners might write for this topic (fictional peers; varied politeness levels)",
+      "- encouragement: one short line in the learner UI language (" + language + ")",
       `Topic title: ${topic.title}`,
       `Topic prompt: ${topic.prompt}`,
       `Learner answer: ${userAnswer}`,
@@ -180,6 +187,16 @@ export async function generateTopicFeedback(
           .slice(0, 3)
       : fallback(userAnswer).alternativeExamples;
 
+    const otherLearnerExamples = Array.isArray(parsed.otherLearnerExamples)
+      ? parsed.otherLearnerExamples
+          .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+          .slice(0, 3)
+      : fallback(userAnswer).otherLearnerExamples;
+    const peers =
+      otherLearnerExamples.length >= 3
+        ? otherLearnerExamples
+        : fallback(userAnswer).otherLearnerExamples;
+
     return {
       correctedAnswer,
       explanation,
@@ -188,6 +205,7 @@ export async function generateTopicFeedback(
           ? alternativeExamples
           : fallback(userAnswer).alternativeExamples,
       encouragement,
+      otherLearnerExamples: peers,
     };
   } catch {
     return fallback(userAnswer);

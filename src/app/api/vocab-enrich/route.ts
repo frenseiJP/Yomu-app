@@ -1,3 +1,6 @@
+import { consumeRateLimit, getClientIp } from "@/lib/security/rateLimit";
+import { getUnauthorizedResponseIfNeeded } from "@/lib/security/authGate";
+
 export const runtime = "edge";
 
 const CLAUDE_MODEL = "claude-3-5-sonnet-20241022";
@@ -24,8 +27,29 @@ type EnrichResult = {
   partOfSpeech: string;
   exampleSentences: string[];
 };
+const MAX_WORD_CHARS = 80;
+const MAX_ROMAJI_CHARS = 120;
 
 export async function POST(req: Request): Promise<Response> {
+  const ip = getClientIp(req);
+  const rl = await consumeRateLimit({
+    key: `vocab_enrich:${ip}`,
+    limit: 10,
+    windowMs: 60_000,
+  });
+  if (!rl.ok) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: {
+        "content-type": "application/json",
+        "retry-after": String(rl.retryAfterSec),
+      },
+    });
+  }
+
+  const unauthorized = await getUnauthorizedResponseIfNeeded("vocab_enrich");
+  if (unauthorized) return unauthorized;
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return new Response(JSON.stringify({ error: "Missing ANTHROPIC_API_KEY" }), {
       status: 500,
@@ -43,7 +67,8 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const { word, romaji } = body;
+  const word = typeof body.word === "string" ? body.word.trim().slice(0, MAX_WORD_CHARS) : "";
+  const romaji = typeof body.romaji === "string" ? body.romaji.trim().slice(0, MAX_ROMAJI_CHARS) : undefined;
   if (!word || typeof word !== "string") {
     return new Response(
       JSON.stringify({ error: "word (string) required" }),
@@ -74,9 +99,8 @@ export async function POST(req: Request): Promise<Response> {
   });
 
   if (!anthropicRes.ok) {
-    const text = await anthropicRes.text().catch(() => "");
     return new Response(
-      JSON.stringify({ error: text || "Claude API error" }),
+      JSON.stringify({ error: "Claude API error" }),
       { status: 500, headers: { "content-type": "application/json" } }
     );
   }
@@ -115,7 +139,6 @@ export async function POST(req: Request): Promise<Response> {
     return new Response(
       JSON.stringify({
         error: "Failed to parse AI response as JSON",
-        raw: raw.slice(0, 500),
       }),
       { status: 502, headers: { "content-type": "application/json" } }
     );

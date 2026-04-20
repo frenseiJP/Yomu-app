@@ -1,7 +1,8 @@
 import type { TopicPracticeResult } from "@/lib/topic/types";
 import { listTopicPracticeResultsByUser } from "@/lib/topic/service";
 import { getOrCreateUserId } from "@/lib/chat/service";
-import { listVocabularyByUser, upsertVocabulary } from "@/lib/vocabulary/storage";
+import { addDaysYmd, todayYmd } from "@/lib/habit/date";
+import { deleteVocabulary, listVocabularyByUser, upsertVocabulary } from "@/lib/vocabulary/storage";
 import type { VocabularyItem, VocabularyItemType, VocabularySourceType } from "@/lib/vocabulary/types";
 
 function id(): string {
@@ -119,6 +120,28 @@ export function getVocabularyLibrary(userId?: string): VocabularyItem[] {
     .slice(0, 20)
     .map((r) => topicToPseudoItem(r, uid));
   return [...direct, ...topicDerived].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+}
+
+/** Saved in `frensei_vocabulary_v1` (excludes topic-derived pseudo rows). */
+export function isPersistedVocabularyItem(item: VocabularyItem): boolean {
+  return !item.id.startsWith("topic_");
+}
+
+export function removeVocabularyItem(id: string): void {
+  deleteVocabulary(id);
+}
+
+/** Mark item reviewed and schedule next review (local library). */
+export function markVocabularyItemReviewed(item: VocabularyItem): VocabularyItem {
+  const today = todayYmd();
+  const updated: VocabularyItem = {
+    ...item,
+    reviewStatus: "reviewed",
+    nextReviewDate: addDaysYmd(today, 7),
+    updatedAt: new Date().toISOString(),
+  };
+  upsertVocabulary(updated);
+  return updated;
 }
 
 function topicToPseudoItem(r: TopicPracticeResult, userId: string): VocabularyItem {

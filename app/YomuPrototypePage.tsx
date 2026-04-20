@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -57,22 +58,35 @@ import { buildSeasonalProgressState } from "@/lib/progress/seasonal";
 import SeasonalProgressCard from "@/components/progress/SeasonalProgressCard";
 import {
   buildCoachContext,
-  completeMissionTask,
   getDueReviews,
-  getOrCreateDailyMission,
   getUserStats,
-  isMissionFullyComplete,
   recordChatUsed,
   recordMissionCompleted,
-  type HabitDailyMission,
   type DueReviews,
   type UserStats,
   activeDaysToWeekDots,
   getProgressSnapshot,
-  tryCompleteMissionFromChat,
 } from "@/lib/habit";
-import DailyMissionCard from "@/components/habit/DailyMissionCard";
+import TodaysRetentionMissionCard from "@/components/habit/TodaysRetentionMissionCard";
 import ReviewCard from "@/components/habit/ReviewCard";
+import {
+  buildRetentionMissionChatOpener,
+  getOrCreateRetentionDailyMission,
+  markRetentionDailyMissionCompleted,
+  type RetentionDailyMissionDay,
+} from "@/lib/mission/retentionDaily";
+import { isMissionCompleted } from "@/lib/mission/completion";
+import {
+  applyMissionGrowthOnCompletion,
+  buildMissionCompletionCopy,
+  computeVisualGrowthStage,
+  growthProgressRatio,
+  readMissionGrowth,
+  type MissionGrowthState,
+} from "@/lib/progress/missionGrowth";
+import { getCalendarSeason } from "@/lib/progress/seasonal";
+import ProgressVisual from "@/components/progress/ProgressVisual";
+import MissionRewardToast from "@/components/progress/MissionRewardToast";
 import type { ChatMessage as StoredChatMessage, ChatSession as StoredChatSession } from "@/lib/chat/types";
 import {
   addAssistantMessage,
@@ -84,6 +98,7 @@ import {
   startNewChatSession,
 } from "@/lib/chat/service";
 import SessionDrawer from "@/components/chat/SessionDrawer";
+import TopicGuidedLearning from "@/components/topic/TopicGuidedLearning";
 import TopicSelector from "@/components/topic/TopicSelector";
 import TopicActions from "@/components/topic/TopicActions";
 import { buildTopicFeedbackMessage, buildTopicGuideMessage } from "@/components/topic/TopicMessageTemplate";
@@ -95,11 +110,22 @@ import {
 } from "@/lib/topic/service";
 import type { TopicPrompt, TopicFeedback } from "@/lib/topic/types";
 import type { SaveCandidate } from "@/lib/save-candidates/types";
+import { guessCorrectedSentence } from "@/lib/save-candidates/guess-correction";
 import { recommendCandidatesForMessage, saveCandidateToVocabulary } from "@/lib/save-candidates/service";
+import FtuePracticePicker from "@/components/chat/FtuePracticePicker";
+import {
+  buildFtueCoachMessage,
+  fallbackFtueCoachPayload,
+  fallbackStructuredCoachPayload,
+  parseFtueCoachPayload,
+} from "@/lib/ftue/format";
+import { migrateFtueIfLegacyUser, readFtuePersist, writeFtuePersist } from "@/lib/ftue/state";
+import { ftueEnglishPromptForMode, getFtueFreeOpening, getFtueOpening } from "@/lib/ftue/openers";
+import type { FtueCoachPayload, FtuePracticeMode } from "@/lib/ftue/types";
 
 type Role = "user" | "assistant";
 type Politeness = "casual" | "neutral" | "business";
-type TabView = "mission" | "record" | "chat" | "community" | "settings" | "more";
+type TabView = "home" | "progress" | "chat" | "topic" | "settings" | "more";
 type DisplayLangRaw = "ja" | "en" | "ko" | "zh";
 
 const JLPT_LEVELS = ["N5", "N4", "N3", "N2", "N1"] as const;
@@ -125,7 +151,6 @@ function labelForDisplayLang(
 /** AI 返信直後に付与する、本文に即した語彙・次の3択 */
 type ChatTurnContext = {
   highlightPhrases: { phrase: string; reading: string }[];
-  chipWords: { phrase: string; reading: string }[];
   followUps: [string, string, string];
   bestFollowUpIndex: number;
   saveCandidates?: SaveCandidate[];
@@ -141,6 +166,10 @@ type Message = {
   tipsNote?: string;
   /** 初回ウェルカム・画像デモなど、トーン行を出すテンプレート用 */
   showToneMeta?: boolean;
+  /** 初回チャット FTUE のメッセージ（言語切替でウェルカムに戻さない） */
+  ftueAnchored?: boolean;
+  /** 今日のリテンション・デイリーミッションの開始メッセージ */
+  retentionMissionOpener?: boolean;
   createdAt: string;
   chatContext?: ChatTurnContext;
   topicLabel?: string;
@@ -150,6 +179,7 @@ type Message = {
     correctedAnswer: string;
     explanation: string;
     alternativeExamples: string[];
+    otherLearnerExamples?: string[];
     saved?: boolean;
   };
 };
@@ -172,14 +202,6 @@ type VocabItem = {
   translations: string[];
   partOfSpeech?: string;
   exampleSentences: string[];
-};
-
-type CommunityPost = {
-  id: string;
-  user_id: string;
-  japanese: string;
-  english: string;
-  created_at: string;
 };
 
 type DailyMission = {
@@ -218,7 +240,10 @@ function getTodaysMission(): DailyMission {
 }
 
 const BG = "#020617";
-const VOCAB_STORAGE_KEY = "yomu_my_vocab";
+const LEGACY_VOCAB_STORAGE_KEY = "yomu_my_vocab";
+function vocabStorageKey(userId: string): string {
+  return `frensei:vocab:legacy-ui:v1:${userId}`;
+}
 
 function migrateVocabItem(v: Record<string, unknown>): VocabItem {
   const id = typeof v.id === "number" ? v.id : Date.now();
@@ -417,6 +442,12 @@ function formatTime(dateIso: string) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function formatSaveCandidateHeading(c: SaveCandidate): string {
+  if (c.type === "correction") return "[Correction]";
+  if (c.type === "phrase") return "[Useful phrase]";
+  return "[Word]";
+}
+
 function applyPoliteness(text: string, level: Politeness): string {
   if (level === "neutral") return text;
   if (level === "casual") {
@@ -453,12 +484,6 @@ const PHRASE_READINGS: [string, string][] = [
   ["文化", "bunka"],
   ["空気", "kuuki"],
   ["桜", "sakura"],
-];
-
-const FALLBACK_VOCAB_CHIPS: { phrase: string; reading: string }[] = [
-  { phrase: "いただきます", reading: "Itadakimasu" },
-  { phrase: "お疲れ様", reading: "Otsukaresama" },
-  { phrase: "よろしくお願いします", reading: "yoroshiku onegaishimasu" },
 ];
 
 /** フォロー3択の正解位置をランダム化（画面上で位置と正解が固定されないようにする） */
@@ -566,20 +591,6 @@ function renderMessageWithVocab(
   );
 }
 
-function guessCorrectedSentence(userText: string, assistantText: string): string | undefined {
-  const lines = assistantText
-    .split(/\n|。|！|!|？|\?/)
-    .map((s) => s.trim())
-    .filter((s) => /[ぁ-んァ-ン一-龯]/.test(s) && s.length >= 4 && s.length <= 60);
-  const normalizedUser = userText.replace(/\s+/g, "");
-  const candidate = lines.find((line) => {
-    const normalized = line.replace(/\s+/g, "");
-    if (normalized === normalizedUser) return false;
-    return /です|ます|ません|でしょう|ください|でした/.test(line);
-  });
-  return candidate;
-}
-
 /** プロトタイプ設定保存用。部分 upsert だと display_name 等が NULL になり DB エラーになるため、既存行は update のみ。 */
 type ProfileLangAuthUser = {
   id: string;
@@ -681,7 +692,7 @@ type YomuPrototypePageProps = {
   embedded?: boolean;
 };
 
-export default function YomuPrototypePage({ initialView = "mission", embedded = false }: YomuPrototypePageProps = {}) {
+export default function YomuPrototypePage({ initialView = "home", embedded = false }: YomuPrototypePageProps = {}) {
   const pathname = usePathname() || "";
   const affiliateBarVisible = isAffiliateBarVisibleForPath(pathname);
   /** 下部タブをアフィリエイトバーより上に置く＋本文の余白 */
@@ -726,7 +737,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
   const [vocab, setVocab] = useState<VocabItem[]>(() => {
     if (typeof window === "undefined") return [];
     try {
-      const raw = window.localStorage.getItem(VOCAB_STORAGE_KEY);
+      const raw = window.localStorage.getItem(LEGACY_VOCAB_STORAGE_KEY);
       if (!raw) return [];
       const parsed = JSON.parse(raw) as unknown[];
       return (parsed || []).map((v) => migrateVocabItem(v as Record<string, unknown>));
@@ -742,18 +753,28 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
   const [followUpFeedback, setFollowUpFeedback] = useState<null | "nice" | "ok">(null);
   const [currentTopic, setCurrentTopic] = useState("");
   const [activeView, setActiveView] = useState<TabView>(initialView);
-  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
-  const [communityLoading, setCommunityLoading] = useState(false);
-  const [communityError, setCommunityError] = useState<string | null>(null);
-  const [communityJa, setCommunityJa] = useState("");
-  const [communityEn, setCommunityEn] = useState("");
   const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
   const [chatSessions, setChatSessions] = useState<StoredChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [topicSelectorMode, setTopicSelectorMode] = useState<"entry" | "topic_list" | "hidden">("entry");
   const [activeTopicPrompt, setActiveTopicPrompt] = useState<TopicPrompt | null>(null);
   const [habitUserId, setHabitUserId] = useState("guest");
-  const [dailyMission, setDailyMission] = useState<HabitDailyMission | null>(null);
+  const [reportFabPos, setReportFabPos] = useState<{ x: number; y: number } | null>(null);
+  const [retentionMissionDay, setRetentionMissionDay] = useState<RetentionDailyMissionDay | null>(null);
+  const [retentionRewardBanner, setRetentionRewardBanner] = useState<string | null>(null);
+  const [retentionMissionChatOpen, setRetentionMissionChatOpen] = useState(false);
+  const retentionMissionFinalizedRef = useRef(false);
+  const [missionGrowth, setMissionGrowth] = useState<MissionGrowthState>({
+    totalCompleted: 0,
+    currentStreak: 0,
+    lastActiveDate: "",
+  });
+  const [missionMicroToast, setMissionMicroToast] = useState<{ l1: string; l2: string } | null>(null);
+  const [ftueShowPicker, setFtueShowPicker] = useState(false);
+  const [ftueCoachActive, setFtueCoachActive] = useState(false);
+  const [ftuePracticeKind, setFtuePracticeKind] = useState<FtuePracticeMode>("natural");
+  const ftueCoachingAttemptRef = useRef(0);
+  const ftueFreePathRef = useRef(false);
   const [dueReviews, setDueReviews] = useState<DueReviews>({ words: [], mistakes: [] });
   const [stats, setStats] = useState<UserStats>({
     streak: 0,
@@ -765,38 +786,57 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
   });
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const politenessRef = useRef<Politeness>("casual");
+  const reportFabRef = useRef<HTMLButtonElement | null>(null);
+  const reportFabDraggingRef = useRef(false);
+  const reportFabMovedRef = useRef(false);
+  const reportFabPressTimerRef = useRef<number | null>(null);
+  const reportFabPointerOffsetRef = useRef({ x: 0, y: 0 });
   const { settingsText, uiText } = useMemo(
     () => getPrototypeCopy(appLang as Lang),
     [appLang],
   );
 
   const refreshHabitData = useCallback((userId: string) => {
-    const m = getOrCreateDailyMission(userId);
+    const rDay = getOrCreateRetentionDailyMission(userId, jlptLevel);
+    setMissionGrowth(readMissionGrowth(userId));
     const r = getDueReviews(userId);
     const s = getUserStats(userId);
-    setDailyMission(m);
+    setRetentionMissionDay(rDay);
     setDueReviews(r);
     setStats(s);
     const p = getProgressSnapshot(userId);
     setStreakDays(activeDaysToWeekDots(p.activeDays));
-    setMissionCompleted(isMissionFullyComplete(m));
-  }, []);
+    setMissionCompleted(Boolean(rDay.completed));
+  }, [jlptLevel]);
 
   const refreshChatSessions = useCallback((userId: string) => {
+    migrateFtueIfLegacyUser(userId);
+    const ftueP = readFtuePersist();
     const rows = getSessions(userId);
     setChatSessions(rows);
     if (rows.length === 0) {
       const created = startNewChatSession(userId);
       setChatSessions([created]);
       setCurrentSessionId(created.id);
-      setMessages([buildWelcomeMessage(appLang as Lang)]);
+      if (!ftueP.pickerDone && !ftueP.firstLearningCompleted) {
+        setFtueShowPicker(true);
+        setMessages([]);
+        setTopicSelectorMode("entry");
+      } else {
+        setMessages([buildWelcomeMessage(appLang as Lang)]);
+      }
       return;
     }
     if (!currentSessionId || !rows.some((s) => s.id === currentSessionId)) {
       const sid = rows[0].id;
       setCurrentSessionId(sid);
       const ms = getStoredMessages(userId, sid);
-      setMessages(ms.length ? toViewMessages(ms) : [buildWelcomeMessage(appLang as Lang)]);
+      if (!ftueP.pickerDone && !ftueP.firstLearningCompleted && ms.length === 0) {
+        setFtueShowPicker(true);
+        setMessages([]);
+      } else {
+        setMessages(ms.length ? toViewMessages(ms) : [buildWelcomeMessage(appLang as Lang)]);
+      }
       setTopicSelectorMode(ms.length > 0 ? "hidden" : "entry");
     }
   }, [appLang, currentSessionId]);
@@ -806,6 +846,18 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
     [appLang],
   );
   const isLightTheme = uiTheme === "light";
+
+  const clampReportFabPos = useCallback((x: number, y: number) => {
+    if (typeof window === "undefined") return { x, y };
+    const size = 52;
+    const margin = 8;
+    const maxX = Math.max(margin, window.innerWidth - size - margin);
+    const maxY = Math.max(margin, window.innerHeight - size - margin);
+    return {
+      x: Math.min(maxX, Math.max(margin, x)),
+      y: Math.min(maxY, Math.max(margin, y)),
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -851,11 +903,40 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
   }, [uiTheme]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const initX = window.innerWidth - 64;
+    const initY = window.innerHeight - 170;
+    setReportFabPos(clampReportFabPos(initX, initY));
+  }, [clampReportFabPos]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onResize = () => {
+      setReportFabPos((prev) => {
+        if (!prev) return prev;
+        return clampReportFabPos(prev.x, prev.y);
+      });
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [clampReportFabPos]);
+
+  useEffect(() => {
+    if (activeView !== "chat") return;
+    migrateFtueIfLegacyUser(habitUserId);
+    const p = readFtuePersist();
+    if (p.pickerDone || p.firstLearningCompleted) setFtueShowPicker(false);
+  }, [activeView, habitUserId]);
+
+  useEffect(() => {
+    if (activeView !== "chat") return;
     setMessages((prev) => {
       if (prev.some((m) => m.role === "user")) return prev;
+      if (prev.some((m) => m.ftueAnchored)) return prev;
+      if (ftueShowPicker && prev.length === 0) return prev;
       return [buildWelcomeMessage(appLang as Lang)];
     });
-  }, [appLang]);
+  }, [appLang, ftueShowPicker, activeView]);
 
   useEffect(() => {
     politenessRef.current = politeness;
@@ -869,6 +950,14 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [choiceSheet]);
+
+  useEffect(() => {
+    return () => {
+      if (reportFabPressTimerRef.current) {
+        window.clearTimeout(reportFabPressTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const syncLangFromCookie = () => {
@@ -1208,12 +1297,33 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
   };
 
   useEffect(() => {
+    if (!habitUserId || typeof window === "undefined") return;
     try {
-      window.localStorage.setItem(VOCAB_STORAGE_KEY, JSON.stringify(vocab));
+      const scopedRaw = window.localStorage.getItem(vocabStorageKey(habitUserId));
+      if (scopedRaw) {
+        const parsed = JSON.parse(scopedRaw) as unknown[];
+        setVocab((parsed || []).map((v) => migrateVocabItem(v as Record<string, unknown>)));
+        return;
+      }
+      // legacy key から userId スコープへ 1 回だけ移行
+      const legacyRaw = window.localStorage.getItem(LEGACY_VOCAB_STORAGE_KEY);
+      if (!legacyRaw) return;
+      window.localStorage.setItem(vocabStorageKey(habitUserId), legacyRaw);
+      const parsed = JSON.parse(legacyRaw) as unknown[];
+      setVocab((parsed || []).map((v) => migrateVocabItem(v as Record<string, unknown>)));
     } catch {
       /* ignore */
     }
-  }, [vocab]);
+  }, [habitUserId]);
+
+  useEffect(() => {
+    if (!habitUserId || typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(vocabStorageKey(habitUserId), JSON.stringify(vocab));
+    } catch {
+      /* ignore */
+    }
+  }, [vocab, habitUserId]);
 
   const todaysMission = useMemo(() => getTodaysMission(), []);
   const [missionCompleted, setMissionCompleted] = useState(false);
@@ -1236,6 +1346,18 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
     );
   }
 
+  const missionGrowthVisual = useMemo(() => {
+    const season = getCalendarSeason();
+    const stage = computeVisualGrowthStage(missionGrowth.totalCompleted, missionGrowth.currentStreak);
+    return {
+      season,
+      stage,
+      progressRatio: growthProgressRatio(missionGrowth.totalCompleted, stage),
+    };
+  }, [missionGrowth]);
+
+  const dismissMissionToast = useCallback(() => setMissionMicroToast(null), []);
+
   useEffect(() => {
     const timer = requestAnimationFrame(() => {
       bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -1243,9 +1365,30 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
     return () => cancelAnimationFrame(timer);
   }, [messages, isTyping, politeness]);
 
+  useEffect(() => {
+    if (!retentionMissionChatOpen) return;
+    if (!retentionMissionDay || retentionMissionDay.completed) return;
+    if (retentionMissionFinalizedRef.current) return;
+    if (!isMissionCompleted(messages)) return;
+    retentionMissionFinalizedRef.current = true;
+    const updated = markRetentionDailyMissionCompleted(habitUserId);
+    if (updated) setRetentionMissionDay(updated);
+    recordMissionCompleted(habitUserId);
+    const grown = applyMissionGrowthOnCompletion(habitUserId);
+    setMissionGrowth(grown);
+    const season = getCalendarSeason();
+    const copy = buildMissionCompletionCopy(season);
+    setRetentionRewardBanner(copy.banner);
+    window.setTimeout(() => setRetentionRewardBanner(null), 10000);
+    setMissionMicroToast({ l1: copy.microLine1, l2: copy.microLine2 });
+    setMissionCompleted(true);
+    setRetentionMissionChatOpen(false);
+    void refreshHabitData(habitUserId);
+  }, [messages, retentionMissionChatOpen, retentionMissionDay, habitUserId, refreshHabitData]);
+
   const controllerRef = useRef<AbortController | null>(null);
   const isLoading = isTyping;
-  const canSend = input.trim().length > 0 && !isLoading;
+  const canSend = input.trim().length > 0 && !isLoading && !ftueShowPicker;
 
   const latestFollowUpContext = useMemo((): ChatTurnContext | null => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -1269,7 +1412,12 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
   }, [messages]);
 
   const enrichChatContext = useCallback(
-    async (assistantId: number, assistantText: string, userText: string) => {
+    async (
+      assistantId: number,
+      assistantText: string,
+      userText: string,
+      opts?: { correctedSentence?: string },
+    ) => {
       setContextLoadingId(assistantId);
       const defaults = getPrototypeCopy(appLang as Lang).uiText;
       try {
@@ -1318,40 +1466,18 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
           }))
           .filter((x) => x.phrase.length > 0);
 
-        const cwRaw = Array.isArray(data.chipWords) ? data.chipWords : [];
-        let chipWords = cwRaw
-          .filter(
-            (x): x is { phrase: string; reading?: string } =>
-              !!x &&
-              typeof x === "object" &&
-              typeof (x as { phrase?: unknown }).phrase === "string",
-          )
-          .map((x) => ({
-            phrase: String(x.phrase).trim(),
-            reading:
-              typeof x.reading === "string" && x.reading.trim()
-                ? x.reading.trim()
-                : String(x.phrase).trim(),
-          }))
-          .filter((x) => x.phrase.length > 0);
-
-        let ci = 0;
-        while (chipWords.length < 3) {
-          const fromHp = normalizedHp[ci++];
-          const fb = FALLBACK_VOCAB_CHIPS[chipWords.length];
-          const next = fromHp ?? fb;
-          if (next) chipWords.push(next);
-          else break;
-        }
-        chipWords = chipWords.slice(0, 3);
-
-        const saveCandidates = recommendCandidatesForMessage({
-          aiMessageContent: assistantText,
-          userMessageContent: userText,
-          correctedSentence: guessCorrectedSentence(userText, assistantText),
-          messageId: String(assistantId),
-          sessionId: currentSessionId ?? undefined,
-        });
+        const saveCandidates = recommendCandidatesForMessage(
+          {
+            aiMessageContent: assistantText,
+            userMessageContent: userText,
+            correctedSentence:
+              opts?.correctedSentence?.trim() ||
+              guessCorrectedSentence(userText, assistantText),
+            messageId: String(assistantId),
+            sessionId: currentSessionId ?? undefined,
+          },
+          habitUserId,
+        );
 
         setMessages((prev) =>
           prev.map((m) =>
@@ -1360,7 +1486,6 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                   ...m,
                   chatContext: {
                     highlightPhrases: normalizedHp,
-                    chipWords,
                     followUps: shuffled.items,
                     bestFollowUpIndex: shuffled.bestIdx,
                     saveCandidates,
@@ -1375,7 +1500,63 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
         setContextLoadingId((id) => (id === assistantId ? null : id));
       }
     },
-    [appLang, currentSessionId],
+    [appLang, currentSessionId, habitUserId],
+  );
+
+  const beginFtue = useCallback(
+    (mode: FtuePracticeMode) => {
+      writeFtuePersist({ pickerDone: true });
+      setFtueShowPicker(false);
+      setTopicSelectorMode("hidden");
+      const uid = habitUserId;
+      let sid = currentSessionId;
+      if (!sid) {
+        const created = startNewChatSession(uid);
+        sid = created.id;
+        setCurrentSessionId(created.id);
+        setChatSessions(getSessions(uid));
+      }
+      const nowIso = new Date().toISOString();
+      const toneAt = politenessRef.current;
+      if (mode === "free") {
+        setFtueCoachActive(false);
+        setFtuePracticeKind("free");
+        ftueFreePathRef.current = true;
+        ftueCoachingAttemptRef.current = 0;
+        const line = getFtueFreeOpening();
+        addAssistantMessage(uid, sid, line);
+        setChatSessions(getSessions(uid));
+        setMessages([
+          {
+            id: Date.now(),
+            role: "assistant",
+            baseText: line,
+            createdAt: nowIso,
+            replyTone: toneAt,
+            ftueAnchored: true,
+          },
+        ]);
+        return;
+      }
+      setFtuePracticeKind(mode);
+      setFtueCoachActive(true);
+      ftueFreePathRef.current = false;
+      ftueCoachingAttemptRef.current = 0;
+      const opening = getFtueOpening(mode);
+      addAssistantMessage(uid, sid, opening);
+      setChatSessions(getSessions(uid));
+      setMessages([
+        {
+          id: Date.now(),
+          role: "assistant",
+          baseText: opening,
+          createdAt: nowIso,
+          replyTone: toneAt,
+          ftueAnchored: true,
+        },
+      ]);
+    },
+    [currentSessionId, habitUserId],
   );
 
   function buildClaudeMessages(userText: string) {
@@ -1416,15 +1597,6 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
     setIsTyping(true);
     setTopicSelectorMode("hidden");
 
-    if (dailyMission) {
-      const updated = tryCompleteMissionFromChat(habitUserId, dailyMission, text);
-      setDailyMission(updated);
-      if (isMissionFullyComplete(updated)) {
-        recordMissionCompleted(habitUserId);
-      }
-      setMissionCompleted(isMissionFullyComplete(updated));
-    }
-
     if (controllerRef.current) controllerRef.current.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
@@ -1444,6 +1616,87 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
 
     const fetchErrText = getPrototypeCopy(appLang as Lang).uiText.chatFetchError;
     let accumulated = "";
+
+    const coachingFtue = ftueCoachActive && ftuePracticeKind !== "free";
+    if (coachingFtue) {
+      ftueCoachingAttemptRef.current += 1;
+      const showMicro = ftueCoachingAttemptRef.current >= 2;
+      try {
+        const historyForFtue = [...messages, userMsg]
+          .filter((m) => (m.role === "user" || m.role === "assistant") && m.baseText.trim())
+          .filter((m) => !m.showToneMeta)
+          .slice(0, -1)
+          .map((m) => ({ role: m.role, content: m.baseText.trim() }));
+
+        const res = await fetch("/api/chat/ftue", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            userSentence: text,
+            promptEnglish: ftueEnglishPromptForMode(ftuePracticeKind as "natural" | "daily"),
+            language: appLang,
+            history: historyForFtue,
+          }),
+          signal: controller.signal,
+        });
+        const json = (await res.json()) as {
+          ok?: boolean;
+          coach?: unknown;
+        };
+        const payload: FtueCoachPayload =
+          json.ok && json.coach && typeof json.coach === "object"
+            ? (parseFtueCoachPayload(json.coach) ?? fallbackFtueCoachPayload(text))
+            : fallbackFtueCoachPayload(text);
+        const core = buildFtueCoachMessage(payload);
+        const body = showMicro
+          ? "Nice improvement 👍\nYou sound more natural already.\n\n" + core
+          : core;
+        addAssistantMessage(habitUserId, sessionId, body);
+        setChatSessions(getSessions(habitUserId));
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, baseText: body, replyTone: toneAtSend, ftueAnchored: true }
+              : m,
+          ),
+        );
+        void enrichChatContext(assistantId, body, text, {
+          correctedSentence: payload.correctedSentence,
+        });
+        const p0 = readFtuePersist();
+        if (!p0.firstLearningCompleted) {
+          writeFtuePersist({ firstLearningCompleted: true });
+        }
+        refreshHabitData(habitUserId);
+      } catch {
+        const payload = fallbackFtueCoachPayload(text);
+        const core = buildFtueCoachMessage(payload);
+        const body = showMicro
+          ? "Nice improvement 👍\nYou sound more natural already.\n\n" + core
+          : core;
+        addAssistantMessage(habitUserId, sessionId, body);
+        setChatSessions(getSessions(habitUserId));
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, baseText: body, replyTone: toneAtSend, ftueAnchored: true }
+              : m,
+          ),
+        );
+        void enrichChatContext(assistantId, body, text, {
+          correctedSentence: payload.correctedSentence,
+        });
+        const p0 = readFtuePersist();
+        if (!p0.firstLearningCompleted) {
+          writeFtuePersist({ firstLearningCompleted: true });
+        }
+        refreshHabitData(habitUserId);
+      } finally {
+        setIsTyping(false);
+        controllerRef.current = null;
+      }
+      return;
+    }
 
     // Topic Practice mode: generate structured coaching feedback inside chat.
     if (activeTopicPrompt) {
@@ -1469,6 +1722,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                     correctedAnswer: feedback.correctedAnswer,
                     explanation: feedback.explanation,
                     alternativeExamples: feedback.alternativeExamples,
+                    otherLearnerExamples: feedback.otherLearnerExamples,
                   },
                 }
               : m,
@@ -1486,8 +1740,9 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
       return;
     }
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/chat/structured", {
         method: "POST",
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({
           messages: buildClaudeMessages(text),
           tone: toneAtSend,
@@ -1497,50 +1752,42 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
         signal: controller.signal,
       });
 
-      if (!res.ok || !res.body) {
-        setIsTyping(false);
-        addAssistantMessage(habitUserId, sessionId, fetchErrText);
-        setChatSessions(getSessions(habitUserId));
-        setMessages((prev) =>
-          prev.map((m) => (m.id === assistantId ? { ...m, baseText: fetchErrText } : m))
-        );
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        if (!value) continue;
-        accumulated += decoder.decode(value);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId
-              ? { ...m, baseText: accumulated, replyTone: toneAtSend }
-              : m
-          )
-        );
+      const json = (await res.json()) as {
+        ok?: boolean;
+        coach?: unknown;
+      };
+      const payload: FtueCoachPayload =
+        json.ok && json.coach && typeof json.coach === "object"
+          ? (parseFtueCoachPayload(json.coach) ?? fallbackStructuredCoachPayload(text))
+          : fallbackStructuredCoachPayload(text);
+      const body = buildFtueCoachMessage(payload);
+      accumulated = body;
+      addAssistantMessage(habitUserId, sessionId, body);
+      setChatSessions(getSessions(habitUserId));
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId ? { ...m, baseText: body, replyTone: toneAtSend } : m,
+        ),
+      );
+      void enrichChatContext(assistantId, body, text, {
+        correctedSentence: payload.correctedSentence,
+      });
+      if (ftueFreePathRef.current) {
+        const pp = readFtuePersist();
+        if (!pp.firstLearningCompleted) {
+          writeFtuePersist({ firstLearningCompleted: true });
+        }
+        ftueFreePathRef.current = false;
       }
     } catch {
       addAssistantMessage(habitUserId, sessionId, fetchErrText);
       setChatSessions(getSessions(habitUserId));
       setMessages((prev) =>
-        prev.map((m) => (m.id === assistantId ? { ...m, baseText: fetchErrText } : m))
+        prev.map((m) => (m.id === assistantId ? { ...m, baseText: fetchErrText } : m)),
       );
     } finally {
       setIsTyping(false);
       controllerRef.current = null;
-    }
-
-    if (
-      accumulated.trim().length > 16 &&
-      accumulated !== fetchErrText &&
-      !accumulated.includes("OPENAI_API_KEY")
-    ) {
-      void enrichChatContext(assistantId, accumulated, text);
-      addAssistantMessage(habitUserId, sessionId, accumulated);
-      setChatSessions(getSessions(habitUserId));
     }
     refreshHabitData(habitUserId);
   };
@@ -1560,19 +1807,72 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
 
   const openSession = useCallback((sessionId: string) => {
     setCurrentSessionId(sessionId);
+    setRetentionMissionChatOpen(false);
+    setFtueCoachActive(false);
+    ftueFreePathRef.current = false;
+    const p = readFtuePersist();
     const rows = getStoredMessages(habitUserId, sessionId);
-    setMessages(rows.length ? toViewMessages(rows) : [buildWelcomeMessage(appLang as Lang)]);
+    if (!p.pickerDone && !p.firstLearningCompleted && rows.length === 0) {
+      setFtueShowPicker(true);
+      setMessages([]);
+    } else {
+      setMessages(rows.length ? toViewMessages(rows) : [buildWelcomeMessage(appLang as Lang)]);
+    }
     setTopicSelectorMode(rows.length > 0 ? "hidden" : "entry");
     setActiveTopicPrompt(null);
     setSessionDrawerOpen(false);
     setActiveView("chat");
   }, [appLang, habitUserId]);
 
+  const startRetentionDailyMissionChat = useCallback(() => {
+    if (!retentionMissionDay) return;
+    retentionMissionFinalizedRef.current = false;
+    setRetentionMissionChatOpen(true);
+    const uid = habitUserId;
+    const c = startNewChatSession(uid, retentionMissionDay.mission.title);
+    const sid = c.id;
+    setCurrentSessionId(sid);
+    setChatSessions(getSessions(uid));
+    setFtueCoachActive(false);
+    ftueFreePathRef.current = false;
+    setFtueShowPicker(false);
+    setTopicSelectorMode("hidden");
+    setActiveTopicPrompt(null);
+    const opener = buildRetentionMissionChatOpener(retentionMissionDay.mission);
+    addAssistantMessage(uid, sid, opener);
+    setChatSessions(getSessions(uid));
+    const nowIso = new Date().toISOString();
+    const toneAt = politenessRef.current;
+    setMessages([
+      {
+        id: Date.now(),
+        role: "assistant",
+        baseText: opener,
+        createdAt: nowIso,
+        replyTone: toneAt,
+        retentionMissionOpener: true,
+        ftueAnchored: true,
+      },
+    ]);
+    setActiveView("chat");
+    setSessionDrawerOpen(false);
+    setInput("");
+  }, [habitUserId, retentionMissionDay]);
+
   const createNewSession = useCallback((prefill?: string) => {
+    setRetentionMissionChatOpen(false);
     const s = startNewChatSession(habitUserId, prefill);
     setCurrentSessionId(s.id);
     setChatSessions(getSessions(habitUserId));
-    setMessages([buildWelcomeMessage(appLang as Lang)]);
+    setFtueCoachActive(false);
+    ftueFreePathRef.current = false;
+    const p = readFtuePersist();
+    if (!p.pickerDone && !p.firstLearningCompleted) {
+      setFtueShowPicker(true);
+      setMessages([]);
+    } else {
+      setMessages([buildWelcomeMessage(appLang as Lang)]);
+    }
     setTopicSelectorMode("entry");
     setActiveTopicPrompt(null);
     setInput(prefill ?? "");
@@ -1677,94 +1977,6 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
   };
 
 
-  // コミュニティ投稿一覧を取得
-  useEffect(() => {
-    if (activeView !== "community") return;
-    let aborted = false;
-    const fetchPosts = async () => {
-      setCommunityLoading(true);
-      setCommunityError(null);
-      try {
-        const supabase = createAuthClient();
-        const { data, error } = await supabase
-          .from("posts")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(50);
-        if (error) throw error;
-        if (!aborted && data) {
-          setCommunityPosts(
-            data.map((row) => ({
-              id: String(row.id),
-              user_id: String(row.user_id),
-              japanese: String(row.japanese ?? row.ja ?? ""),
-              english: String(row.english ?? row.en ?? ""),
-              created_at: row.created_at ?? new Date().toISOString(),
-            })),
-          );
-        }
-      } catch (e) {
-        if (!aborted) {
-          setCommunityError(uiText.communityLoadError);
-        }
-      } finally {
-        if (!aborted) setCommunityLoading(false);
-      }
-    };
-    fetchPosts();
-    return () => {
-      aborted = true;
-    };
-  }, [activeView, uiText]);
-
-  const handleCommunitySubmit = async () => {
-    const ja = communityJa.trim();
-    const en = communityEn.trim();
-    if (!ja || !en) return;
-
-    const supabase = createAuthClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      alert(uiText.alertSignInCommunityPost);
-      return;
-    }
-
-    setCommunityLoading(true);
-    setCommunityError(null);
-    try {
-      const { data, error } = await supabase
-        .from("posts")
-        .insert([
-          {
-            // user_id は Supabase 側で auth.uid() によって自動付与される想定
-            japanese: ja,
-            english: en,
-          },
-        ])
-        .select("*")
-        .single();
-      if (error) throw error;
-      if (data) {
-        const created: CommunityPost = {
-          id: String(data.id),
-          user_id: String(data.user_id),
-          japanese: String(data.japanese ?? data.ja ?? ""),
-          english: String(data.english ?? data.en ?? ""),
-          created_at: data.created_at ?? new Date().toISOString(),
-        };
-        setCommunityPosts((prev) => [created, ...prev]);
-        setCommunityJa("");
-        setCommunityEn("");
-      }
-    } catch (e) {
-      setCommunityError(uiText.communityPostError);
-    } finally {
-      setCommunityLoading(false);
-    }
-  };
-
   // Record画面用：4軸スキルチャート用の値と座標
   const vocabScore = Math.min(vocab.length / 20, 1); // 語彙
   const naturalScore = Math.min((streakDays.filter(Boolean).length + 2) / 7, 1); // 自然さ
@@ -1798,13 +2010,14 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
     () =>
       buildSeasonalProgressState({
         streak: stats.streak,
-        recentActivityCount: streakDays.filter(Boolean).length,
+        activityCount: streakDays.filter(Boolean).length,
         missionDoneCount: getProgressSnapshot(habitUserId).missionsCompletedCount,
         reviewDoneCount: getProgressSnapshot(habitUserId).reviewsCompletedCount,
         chatCount: getProgressSnapshot(habitUserId).totalChatMessages,
         topicCount: stats.totalTopicPractices,
+        uiLang: appLang === "ja" || appLang === "ko" || appLang === "zh" ? appLang : "en",
       }),
-    [habitUserId, stats, streakDays],
+    [appLang, habitUserId, stats, streakDays],
   );
 
   return (
@@ -1818,25 +2031,37 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
         style={{ paddingBottom: mainBottomPadding }}
       >
         {/* 初回・Daily Mission: 全画面表示 */}
-        {activeView === "mission" && (
+        {activeView === "home" && (
           <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
-            {dailyMission ? (
+            {retentionMissionDay ? (
               <div className="space-y-3 pb-4">
-                <DailyMissionCard
-                  mission={dailyMission}
-                  ui={uiText}
+                <div className="space-y-2">
+                  <ProgressVisual
+                    season={missionGrowthVisual.season}
+                    stage={missionGrowthVisual.stage}
+                    progressRatio={missionGrowthVisual.progressRatio}
+                    isLightTheme={isLightTheme}
+                  />
+                  <p
+                    className={`text-center font-wa-serif text-sm leading-snug ${
+                      isLightTheme ? "text-neutral-800" : "text-slate-100"
+                    }`}
+                  >
+                    {missionGrowth.currentStreak > 0
+                      ? `You're on a ${missionGrowth.currentStreak}-day streak 🔥`
+                      : "Your streak starts with today's small step 🔥"}
+                  </p>
+                </div>
+                <TodaysRetentionMissionCard
+                  day={retentionMissionDay}
                   isLightTheme={isLightTheme}
-                  allComplete={isMissionFullyComplete(dailyMission)}
-                  onOpenChat={() => createNewSession(dailyMission.tasks.find((t) => !t.completed)?.instruction)}
-                  onToggleTask={(taskId) => {
-                    const next = completeMissionTask(habitUserId, dailyMission.date, taskId);
-                    if (!next) return;
-                    setDailyMission(next);
-                    if (isMissionFullyComplete(next)) {
-                      recordMissionCompleted(habitUserId);
-                    }
-                    refreshHabitData(habitUserId);
-                  }}
+                  onStart={() => startRetentionDailyMissionChat()}
+                />
+                <SeasonalProgressCard
+                  state={seasonalState}
+                  compact
+                  isLightTheme={isLightTheme}
+                  onOpenProgress={() => setActiveView("progress")}
                 />
                 <ReviewCard
                   userId={habitUserId}
@@ -1853,7 +2078,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
         )}
 
         {/* Progress: seasonal growth journey */}
-        {activeView === "record" && (
+        {activeView === "progress" && (
           <div className="mx-auto flex h-full max-w-5xl flex-1 flex-col overflow-y-auto px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
             <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -1861,7 +2086,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                   Progress
                 </h1>
                 <p className="mt-1 text-[11px] text-slate-400 sm:text-xs">
-                  Seasonal story of your Japanese growth
+                  A gentle season for your words — no scores, just growth.
                 </p>
               </div>
               <div className="flex flex-shrink-0 items-center gap-2 rounded-full border border-yomu-glassBorder bg-yomu-glass px-2 py-1.5 text-[11px] backdrop-blur-sm sm:py-1">
@@ -1883,7 +2108,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
               </div>
             </header>
 
-            <SeasonalProgressCard state={seasonalState} />
+            <SeasonalProgressCard state={seasonalState} isLightTheme={isLightTheme} />
 
             <section className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
@@ -1916,15 +2141,12 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                 <p className="mt-1 text-[12px] text-slate-400">
                   Quick access to your personal learning library.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.location.href = "/vocabulary";
-                  }}
-                  className="mt-3 inline-flex rounded-xl bg-wa-ruri px-3 py-2 text-xs font-medium text-white"
+                <Link
+                  href="/vocabulary"
+                  className="mt-3 inline-flex rounded-xl bg-wa-ruri px-3 py-2 text-xs font-medium text-white hover:bg-wa-ruri/90"
                 >
                   Open Vocabulary
-                </button>
+                </Link>
               </div>
             </section>
 
@@ -2128,129 +2350,39 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
           </div>
         )}
 
-        {/* Topic tab: share Japanese + English (community board); stays on this screen after post */}
-        {activeView === "community" && (
-          <div className="mx-auto flex h-full max-w-5xl flex-1 flex-col gap-4 overflow-y-auto px-3 py-4 sm:gap-5 sm:px-5 sm:py-6 lg:px-8 lg:py-6">
-            <header className="space-y-1">
-              <h1 className="font-wa-serif text-lg font-semibold text-slate-50 sm:text-xl">
-                Topic
-              </h1>
-              <p className="text-[11px] text-slate-400 sm:text-xs">
-                {uiText.communitySubtitle}
-              </p>
-            </header>
-
-            <section className="rounded-3xl border border-slate-800/80 bg-slate-950/80 p-4 shadow-[0_22px_80px_rgba(0,0,0,0.9)] backdrop-blur-xl sm:p-5">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4 text-wa-ruri" />
-                  <span className="font-wa-serif text-[11px] font-semibold tracking-[0.18em] text-slate-400">
-                    {uiText.newPostBadge}
-                  </span>
-                </div>
-                <span className="text-[10px] text-slate-500">{uiText.signedInOnly}</span>
-              </div>
-
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-slate-300">{uiText.communityLabelJa}</label>
-                  <textarea
-                    value={communityJa}
-                    onChange={(e) => setCommunityJa(e.target.value)}
-                    rows={3}
-                    placeholder={uiText.communityPlaceholderJa}
-                    className="w-full resize-none rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-[13px] text-slate-100 placeholder:text-slate-500 focus:border-wa-ruri focus:outline-none focus:ring-1 focus:ring-wa-ruri/60"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-slate-300">{uiText.communityLabelEn}</label>
-                  <textarea
-                    value={communityEn}
-                    onChange={(e) => setCommunityEn(e.target.value)}
-                    rows={3}
-                    placeholder={uiText.communityPlaceholderEn}
-                    className="w-full resize-none rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-[13px] text-slate-100 placeholder:text-slate-500 focus:border-wa-ruri focus:outline-none focus:ring-1 focus:ring-wa-ruri/60"
-                  />
-                </div>
-                {communityError && <p className="text-[11px] text-rose-400">{communityError}</p>}
-                <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-[11px] text-slate-500">{uiText.communityFormFooterHint}</p>
-                  <button
-                    type="button"
-                    disabled={communityLoading || !communityJa.trim() || !communityEn.trim()}
-                    onClick={handleCommunitySubmit}
-                    className="btn-wa-hover btn-wa-hover-ruri inline-flex items-center justify-center gap-2 rounded-xl bg-wa-ruri px-4 py-2.5 text-[12px] font-medium text-slate-50 shadow-glass disabled:cursor-not-allowed disabled:bg-wa-hai/50 disabled:text-slate-300"
-                  >
-                    {communityLoading ? uiText.posting : uiText.post}
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            <section className="space-y-3 pb-4">
-              {communityLoading && communityPosts.length === 0 && (
-                <p className="text-[12px] text-slate-400">{uiText.loadingPosts}</p>
-              )}
-              {!communityLoading && communityPosts.length === 0 && !communityError && (
-                <p className="text-[12px] text-slate-500">{uiText.noPostsYet}</p>
-              )}
-              {communityPosts.map((post) => (
-                <article
-                  key={post.id}
-                  className="rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-950/80 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.85)] backdrop-blur-xl sm:p-5"
-                >
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/80 text-[11px] text-slate-300">
-                        JP
-                      </div>
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/80 text-[11px] text-slate-300">
-                        EN
-                      </div>
-                    </div>
-                    <span className="text-[10px] text-slate-500">
-                      {new Date(post.created_at).toLocaleString(dateLocale, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                  <div className="space-y-3 text-[13px] leading-relaxed text-slate-200">
-                    <div className="space-y-1.5">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                        {uiText.communityLabelJa}
-                      </p>
-                      <p className="whitespace-pre-wrap text-slate-100">{post.japanese}</p>
-                    </div>
-                    <div className="h-px w-full bg-gradient-to-r from-slate-800/0 via-slate-700/70 to-slate-800/0" />
-                    <div className="space-y-1.5">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                        {uiText.communityLabelEn}
-                      </p>
-                      <p className="whitespace-pre-wrap text-slate-200">{post.english}</p>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </section>
-          </div>
+        {activeView === "topic" && (
+          <TopicGuidedLearning
+            userId={habitUserId}
+            appLang={appLang}
+            isLightTheme={isLightTheme}
+            onPracticeSaved={() => refreshHabitData(habitUserId)}
+          />
         )}
 
         {activeView === "more" && (
           <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col gap-3 overflow-y-auto px-4 py-6">
             <h1 className="font-wa-serif text-lg font-semibold text-slate-50">More</h1>
-            <button
-              type="button"
-              onClick={() => {
-                window.location.href = "/vocabulary";
-              }}
-              className="rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left"
+            <Link
+              href="/vocabulary"
+              className="block rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
             >
               <p className="text-sm text-slate-100">Vocabulary</p>
               <p className="mt-0.5 text-xs text-slate-400">Your personal learning library</p>
-            </button>
+            </Link>
+            <Link
+              href="/report"
+              className="block rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
+            >
+              <p className="text-sm text-slate-100">Report</p>
+              <p className="mt-0.5 text-xs text-slate-400">学習のまとめ。ベータのご意見送付先への導線もあります。</p>
+            </Link>
+            <Link
+              href="/feedback"
+              className="block rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
+            >
+              <p className="text-sm text-slate-100">ご意見・感想（ベータ）</p>
+              <p className="mt-0.5 text-xs text-slate-400">不具合・要望・よかった点を専用ページから</p>
+            </Link>
             <button
               type="button"
               onClick={() => setActiveView("settings")}
@@ -2542,53 +2674,63 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
 
         {/* チャット: 入力欄は常に画面下部に固定、ログのみスクロール */}
         {activeView === "chat" && (
-          <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-2 px-2 py-2 sm:gap-3 sm:px-3 sm:py-3 lg:px-4">
-            <header className="flex flex-shrink-0 items-center justify-between gap-2">
-              <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col gap-1 px-1 py-1 sm:gap-1.5 sm:px-2 sm:py-1.5">
+            {retentionRewardBanner ? (
+              <div
+                role="status"
+                className="flex-shrink-0 whitespace-pre-line rounded-xl border border-emerald-500/45 bg-emerald-950/55 px-3 py-2.5 text-center text-[12px] leading-snug text-emerald-50"
+              >
+                {retentionRewardBanner}
+              </div>
+            ) : null}
+            <header className="flex flex-shrink-0 items-center justify-between gap-1.5 border-b border-slate-800/20 pb-1">
+              <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-2.5">
                 <button
                   type="button"
                   onClick={() => setSessionDrawerOpen(true)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700/80 bg-slate-900/70 text-slate-300"
+                  className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-slate-700/60 bg-slate-900/50 text-slate-300"
                   aria-label="Open sessions"
                 >
                   <PanelLeft className="h-4 w-4" />
                 </button>
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-wa-ruri to-wa-asagi text-sm font-bold text-white shadow-glass">
-                  Y
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-wa-ruri to-wa-asagi text-[11px] font-bold text-white sm:h-9 sm:w-9 sm:text-xs">
+                  F
                 </div>
-                <p className="font-wa-serif truncate text-sm font-semibold text-slate-50 sm:text-base">
+                <p className="font-wa-serif hidden min-w-0 flex-1 truncate text-[13px] font-semibold text-slate-50 sm:block sm:text-sm">
                   {chatSessions.find((s) => s.id === currentSessionId)?.title ?? uiText.japaneseChat}
                 </p>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-shrink-0 items-center gap-1">
                 <button
                   type="button"
                   onClick={() => setChatSettingsOpen((v) => !v)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/70 px-2.5 py-2 text-xs text-slate-200"
+                  className={`inline-flex h-9 min-h-[44px] items-center gap-1.5 rounded-lg border px-2.5 text-slate-200 transition sm:min-h-0 ${
+                    chatSettingsOpen
+                      ? "border-wa-ruri/60 bg-wa-ruri/15 text-wa-asagi"
+                      : "border-slate-700/80 bg-slate-900/50 hover:border-slate-600"
+                  }`}
+                  aria-expanded={chatSettingsOpen}
+                  aria-label="Chat settings: furigana, tone, JLPT, region"
+                  title="Furigana, tone, JLPT, region"
                 >
-                  ⚙ Settings
+                  <Settings className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className="text-[10px] font-medium leading-tight sm:text-[11px]">Settings</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => createNewSession()}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/70 px-2.5 py-2 text-xs text-slate-200"
+                  className="inline-flex h-9 min-h-[44px] w-9 min-w-[44px] items-center justify-center rounded-lg border border-slate-700/80 bg-slate-900/50 text-slate-200 hover:border-slate-600 sm:min-h-9 sm:min-w-9"
+                  aria-label="New chat"
+                  title="New chat"
                 >
-                  <PlusCircle className="h-3.5 w-3.5" /> New
+                  <PlusCircle className="h-4 w-4" />
                 </button>
               </div>
             </header>
 
-            <section className="glass-panel relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-800/40 p-2 backdrop-blur-xl sm:p-3">
+            <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-800/20 bg-slate-950/20 p-1 backdrop-blur-sm sm:rounded-2xl sm:p-1.5">
             {chatSettingsOpen ? (
-            <div className="mb-2 flex flex-shrink-0 flex-col gap-2 rounded-xl border border-yomu-glassBorder bg-slate-900/50 p-2.5 sm:mb-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-0.5">
-                <p className="font-wa-serif text-xs font-medium text-slate-100 sm:text-sm">
-                  {uiText.coachLine}
-                </p>
-                <p className="hidden text-[11px] text-slate-500 sm:block">
-                  {uiText.featureLine}
-                </p>
-              </div>
+            <div className="mb-1 flex flex-shrink-0 flex-col gap-2 rounded-lg border border-slate-700/45 bg-slate-900/35 p-1.5 sm:mb-1.5 sm:rounded-xl sm:p-2">
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-400">{uiText.furigana}</span>
@@ -2678,7 +2820,7 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
             </div>
             ) : null}
 
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overflow-x-hidden px-1 pb-20 pt-1 text-[14px] leading-relaxed sm:space-y-4 sm:pb-24">
+            <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overflow-x-hidden px-0.5 pb-[6rem] pt-0.5 text-[14px] leading-relaxed sm:space-y-3 sm:pb-28">
               {messages.map((msg) => {
                 const isAssistant = msg.role === "assistant";
                 const toneForMessage = isAssistant
@@ -2689,6 +2831,11 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                     ? applyPoliteness(msg.baseText, toneForMessage)
                     : msg.baseText
                   : msg.baseText;
+                const hasMetaStrip =
+                  isAssistant &&
+                  Boolean(msg.culturalNote || msg.showToneMeta || msg.tipsNote);
+                const saveList = msg.chatContext?.saveCandidates ?? [];
+                const hasSaves = isAssistant && saveList.length > 0;
                 return (
                   <div
                     key={msg.id}
@@ -2698,178 +2845,191 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                     }}
                   >
                     {isAssistant && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex max-w-[min(100%,40rem)] items-center gap-2">
                         <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-wa-ruri to-wa-asagi text-[10px] font-bold text-white">
-                          Y
+                          F
                         </div>
                         <span className="text-[11px] text-slate-500">
-                          Yomu · {formatTime(msg.createdAt)}
+                          Frensei · {formatTime(msg.createdAt)}
                         </span>
                         <button
                           type="button"
                           onClick={() => toggleSpeak(msg.baseText)}
-                          className="btn-wa-hover btn-wa-hover-ruri ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full border border-yomu-glassBorder bg-yomu-glass text-slate-300 hover:border-wa-ruri hover:text-slate-50"
+                          className="btn-wa-hover btn-wa-hover-ruri ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-700/50 bg-slate-900/40 text-slate-300 hover:border-wa-ruri hover:text-slate-50"
                           aria-label={uiText.ariaPlayAudio}
                         >
                           <Volume2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     )}
-                    <div
-                      className={`w-fit max-w-[min(90%,50rem)] rounded-2xl px-3 py-2.5 sm:px-4 ${
-                        isAssistant
-                          ? "rounded-bl-sm border border-slate-700/70 bg-slate-800/75 text-slate-100"
-                          : "rounded-br-sm border border-wa-ruri/40 bg-wa-ruri/25 text-slate-50"
-                      }`}
-                    >
-                      {isAssistant && msg.topicLabel ? (
-                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300/90">
-                          {msg.topicLabel}
-                        </p>
-                      ) : null}
-                      {isAssistant ? (
-                        <p className="inline break-words">
-                          {renderMessageWithVocab(
-                            displayText,
-                            furiganaOn,
-                            (phrase, reading) => setVocabMenu({ phrase, reading }),
-                            (msg.chatContext?.highlightPhrases ?? []).map(
-                              (p) => [p.phrase, p.reading] as [string, string],
-                            ),
-                          )}
-                        </p>
-                      ) : (
-                        <p className="break-words">{displayText}</p>
-                      )}
-                      {isAssistant && msg.topicFeedback ? (
-                        <TopicActions
-                          saved={Boolean(msg.topicFeedback.saved)}
-                          onSave={() => {
-                            if (!currentSessionId) return;
-                            saveTopicPracticeResult(
-                              habitUserId,
-                              currentSessionId,
-                              msg.topicFeedback!.topicId,
-                              {
-                                correctedAnswer: msg.topicFeedback!.correctedAnswer,
-                                explanation: msg.topicFeedback!.explanation,
-                                alternativeExamples: msg.topicFeedback!.alternativeExamples,
-                                encouragement: "Saved. Keep going at your pace.",
-                              },
-                              msg.topicFeedback!.userAnswer,
-                            );
-                            setMessages((prev) =>
-                              prev.map((m2) =>
-                                m2.id === msg.id && m2.topicFeedback
-                                  ? {
-                                      ...m2,
-                                      topicFeedback: { ...m2.topicFeedback, saved: true },
-                                    }
-                                  : m2,
+                    {isAssistant ? (
+                      <div className="flex w-full max-w-[min(100%,40rem)] flex-col gap-2">
+                        <div
+                          className={`rounded-2xl px-3 py-2.5 sm:px-3.5 sm:py-2.5 ${
+                            "rounded-bl-md border border-slate-700/45 bg-slate-800/50 text-slate-100 shadow-sm"
+                          }`}
+                        >
+                          {msg.topicLabel ? (
+                            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300/90">
+                              {msg.topicLabel}
+                            </p>
+                          ) : null}
+                          <p className="inline break-words">
+                            {renderMessageWithVocab(
+                              displayText,
+                              furiganaOn,
+                              (phrase, reading) => setVocabMenu({ phrase, reading }),
+                              (msg.chatContext?.highlightPhrases ?? []).map(
+                                (p) => [p.phrase, p.reading] as [string, string],
                               ),
-                            );
-                          }}
-                          onTryAgain={() => {
-                            if (!activeTopicPrompt) return;
-                            setInput("");
-                            setMessages((prev) => [
-                              ...prev,
-                              {
-                                id: Date.now() + 99,
-                                role: "assistant",
-                                baseText: `Try one more for the same topic 👇\n${activeTopicPrompt.prompt}`,
-                                createdAt: new Date().toISOString(),
-                                topicLabel: "Topic Practice",
-                              },
-                            ]);
-                          }}
-                        />
-                      ) : null}
-                      {isAssistant && (
-                        <div className="mt-4 space-y-2.5 rounded-xl border border-yomu-glassBorder bg-yomu-glass/80 p-3.5 text-[11px] backdrop-blur-sm">
-                          {msg.culturalNote && (
-                            <div className="flex gap-2 text-slate-300">
-                              <span className="mt-0.5 text-sky-400">
-                                <Sparkles className="h-3 w-3" />
-                              </span>
-                              <p>{msg.culturalNote}</p>
-                            </div>
-                          )}
-                          {msg.showToneMeta && (
-                            <p className="text-slate-400">
-                              <span className="font-semibold text-slate-300">
-                                {uiText.tone}:
-                              </span>{" "}
-                              {toneForMessage === "casual"
-                                ? `${uiText.casual} · ${uiText.casualHint}`
-                                : toneForMessage === "business"
-                                  ? `${uiText.business} · ${uiText.businessHint}`
-                                  : `${uiText.neutral} · ${uiText.neutralHint}`}
-                            </p>
-                          )}
-                          {msg.tipsNote && (
-                            <p className="text-slate-400">
-                              <span className="font-semibold text-slate-300">{uiText.tipLabel}</span>{" "}
-                              {msg.tipsNote}
-                            </p>
-                          )}
-                          {msg.chatContext?.saveCandidates?.length ? (
-                            <div className="mt-2 space-y-2">
-                              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                                Recommended to save
-                              </p>
-                              {msg.chatContext.saveCandidates.map((cand) => (
-                                <div
-                                  key={cand.id}
-                                  className="rounded-lg border border-slate-700/70 bg-slate-900/70 px-2.5 py-2"
-                                >
-                                  <p className="text-[10px] font-semibold text-slate-400">{cand.label}</p>
-                                  <p className="mt-0.5 text-[12px] text-slate-100">{cand.primaryText}</p>
-                                  {cand.secondaryText ? (
-                                    <p className="mt-0.5 text-[10px] text-slate-400">{cand.secondaryText}</p>
-                                  ) : null}
-                                  {cand.explanation ? (
-                                    <p className="mt-0.5 text-[10px] text-slate-500">{cand.explanation}</p>
-                                  ) : null}
-                                  <button
-                                    type="button"
-                                    disabled={cand.alreadySaved}
-                                    onClick={() => {
-                                      saveCandidateToVocabulary(cand);
-                                      setMessages((prev) =>
-                                        prev.map((m2) =>
-                                          m2.id === msg.id && m2.chatContext?.saveCandidates
-                                            ? {
-                                                ...m2,
-                                                chatContext: {
-                                                  ...m2.chatContext,
-                                                  saveCandidates: m2.chatContext.saveCandidates.map((c2) =>
-                                                    c2.id === cand.id ? { ...c2, alreadySaved: true } : c2,
-                                                  ),
-                                                },
-                                              }
-                                            : m2,
-                                        ),
-                                      );
-                                    }}
-                                    className="mt-2 rounded-md border border-wa-ruri/50 bg-wa-ruri/20 px-2.5 py-1 text-[10px] font-medium text-slate-100 disabled:border-slate-700 disabled:bg-slate-800/70 disabled:text-slate-500"
-                                  >
-                                    {cand.alreadySaved ? "Saved" : "Save"}
-                                  </button>
-                                </div>
-                              ))}
+                            )}
+                          </p>
+                          {msg.topicFeedback ? (
+                            <div className="mt-3 border-t border-slate-700/40 pt-2">
+                              <TopicActions
+                                saved={Boolean(msg.topicFeedback.saved)}
+                                onSave={() => {
+                                  if (!currentSessionId) return;
+                                  saveTopicPracticeResult(
+                                    habitUserId,
+                                    currentSessionId,
+                                    msg.topicFeedback!.topicId,
+                                    {
+                                      correctedAnswer: msg.topicFeedback!.correctedAnswer,
+                                      explanation: msg.topicFeedback!.explanation,
+                                      alternativeExamples: msg.topicFeedback!.alternativeExamples,
+                                      encouragement: "Saved. Keep going at your pace.",
+                                      otherLearnerExamples: msg.topicFeedback!.otherLearnerExamples ?? [],
+                                    },
+                                    msg.topicFeedback!.userAnswer,
+                                  );
+                                  setMessages((prev) =>
+                                    prev.map((m2) =>
+                                      m2.id === msg.id && m2.topicFeedback
+                                        ? {
+                                            ...m2,
+                                            topicFeedback: { ...m2.topicFeedback, saved: true },
+                                          }
+                                        : m2,
+                                    ),
+                                  );
+                                }}
+                                onTryAgain={() => {
+                                  if (!activeTopicPrompt) return;
+                                  setInput("");
+                                  setMessages((prev) => [
+                                    ...prev,
+                                    {
+                                      id: Date.now() + 99,
+                                      role: "assistant",
+                                      baseText: `Try one more for the same topic 👇\n${activeTopicPrompt.prompt}`,
+                                      createdAt: new Date().toISOString(),
+                                      topicLabel: "Topic Practice",
+                                    },
+                                  ]);
+                                }}
+                              />
                             </div>
                           ) : null}
                         </div>
-                      )}
-                    </div>
+                        {hasMetaStrip ? (
+                          <div className="space-y-1.5 rounded-xl border border-slate-800/50 bg-slate-900/35 px-3 py-2 text-[11px] text-slate-400">
+                            {msg.culturalNote && (
+                              <div className="flex gap-2 text-slate-300">
+                                <span className="mt-0.5 shrink-0 text-sky-400">
+                                  <Sparkles className="h-3 w-3" />
+                                </span>
+                                <p>{msg.culturalNote}</p>
+                              </div>
+                            )}
+                            {msg.showToneMeta && (
+                              <p>
+                                <span className="font-semibold text-slate-300">
+                                  {uiText.tone}:
+                                </span>{" "}
+                                {toneForMessage === "casual"
+                                  ? `${uiText.casual} · ${uiText.casualHint}`
+                                  : toneForMessage === "business"
+                                    ? `${uiText.business} · ${uiText.businessHint}`
+                                    : `${uiText.neutral} · ${uiText.neutralHint}`}
+                              </p>
+                            )}
+                            {msg.tipsNote && (
+                              <p>
+                                <span className="font-semibold text-slate-300">{uiText.tipLabel}</span>{" "}
+                                {msg.tipsNote}
+                              </p>
+                            )}
+                          </div>
+                        ) : null}
+                        {hasSaves ? (
+                          <div className="space-y-2 border-t border-slate-800/35 pt-2">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                              Recommended to save
+                            </p>
+                            {saveList.map((cand) => (
+                              <div
+                                key={cand.id}
+                                className="rounded-lg border border-slate-700/50 bg-slate-900/45 px-2.5 py-2"
+                              >
+                                <p className="text-[10px] font-semibold text-slate-400">
+                                  {formatSaveCandidateHeading(cand)}
+                                </p>
+                                <p className="mt-1 text-[13px] font-medium leading-snug text-slate-50">
+                                  {cand.primaryText}
+                                </p>
+                                {cand.secondaryText ? (
+                                  <p className="mt-1 text-[11px] text-slate-400">{cand.secondaryText}</p>
+                                ) : null}
+                                {cand.explanation ? (
+                                  <p className="mt-0.5 text-[11px] text-slate-500">{cand.explanation}</p>
+                                ) : null}
+                                <button
+                                  type="button"
+                                  disabled={cand.alreadySaved}
+                                  onClick={() => {
+                                    saveCandidateToVocabulary(cand, habitUserId);
+                                    setMessages((prev) =>
+                                      prev.map((m2) =>
+                                        m2.id === msg.id && m2.chatContext?.saveCandidates
+                                          ? {
+                                              ...m2,
+                                              chatContext: {
+                                                ...m2.chatContext,
+                                                saveCandidates: m2.chatContext.saveCandidates.map((c2) =>
+                                                  c2.id === cand.id ? { ...c2, alreadySaved: true } : c2,
+                                                ),
+                                              },
+                                            }
+                                          : m2,
+                                      ),
+                                    );
+                                  }}
+                                  className="mt-2 rounded-md border border-wa-ruri/45 bg-wa-ruri/15 px-2.5 py-1.5 text-[11px] font-semibold text-slate-100 disabled:border-slate-700/80 disabled:bg-slate-800/60 disabled:text-slate-500"
+                                >
+                                  {cand.alreadySaved ? "Saved" : "[Save]"}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div
+                        className={
+                          "w-fit max-w-[min(88%,24rem)] rounded-2xl rounded-br-md border border-wa-ruri/35 bg-wa-ruri/20 px-3 py-2.5 text-slate-50 shadow-sm sm:max-w-[min(85%,26rem)]"
+                        }
+                      >
+                        <p className="break-words">{displayText}</p>
+                      </div>
+                    )}
                   </div>
                 );
               })}
               {isTyping && (
                 <div className="msg-enter flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-wa-ruri to-wa-asagi text-[10px] font-bold text-white">
-                    Y
+                    F
                   </div>
                   <div className="flex items-center gap-1 rounded-2xl border border-yomu-glassBorder bg-yomu-glass px-3 py-1.5">
                     <span className="dot" />
@@ -2881,13 +3041,14 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
               <div ref={bottomRef} />
             </div>
 
-            <div className="flex flex-shrink-0 flex-col pb-safe pt-3 sm:mt-5">
-              {topicSelectorMode !== "hidden" ? (
+            <div className="relative flex flex-shrink-0 flex-col pb-safe pt-2">
+              {ftueShowPicker ? <FtuePracticePicker onPick={beginFtue} /> : null}
+              {topicSelectorMode !== "hidden" && !ftueShowPicker ? (
                 <TopicSelector
                   mode={topicSelectorMode === "topic_list" ? "topic_list" : "entry"}
                   topics={TOPIC_PROMPTS}
                   showContinueLast={chatSessions.length > 1}
-                  onDailyMission={() => setActiveView("mission")}
+                  onDailyMission={() => setActiveView("home")}
                   onTopicPractice={() => setTopicSelectorMode("topic_list")}
                   onFreeChat={() => {
                     setTopicSelectorMode("hidden");
@@ -2923,10 +3084,10 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                   }}
                 />
               ) : null}
-              <div className="glass-input absolute inset-x-2 bottom-2 flex items-end gap-2 rounded-2xl border border-slate-700/70 bg-slate-950/90 px-3 py-2 shadow-glass sm:inset-x-3 sm:bottom-3 sm:gap-3 sm:px-4 sm:py-3">
+              <div className="absolute inset-x-1.5 bottom-1.5 z-10 flex items-end gap-2 rounded-2xl border border-slate-700/55 bg-slate-950/95 px-2.5 py-2 shadow-lg backdrop-blur-md sm:inset-x-2 sm:bottom-2 sm:gap-2.5 sm:px-3 sm:py-2.5">
                 <button
                   type="button"
-                  className="btn-wa-hover btn-wa-hover-ruri flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-yomu-glassBorder bg-yomu-glass text-slate-300 hover:border-wa-ruri hover:text-slate-50 sm:h-9 sm:w-9"
+                  className="btn-wa-hover btn-wa-hover-ruri flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-slate-700/50 bg-slate-900/60 text-slate-300 hover:border-wa-ruri hover:text-slate-50 sm:h-10 sm:w-10"
                   onClick={() =>
                     handleImageSelect(new File([""], "hanami-photo.jpg"))
                   }
@@ -2938,15 +3099,16 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
                   <textarea
                     rows={1}
                     value={input}
+                    disabled={ftueShowPicker}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
-                        if (input.trim()) handleSend(input);
+                        if (input.trim() && !ftueShowPicker) handleSend(input);
                       }
                     }}
                     placeholder={uiText.inputPlaceholder}
-                    className="max-h-32 w-full resize-none border-0 bg-transparent text-[13px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-0"
+                    className="max-h-32 w-full resize-none border-0 bg-transparent text-[13px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   {imageName && (
                     <p className="mt-1 text-[11px] text-slate-500">
@@ -2970,6 +3132,14 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
         )}
 
       </main>
+
+      {missionMicroToast ? (
+        <MissionRewardToast
+          line1={missionMicroToast.l1}
+          line2={missionMicroToast.l2}
+          onDismiss={dismissMissionToast}
+        />
+      ) : null}
 
       {/* 言語・地域: タップで開くボトムシート（一覧を1画面に並べない） */}
       {choiceSheet && (
@@ -3090,12 +3260,12 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
           {/* ホーム（Daily Mission） */}
           <motion.button
             type="button"
-            onClick={() => setActiveView("mission")}
-            onPointerDown={() => setActiveView("mission")}
+            onClick={() => setActiveView("home")}
+            onPointerDown={() => setActiveView("home")}
             className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
-              activeView === "mission" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
+              activeView === "home" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
             }`}
-            animate={activeView === "mission" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
+            animate={activeView === "home" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
           >
             <Target className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
@@ -3105,12 +3275,12 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
           {/* Topic */}
           <motion.button
             type="button"
-            onClick={() => setActiveView("community")}
-            onPointerDown={() => setActiveView("community")}
+            onClick={() => setActiveView("topic")}
+            onPointerDown={() => setActiveView("topic")}
             className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
-              activeView === "community" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
+              activeView === "topic" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
             }`}
-            animate={activeView === "community" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
+            animate={activeView === "topic" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
           >
             <Compass className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
@@ -3167,12 +3337,12 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
           {/* Progress */}
           <motion.button
             type="button"
-            onClick={() => setActiveView("record")}
-            onPointerDown={() => setActiveView("record")}
+            onClick={() => setActiveView("progress")}
+            onPointerDown={() => setActiveView("progress")}
             className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
-              activeView === "record" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
+              activeView === "progress" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
             }`}
-            animate={activeView === "record" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
+            animate={activeView === "progress" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
           >
             <ClipboardList className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
@@ -3195,6 +3365,68 @@ export default function YomuPrototypePage({ initialView = "mission", embedded = 
           </motion.button>
         </div>
       </nav>
+
+      {/* Report quick button: tap to open, long-press to move */}
+      {!embedded && reportFabPos ? (
+        <button
+          ref={reportFabRef}
+          type="button"
+          aria-label="Open report"
+          title="Report（長押しで移動）"
+          onPointerDown={(e) => {
+            if (!reportFabRef.current) return;
+            reportFabMovedRef.current = false;
+            reportFabDraggingRef.current = false;
+            const rect = reportFabRef.current.getBoundingClientRect();
+            reportFabPointerOffsetRef.current = {
+              x: e.clientX - rect.left,
+              y: e.clientY - rect.top,
+            };
+            if (reportFabPressTimerRef.current) {
+              window.clearTimeout(reportFabPressTimerRef.current);
+            }
+            reportFabPressTimerRef.current = window.setTimeout(() => {
+              reportFabDraggingRef.current = true;
+            }, 320);
+          }}
+          onPointerMove={(e) => {
+            if (!reportFabDraggingRef.current) return;
+            const next = clampReportFabPos(
+              e.clientX - reportFabPointerOffsetRef.current.x,
+              e.clientY - reportFabPointerOffsetRef.current.y,
+            );
+            reportFabMovedRef.current = true;
+            setReportFabPos(next);
+          }}
+          onPointerUp={() => {
+            if (reportFabPressTimerRef.current) {
+              window.clearTimeout(reportFabPressTimerRef.current);
+              reportFabPressTimerRef.current = null;
+            }
+            if (reportFabDraggingRef.current) {
+              reportFabDraggingRef.current = false;
+              return;
+            }
+            if (!reportFabMovedRef.current) {
+              window.location.href = "/report";
+            }
+          }}
+          onPointerCancel={() => {
+            if (reportFabPressTimerRef.current) {
+              window.clearTimeout(reportFabPressTimerRef.current);
+              reportFabPressTimerRef.current = null;
+            }
+            reportFabDraggingRef.current = false;
+          }}
+          className="fixed z-[980] flex h-[52px] w-[52px] touch-none items-center justify-center rounded-full bg-gradient-to-br from-wa-ruri to-wa-asagi text-white shadow-[0_10px_28px_rgba(42,92,170,0.45)] ring-2 ring-wa-asagi/70 active:scale-95"
+          style={{
+            left: reportFabPos.x,
+            top: reportFabPos.y,
+          }}
+        >
+          <FileText className="h-5 w-5" />
+        </button>
+      ) : null}
 
       {/* 単語タップ時：「単語帳に追加する」メニュー */}
       {vocabMenu && (

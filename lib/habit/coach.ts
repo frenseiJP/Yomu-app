@@ -1,6 +1,7 @@
 import { recordsStorage } from "@/src/features/records/storage";
-import type { CoachContextPayload, HabitDailyMission } from "@/lib/habit/types";
-import { getOrCreateDailyMission } from "@/lib/habit/mission";
+import type { CoachContextPayload } from "@/lib/habit/types";
+import { getOrCreateRetentionDailyMission } from "@/lib/mission/retentionDaily";
+import { readMissionGrowth } from "@/lib/progress/missionGrowth";
 import { getUserStats } from "@/lib/habit/progress";
 import { readHabitJson } from "@/lib/habit/storage";
 import type { UserProgressV1 } from "@/lib/habit/types";
@@ -19,9 +20,9 @@ export function buildCoachContext(userId: string): CoachContextPayload {
   }));
 
   const stats = getUserStats(userId);
-  const mission = getOrCreateDailyMission(userId);
-  const incomplete = mission.tasks.filter((t) => !t.completed).length;
-  const lastMissionSummary = `Today's mission (${mission.date}): ${mission.tasks.length - incomplete}/${mission.tasks.length} tasks done. Tasks: ${mission.tasks.map((t) => t.instruction).join(" | ")}`;
+  const dayMission = getOrCreateRetentionDailyMission(userId, "N3");
+  const mg = readMissionGrowth(userId);
+  const lastMissionSummary = `Today's quick mission (${dayMission.date}): "${dayMission.mission.title}" — ${dayMission.mission.instruction} (EN cue: "${dayMission.mission.prompt_en}"). Status: ${dayMission.completed ? "completed" : "open"}. Mission completions (lifetime): ${mg.totalCompleted}; current mission-day streak: ${mg.currentStreak}.`;
 
   const prog = readHabitJson<UserProgressV1>(PROGRESS_KIND, userId, {
     activeDays: [],
@@ -73,7 +74,3 @@ export function formatCoachContextForSystem(ctx: CoachContextPayload | null | un
   return lines.join("\n");
 }
 
-export function missionToCoachSummary(mission: HabitDailyMission): string {
-  const incomplete = mission.tasks.filter((t) => !t.completed).length;
-  return `${mission.tasks.length - incomplete}/${mission.tasks.length} tasks done today`;
-}

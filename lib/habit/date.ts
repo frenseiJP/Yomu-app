@@ -15,3 +15,14 @@ export function addDaysYmd(ymd: string, delta: number): string {
 export function todayYmd(): string {
   return toYmd(new Date());
 }
+
+function ymdToEpochDay(ymd: string): number {
+  const [y, m, d] = ymd.split("-").map(Number);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return 0;
+  return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
+}
+
+/** `toYmd` から `fromYmd` までの暦日差（正なら to が未来） */
+export function diffCalendarDaysYmd(fromYmd: string, toYmd: string): number {
+  return ymdToEpochDay(toYmd) - ymdToEpochDay(fromYmd);
+}

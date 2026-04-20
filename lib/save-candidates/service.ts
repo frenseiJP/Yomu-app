@@ -88,8 +88,11 @@ function findDuplicate(items: VocabularyItem[], item: VocabularyItem): Vocabular
   return items.find((x) => x.type === item.type && norm(x.term) === t) ?? null;
 }
 
-export function recommendCandidatesForMessage(params: Omit<GetRecommendedSaveCandidatesParams, "existingItems">): SaveCandidate[] {
-  const userId = getOrCreateUserId();
+export function recommendCandidatesForMessage(
+  params: Omit<GetRecommendedSaveCandidatesParams, "existingItems">,
+  scopedUserId?: string,
+): SaveCandidate[] {
+  const userId = scopedUserId?.trim() || getOrCreateUserId();
   const existing = listVocabularyByUser(userId);
   const candidates = getRecommendedSaveCandidates({
     ...params,
@@ -102,8 +105,11 @@ export function recommendCandidatesForMessage(params: Omit<GetRecommendedSaveCan
   });
 }
 
-export function saveCandidateToVocabulary(candidate: SaveCandidate): { saved: boolean; item: VocabularyItem } {
-  const userId = getOrCreateUserId();
+export function saveCandidateToVocabulary(
+  candidate: SaveCandidate,
+  scopedUserId?: string,
+): { saved: boolean; item: VocabularyItem } {
+  const userId = scopedUserId?.trim() || getOrCreateUserId();
   const all = listVocabularyByUser(userId);
   const item = toVocabularyItem(candidate, userId);
   const dup = findDuplicate(all, item);
