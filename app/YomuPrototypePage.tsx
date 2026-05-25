@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Image as ImageIcon,
@@ -16,6 +16,7 @@ import {
   Settings,
   ClipboardList,
   Compass,
+  Library,
   MoreHorizontal,
   Languages,
   Eye,
@@ -67,8 +68,6 @@ import {
   activeDaysToWeekDots,
   getProgressSnapshot,
 } from "@/lib/habit";
-import TodaysRetentionMissionCard from "@/components/habit/TodaysRetentionMissionCard";
-import ReviewCard from "@/components/habit/ReviewCard";
 import {
   buildRetentionMissionChatOpener,
   getOrCreateRetentionDailyMission,
@@ -79,13 +78,10 @@ import { isMissionCompleted } from "@/lib/mission/completion";
 import {
   applyMissionGrowthOnCompletion,
   buildMissionCompletionCopy,
-  computeVisualGrowthStage,
-  growthProgressRatio,
   readMissionGrowth,
   type MissionGrowthState,
 } from "@/lib/progress/missionGrowth";
 import { getCalendarSeason } from "@/lib/progress/seasonal";
-import ProgressVisual from "@/components/progress/ProgressVisual";
 import MissionRewardToast from "@/components/progress/MissionRewardToast";
 import type { ChatMessage as StoredChatMessage, ChatSession as StoredChatSession } from "@/lib/chat/types";
 import {
@@ -113,6 +109,13 @@ import type { SaveCandidate } from "@/lib/save-candidates/types";
 import { guessCorrectedSentence } from "@/lib/save-candidates/guess-correction";
 import { recommendCandidatesForMessage, saveCandidateToVocabulary } from "@/lib/save-candidates/service";
 import FtuePracticePicker from "@/components/chat/FtuePracticePicker";
+import AssistantMessageBody from "@/components/chat/AssistantMessageBody";
+import DailyUsefulPhraseCard from "@/components/habit/DailyUsefulPhraseCard";
+import BetaFeedbackPrompt from "@/components/feedback/BetaFeedbackPrompt";
+import {
+  buildDailyPhrasePracticeOpener,
+  getDailyUsefulPhrase,
+} from "@/lib/dailyPhrase/getDailyPhrase";
 import {
   buildFtueCoachMessage,
   fallbackFtueCoachPayload,
@@ -122,6 +125,8 @@ import {
 import { migrateFtueIfLegacyUser, readFtuePersist, writeFtuePersist } from "@/lib/ftue/state";
 import { ftueEnglishPromptForMode, getFtueFreeOpening, getFtueOpening } from "@/lib/ftue/openers";
 import type { FtueCoachPayload, FtuePracticeMode } from "@/lib/ftue/types";
+import { markBetaFeedbackPromptShown, shouldShowBetaFeedbackPrompt } from "@/lib/feedback/service";
+import { logBetaEvent } from "@/lib/analytics/client";
 
 type Role = "user" | "assistant";
 type Politeness = "casual" | "neutral" | "business";
@@ -150,7 +155,7 @@ function labelForDisplayLang(
 
 /** AI 返信直後に付与する、本文に即した語彙・次の3択 */
 type ChatTurnContext = {
-  highlightPhrases: { phrase: string; reading: string }[];
+  highlightPhrases: { phrase: string; reading: string; romaji?: string }[];
   followUps: [string, string, string];
   bestFollowUpIndex: number;
   saveCandidates?: SaveCandidate[];
@@ -170,6 +175,8 @@ type Message = {
   ftueAnchored?: boolean;
   /** 今日のリテンション・デイリーミッションの開始メッセージ */
   retentionMissionOpener?: boolean;
+  /** 構造化 Sensei 返信（モバイル向けセクション表示用） */
+  senseiPayload?: FtueCoachPayload;
   createdAt: string;
   chatContext?: ChatTurnContext;
   topicLabel?: string;
@@ -536,17 +543,19 @@ function withFurigana(text: string): JSX.Element {
 function renderMessageWithVocab(
   text: string,
   furiganaOn: boolean,
-  onWordTap: (phrase: string, reading: string) => void,
-  extraPhrasePairs: [string, string][] = []
+  onWordTap: (phrase: string, reading: string, romaji?: string) => void,
+  extraPhrasePairs: [string, string, string?][] = []
 ): JSX.Element {
-  type Segment = { type: "text"; value: string } | { type: "vocab"; phrase: string; reading: string };
+  type Segment =
+    | { type: "text"; value: string }
+    | { type: "vocab"; phrase: string; reading: string; romaji?: string };
   const seen = new Set<string>();
-  const merged: [string, string][] = [];
-  for (const [p, r] of [...extraPhrasePairs, ...PHRASE_READINGS]) {
+  const merged: [string, string, string?][] = [];
+  for (const [p, r, roma] of [...extraPhrasePairs, ...PHRASE_READINGS.map((x) => [x[0], x[1], undefined] as [string, string, string?])]) {
     const key = p.trim();
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    merged.push([p, r]);
+    merged.push([p, r, roma]);
   }
   merged.sort((a, b) => b[0].length - a[0].length);
 
@@ -555,11 +564,11 @@ function renderMessageWithVocab(
 
   while (remaining.length > 0) {
     let found = false;
-    for (const [phrase, reading] of merged) {
+    for (const [phrase, reading, romaji] of merged) {
       const idx = remaining.indexOf(phrase);
       if (idx !== -1) {
         if (idx > 0) segments.push({ type: "text", value: remaining.slice(0, idx) });
-        segments.push({ type: "vocab", phrase, reading });
+        segments.push({ type: "vocab", phrase, reading, romaji });
         remaining = remaining.slice(idx + phrase.length);
         found = true;
         break;
@@ -580,10 +589,11 @@ function renderMessageWithVocab(
           <button
             key={i}
             type="button"
-            onClick={() => onWordTap(seg.phrase, seg.reading)}
+            onClick={() => onWordTap(seg.phrase, seg.reading, seg.romaji)}
             className="rounded px-0.5 font-medium text-slate-100 underline decoration-wa-ruri/50 underline-offset-2 hover:decoration-wa-ruri hover:bg-wa-ruri/10"
           >
-            「{seg.phrase}」（{seg.reading}）
+            <span className="text-[1.05em]">{seg.phrase}</span>
+            <span className="text-slate-400"> ({seg.romaji ?? seg.reading})</span>
           </button>
         )
       )}
@@ -663,7 +673,7 @@ async function saveUserProfileLanguageSettings(
   const displayName =
     (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) ||
     user.email?.split("@")[0] ||
-    "Yomu";
+    "Frensei";
 
   const firstLang = patch.first_language ?? "ja";
 
@@ -692,8 +702,10 @@ type YomuPrototypePageProps = {
   embedded?: boolean;
 };
 
-export default function YomuPrototypePage({ initialView = "home", embedded = false }: YomuPrototypePageProps = {}) {
+function YomuPrototypePageInner({ initialView = "home", embedded = false }: YomuPrototypePageProps = {}) {
   const pathname = usePathname() || "";
+  const searchParams = useSearchParams();
+  const sessionFromUrl = searchParams.get("session");
   const affiliateBarVisible = isAffiliateBarVisibleForPath(pathname);
   /** 下部タブをアフィリエイトバーより上に置く＋本文の余白 */
   const mainBottomPadding = affiliateBarVisible
@@ -747,10 +759,12 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
   });
   const [vocabKanaVisible, setVocabKanaVisible] = useState(true);
   const [imageName, setImageName] = useState<string | null>(null);
-  const [vocabMenu, setVocabMenu] = useState<{ phrase: string; reading: string } | null>(null);
+  const [vocabMenu, setVocabMenu] = useState<{ phrase: string; reading: string; romaji?: string } | null>(null);
   const [vocabAdding, setVocabAdding] = useState(false);
   const [contextLoadingId, setContextLoadingId] = useState<number | null>(null);
   const [followUpFeedback, setFollowUpFeedback] = useState<null | "nice" | "ok">(null);
+  const [betaFeedbackVisible, setBetaFeedbackVisible] = useState(false);
+  const [betaFeedbackShownInSession, setBetaFeedbackShownInSession] = useState(false);
   const [currentTopic, setCurrentTopic] = useState("");
   const [activeView, setActiveView] = useState<TabView>(initialView);
   const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
@@ -809,41 +823,68 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
     setMissionCompleted(Boolean(rDay.completed));
   }, [jlptLevel]);
 
-  const refreshChatSessions = useCallback((userId: string) => {
-    migrateFtueIfLegacyUser(userId);
-    const ftueP = readFtuePersist();
-    const rows = getSessions(userId);
-    setChatSessions(rows);
-    if (rows.length === 0) {
-      const created = startNewChatSession(userId);
-      setChatSessions([created]);
-      setCurrentSessionId(created.id);
-      if (!ftueP.pickerDone && !ftueP.firstLearningCompleted) {
-        setFtueShowPicker(true);
-        setMessages([]);
-        setTopicSelectorMode("entry");
-      } else {
-        setMessages([buildWelcomeMessage(appLang as Lang)]);
+  const refreshChatSessions = useCallback(
+    (userId: string, preferredSessionId?: string | null) => {
+      migrateFtueIfLegacyUser(userId);
+      const ftueP = readFtuePersist();
+      const rows = getSessions(userId);
+      setChatSessions(rows);
+      if (rows.length === 0) {
+        const created = startNewChatSession(userId);
+        setChatSessions([created]);
+        setCurrentSessionId(created.id);
+        if (!ftueP.pickerDone && !ftueP.firstLearningCompleted) {
+          setFtueShowPicker(true);
+          setMessages([]);
+          setTopicSelectorMode("entry");
+        } else {
+          setMessages([buildWelcomeMessage(appLang as Lang)]);
+        }
+        return;
       }
-      return;
-    }
-    if (!currentSessionId || !rows.some((s) => s.id === currentSessionId)) {
-      const sid = rows[0].id;
-      setCurrentSessionId(sid);
-      const ms = getStoredMessages(userId, sid);
-      if (!ftueP.pickerDone && !ftueP.firstLearningCompleted && ms.length === 0) {
-        setFtueShowPicker(true);
-        setMessages([]);
-      } else {
-        setMessages(ms.length ? toViewMessages(ms) : [buildWelcomeMessage(appLang as Lang)]);
+
+      const preferredOk =
+        typeof preferredSessionId === "string" &&
+        preferredSessionId.length > 0 &&
+        rows.some((s) => s.id === preferredSessionId);
+
+      const loadSessionMessagesOnly = (sid: string) => {
+        setCurrentSessionId(sid);
+        const ms = getStoredMessages(userId, sid);
+        if (!ftueP.pickerDone && !ftueP.firstLearningCompleted && ms.length === 0) {
+          setFtueShowPicker(true);
+          setMessages([]);
+        } else {
+          setMessages(ms.length ? toViewMessages(ms) : [buildWelcomeMessage(appLang as Lang)]);
+        }
+        setTopicSelectorMode(ms.length > 0 ? "hidden" : "entry");
+      };
+
+      if (preferredOk) {
+        setRetentionMissionChatOpen(false);
+        setFtueCoachActive(false);
+        ftueFreePathRef.current = false;
+        loadSessionMessagesOnly(preferredSessionId);
+        setActiveTopicPrompt(null);
+        setSessionDrawerOpen(false);
+        setActiveView("chat");
+        return;
       }
-      setTopicSelectorMode(ms.length > 0 ? "hidden" : "entry");
-    }
-  }, [appLang, currentSessionId]);
+
+      if (!currentSessionId || !rows.some((s) => s.id === currentSessionId)) {
+        loadSessionMessagesOnly(rows[0].id);
+      }
+    },
+    [appLang, currentSessionId],
+  );
 
   const dateLocale = useMemo(
     () => dateLocaleForLang(appLang as Lang),
     [appLang],
+  );
+  const chatUserMessageCount = useMemo(
+    () => messages.filter((m) => m.role === "user").length,
+    [messages],
   );
   const isLightTheme = uiTheme === "light";
 
@@ -883,20 +924,20 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
         if (!mounted) return;
         setHabitUserId(uid);
         refreshHabitData(uid);
-        refreshChatSessions(uid);
+        refreshChatSessions(uid, sessionFromUrl);
       } catch {
         if (!mounted) return;
         const uid = getOrCreateUserId();
         setHabitUserId(uid);
         refreshHabitData(uid);
-        refreshChatSessions(uid);
+        refreshChatSessions(uid, sessionFromUrl);
       }
     };
     void init();
     return () => {
       mounted = false;
     };
-  }, [refreshHabitData, refreshChatSessions]);
+  }, [refreshHabitData, refreshChatSessions, sessionFromUrl]);
 
   useEffect(() => {
     setStoredUiTheme(uiTheme);
@@ -927,6 +968,29 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
     const p = readFtuePersist();
     if (p.pickerDone || p.firstLearningCompleted) setFtueShowPicker(false);
   }, [activeView, habitUserId]);
+
+  useEffect(() => {
+    setBetaFeedbackVisible(false);
+    setBetaFeedbackShownInSession(false);
+  }, [currentSessionId]);
+
+  useEffect(() => {
+    if (activeView !== "chat") return;
+    if (betaFeedbackShownInSession || betaFeedbackVisible) return;
+    if (chatUserMessageCount < 3) return;
+    if (!shouldShowBetaFeedbackPrompt(habitUserId, { shownInSession: betaFeedbackShownInSession })) {
+      return;
+    }
+    setBetaFeedbackVisible(true);
+    setBetaFeedbackShownInSession(true);
+    markBetaFeedbackPromptShown(habitUserId);
+  }, [
+    activeView,
+    betaFeedbackShownInSession,
+    betaFeedbackVisible,
+    chatUserMessageCount,
+    habitUserId,
+  ]);
 
   useEffect(() => {
     if (activeView !== "chat") return;
@@ -1241,7 +1305,7 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
           (typeof user.user_metadata?.full_name === "string" &&
             user.user_metadata.full_name.trim()) ||
           user.email?.split("@")[0] ||
-          "Yomu";
+          "Frensei";
         const { error } = await supabase.from("user_profiles").insert({
           user_id: user.id,
           display_name: displayName,
@@ -1346,16 +1410,6 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
     );
   }
 
-  const missionGrowthVisual = useMemo(() => {
-    const season = getCalendarSeason();
-    const stage = computeVisualGrowthStage(missionGrowth.totalCompleted, missionGrowth.currentStreak);
-    return {
-      season,
-      stage,
-      progressRatio: growthProgressRatio(missionGrowth.totalCompleted, stage),
-    };
-  }, [missionGrowth]);
-
   const dismissMissionToast = useCallback(() => setMissionMicroToast(null), []);
 
   useEffect(() => {
@@ -1452,7 +1506,7 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
         const hpRaw = Array.isArray(data.highlightPhrases) ? data.highlightPhrases : [];
         const normalizedHp = hpRaw
           .filter(
-            (x): x is { phrase: string; reading?: string } =>
+            (x): x is { phrase: string; reading?: string; romaji?: string } =>
               !!x &&
               typeof x === "object" &&
               typeof (x as { phrase?: unknown }).phrase === "string",
@@ -1463,6 +1517,10 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
               typeof x.reading === "string" && x.reading.trim()
                 ? x.reading.trim()
                 : String(x.phrase).trim(),
+            romaji:
+              typeof x.romaji === "string" && x.romaji.trim()
+                ? x.romaji.trim()
+                : undefined,
           }))
           .filter((x) => x.phrase.length > 0);
 
@@ -1583,6 +1641,16 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
 
     if (!opts?.preserveFollowUpFeedback) setFollowUpFeedback(null);
     const toneAtSend = politenessRef.current;
+    void logBetaEvent({
+      eventType: "chat_send",
+      userId: habitUserId,
+      sessionId,
+      route: "/",
+      metadata: {
+        textLength: text.length,
+        mode: activeTopicPrompt ? "topic" : ftueCoachActive ? "ftue" : "chat",
+      },
+    });
 
     const userMsg: Message = {
       id: Date.now(),
@@ -1645,9 +1713,9 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
         };
         const payload: FtueCoachPayload =
           json.ok && json.coach && typeof json.coach === "object"
-            ? (parseFtueCoachPayload(json.coach) ?? fallbackFtueCoachPayload(text))
+            ? (parseFtueCoachPayload(json.coach, text) ?? fallbackFtueCoachPayload(text))
             : fallbackFtueCoachPayload(text);
-        const core = buildFtueCoachMessage(payload);
+        const core = buildFtueCoachMessage(payload, text);
         const body = showMicro
           ? "Nice improvement 👍\nYou sound more natural already.\n\n" + core
           : core;
@@ -1656,7 +1724,13 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, baseText: body, replyTone: toneAtSend, ftueAnchored: true }
+              ? {
+                  ...m,
+                  baseText: body,
+                  replyTone: toneAtSend,
+                  ftueAnchored: true,
+                  senseiPayload: showMicro ? undefined : payload,
+                }
               : m,
           ),
         );
@@ -1670,7 +1744,7 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
         refreshHabitData(habitUserId);
       } catch {
         const payload = fallbackFtueCoachPayload(text);
-        const core = buildFtueCoachMessage(payload);
+        const core = buildFtueCoachMessage(payload, text);
         const body = showMicro
           ? "Nice improvement 👍\nYou sound more natural already.\n\n" + core
           : core;
@@ -1679,7 +1753,13 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, baseText: body, replyTone: toneAtSend, ftueAnchored: true }
+              ? {
+                  ...m,
+                  baseText: body,
+                  replyTone: toneAtSend,
+                  ftueAnchored: true,
+                  senseiPayload: showMicro ? undefined : payload,
+                }
               : m,
           ),
         );
@@ -1758,19 +1838,22 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
       };
       const payload: FtueCoachPayload =
         json.ok && json.coach && typeof json.coach === "object"
-          ? (parseFtueCoachPayload(json.coach) ?? fallbackStructuredCoachPayload(text))
+          ? (parseFtueCoachPayload(json.coach, text) ?? fallbackStructuredCoachPayload(text))
           : fallbackStructuredCoachPayload(text);
-      const body = buildFtueCoachMessage(payload);
+      const body = buildFtueCoachMessage(payload, text);
       accumulated = body;
       addAssistantMessage(habitUserId, sessionId, body);
       setChatSessions(getSessions(habitUserId));
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === assistantId ? { ...m, baseText: body, replyTone: toneAtSend } : m,
+          m.id === assistantId
+            ? { ...m, baseText: body, replyTone: toneAtSend, senseiPayload: payload }
+            : m,
         ),
       );
       void enrichChatContext(assistantId, body, text, {
-        correctedSentence: payload.correctedSentence,
+        correctedSentence:
+          payload.replyMode === "correction" ? payload.correctedSentence : undefined,
       });
       if (ftueFreePathRef.current) {
         const pp = readFtuePersist();
@@ -1857,7 +1940,53 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
     setActiveView("chat");
     setSessionDrawerOpen(false);
     setInput("");
+    void logBetaEvent({
+      eventType: "mission_start",
+      userId: uid,
+      sessionId: sid,
+      route: "/",
+      metadata: {
+        missionTitle: retentionMissionDay.mission.title,
+        missionCategory: retentionMissionDay.mission.category,
+      },
+    });
   }, [habitUserId, retentionMissionDay]);
+
+  const dailyUsefulPhrase = useMemo(() => getDailyUsefulPhrase(), []);
+
+  const startDailyPhrasePractice = useCallback(() => {
+    const phrase = dailyUsefulPhrase;
+    retentionMissionFinalizedRef.current = false;
+    setRetentionMissionChatOpen(false);
+    const uid = habitUserId;
+    const c = startNewChatSession(uid, `Phrase: ${phrase.phrase}`);
+    const sid = c.id;
+    setCurrentSessionId(sid);
+    setChatSessions(getSessions(uid));
+    setFtueCoachActive(false);
+    ftueFreePathRef.current = false;
+    setFtueShowPicker(false);
+    setTopicSelectorMode("hidden");
+    setActiveTopicPrompt(null);
+    const opener = buildDailyPhrasePracticeOpener(phrase);
+    addAssistantMessage(uid, sid, opener);
+    setChatSessions(getSessions(uid));
+    const nowIso = new Date().toISOString();
+    const toneAt = politenessRef.current;
+    setMessages([
+      {
+        id: Date.now(),
+        role: "assistant",
+        baseText: opener,
+        createdAt: nowIso,
+        replyTone: toneAt,
+        ftueAnchored: true,
+      },
+    ]);
+    setActiveView("chat");
+    setSessionDrawerOpen(false);
+    setInput("");
+  }, [dailyUsefulPhrase, habitUserId]);
 
   const createNewSession = useCallback((prefill?: string) => {
     setRetentionMissionChatOpen(false);
@@ -1953,6 +2082,16 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
         item.translations[0] ?? "",
         item.exampleSentences[0] ?? ""
       );
+      void logBetaEvent({
+        eventType: "vocabulary_save",
+        userId: habitUserId,
+        sessionId: currentSessionId ?? undefined,
+        route: "/",
+        metadata: {
+          source: "chat_highlight",
+          wordLength: word.length,
+        },
+      });
     } finally {
       setVocabAdding(false);
     }
@@ -2006,6 +2145,19 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
     () => listTopicPracticeResultsByUser(habitUserId).slice(0, 3),
     [habitUserId, stats.totalTopicPractices],
   );
+  const recentChatSummary = useMemo(() => {
+    const recent = chatSessions[0];
+    if (!recent) return null;
+    const rows = getStoredMessages(habitUserId, recent.id);
+    const last = rows[rows.length - 1];
+    const previewRaw = (last?.content ?? "").replace(/\s+/g, " ").trim();
+    const preview = previewRaw.length > 88 ? `${previewRaw.slice(0, 88)}…` : previewRaw;
+    return {
+      id: recent.id,
+      title: recent.title,
+      preview: preview || "Continue your conversation.",
+    };
+  }, [chatSessions, habitUserId]);
   const seasonalState = useMemo(
     () =>
       buildSeasonalProgressState({
@@ -2033,47 +2185,88 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
         {/* 初回・Daily Mission: 全画面表示 */}
         {activeView === "home" && (
           <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+            <div className="space-y-3 pb-4">
+              <DailyUsefulPhraseCard
+                phrase={dailyUsefulPhrase}
+                isLightTheme={isLightTheme}
+                onPractice={() => startDailyPhrasePractice()}
+              />
             {retentionMissionDay ? (
-              <div className="space-y-3 pb-4">
-                <div className="space-y-2">
-                  <ProgressVisual
-                    season={missionGrowthVisual.season}
-                    stage={missionGrowthVisual.stage}
-                    progressRatio={missionGrowthVisual.progressRatio}
-                    isLightTheme={isLightTheme}
-                  />
-                  <p
-                    className={`text-center font-wa-serif text-sm leading-snug ${
-                      isLightTheme ? "text-neutral-800" : "text-slate-100"
-                    }`}
-                  >
-                    {missionGrowth.currentStreak > 0
-                      ? `You're on a ${missionGrowth.currentStreak}-day streak 🔥`
-                      : "Your streak starts with today's small step 🔥"}
+              <>
+                <section className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Today&apos;s Mission
                   </p>
-                </div>
-                <TodaysRetentionMissionCard
-                  day={retentionMissionDay}
-                  isLightTheme={isLightTheme}
-                  onStart={() => startRetentionDailyMissionChat()}
-                />
+                  <p className="mt-2 font-wa-serif text-base leading-snug text-slate-50">
+                    {retentionMissionDay.mission.title}
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-300">
+                    {retentionMissionDay.mission.prompt_en}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => startRetentionDailyMissionChat()}
+                    className="mt-3 inline-flex rounded-xl bg-wa-ruri px-4 py-2.5 text-sm font-medium text-white hover:bg-wa-ruri/90"
+                  >
+                    Start
+                  </button>
+                </section>
+
+                <section className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Continue Chat
+                  </p>
+                  {recentChatSummary ? (
+                    <button
+                      type="button"
+                      onClick={() => openSession(recentChatSummary.id)}
+                      className="mt-2 block w-full rounded-xl border border-slate-700/80 bg-slate-900/70 px-3 py-2.5 text-left hover:bg-slate-900"
+                    >
+                      <p className="line-clamp-1 text-sm font-medium text-slate-100">{recentChatSummary.title}</p>
+                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-400">
+                        {recentChatSummary.preview}
+                      </p>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        createNewSession();
+                        setActiveView("chat");
+                      }}
+                      className="mt-2 inline-flex rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30"
+                    >
+                      Start chatting
+                    </button>
+                  )}
+                </section>
+
                 <SeasonalProgressCard
                   state={seasonalState}
                   compact
                   isLightTheme={isLightTheme}
                   onOpenProgress={() => setActiveView("progress")}
                 />
-                <ReviewCard
-                  userId={habitUserId}
-                  words={dueReviews.words}
-                  mistakes={dueReviews.mistakes}
-                  ui={uiText}
-                  isLightTheme={isLightTheme}
-                  onUpdated={() => refreshHabitData(habitUserId)}
-                  onOpenChat={(prefill) => createNewSession(prefill)}
-                />
-              </div>
+
+                {dueReviews.words.length + dueReviews.mistakes.length > 0 ? (
+                  <section className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      Review
+                    </p>
+                    <p className="mt-2 text-sm text-slate-200">
+                      You have {dueReviews.words.length + dueReviews.mistakes.length} items to review.
+                    </p>
+                    <Link
+                      href="/vocabulary"
+                      className="mt-3 inline-flex rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30"
+                    >
+                      Open review
+                    </Link>
+                  </section>
+                ) : null}
+              </>
             ) : null}
+            </div>
           </div>
         )}
 
@@ -2110,6 +2303,32 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
 
             <SeasonalProgressCard state={seasonalState} isLightTheme={isLightTheme} />
 
+            <section className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Active days
+                </p>
+                <p className="mt-2 font-wa-serif text-2xl text-slate-100">{streakDays.filter(Boolean).length}</p>
+                <p className="mt-1 text-xs text-slate-400">this week</p>
+              </div>
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Conversations
+                </p>
+                <p className="mt-2 font-wa-serif text-2xl text-slate-100">{stats.totalSessions}</p>
+                <p className="mt-1 text-xs text-slate-400">sessions completed</p>
+              </div>
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Review due
+                </p>
+                <p className="mt-2 font-wa-serif text-2xl text-slate-100">
+                  {dueReviews.words.length + dueReviews.mistakes.length}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">words and corrections</p>
+              </div>
+            </section>
+
             <section className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -2117,7 +2336,7 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
                 </p>
                 {recentTopicResults.length === 0 ? (
                   <p className="mt-2 text-[12px] text-slate-400">
-                    まだ Topic Practice の保存がありません。
+                    No saved Topic Practice turns yet.
                   </p>
                 ) : (
                   <ul className="mt-2 space-y-1.5">
@@ -2129,224 +2348,41 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
                     ))}
                   </ul>
                 )}
+                <Link
+                  href="/topic"
+                  className="mt-3 inline-flex rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-900"
+                >
+                  Practice a topic
+                </Link>
               </div>
 
               <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Vocabulary / Review
+                  Vocabulary
                 </p>
                 <p className="mt-2 text-[13px] text-slate-300">
-                  Due reviews: {dueReviews.words.length + dueReviews.mistakes.length}
+                  {formatVocabSavedLine(uiText, vocab.length)}
                 </p>
                 <p className="mt-1 text-[12px] text-slate-400">
-                  Quick access to your personal learning library.
+                  Keep useful expressions and corrections in your personal library.
                 </p>
-                <Link
-                  href="/vocabulary"
-                  className="mt-3 inline-flex rounded-xl bg-wa-ruri px-3 py-2 text-xs font-medium text-white hover:bg-wa-ruri/90"
-                >
-                  Open Vocabulary
-                </Link>
-              </div>
-            </section>
-
-            {vocab.length === 0 && !missionCompleted ? (
-              // Empty state
-              <section className="flex flex-1 items-center justify-center rounded-2xl border border-slate-800/60 bg-slate-950/80 p-6 text-center shadow-glass backdrop-blur-xl sm:p-10">
-                <div className="mx-auto max-w-md space-y-4">
-                  <p className="font-wa-serif text-base font-semibold text-slate-50 sm:text-lg">
-                    {uiText.recordEmptyTitle}
-                  </p>
-                  <p className="text-sm leading-relaxed text-slate-400">
-                    {uiText.recordEmptyBody}
-                  </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link
+                    href="/vocabulary"
+                    className="inline-flex rounded-xl bg-wa-ruri px-3 py-2 text-xs font-medium text-white hover:bg-wa-ruri/90"
+                  >
+                    Open Vocabulary
+                  </Link>
                   <button
                     type="button"
                     onClick={() => setActiveView("chat")}
-                    className="btn-wa-hover btn-wa-hover-ruri mt-2 inline-flex items-center justify-center rounded-xl border border-wa-ruri/60 bg-wa-ruri/20 px-4 py-2.5 text-sm font-medium text-slate-100 shadow-glass hover:bg-wa-ruri/30"
+                    className="inline-flex rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30"
                   >
-                    {uiText.recordEmptyCta}
+                    Reflect in chat
                   </button>
                 </div>
-              </section>
-            ) : (
-              <>
-                {/* Stats Section: 和柄プログレス + スキルレーダーチャート */}
-                <section className="grid gap-4 rounded-3xl border border-slate-800/70 bg-slate-950/90 p-4 shadow-glass backdrop-blur-xl sm:grid-cols-3 sm:gap-5 sm:p-5">
-                  {/* 和柄ストリーク：円形プログレス */}
-                  <div className="flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="relative h-24 w-24 sm:h-28 sm:w-28">
-                        <div
-                          className="absolute inset-0 rounded-full border border-slate-800/80 bg-slate-950/80"
-                          style={{
-                            background: `conic-gradient(#facc15 ${
-                              (streakDays.filter(Boolean).length / 7) * 360
-                            }deg, rgba(15,23,42,1) 0deg)`,
-                          }}
-                        />
-                        <div className="absolute inset-[7px] rounded-full bg-slate-950 flex flex-col items-center justify-center text-xs text-slate-300">
-                          <span className="font-wa-serif text-[11px] text-slate-400">
-                            {uiText.patternStreakLabel}
-                          </span>
-                          <span className="font-wa-serif text-xl font-semibold text-slate-50">
-                            {streakDays.filter(Boolean).length}
-                          </span>
-                          <span className="text-[10px] text-slate-500">{uiText.daysShort}</span>
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-slate-400">
-                        {uiText.studiedThisWeekCaption}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* 4軸スキルレーダーチャート */}
-                  <div className="sm:col-span-2 space-y-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                      {uiText.skillChartTitle}
-                    </p>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                      <svg
-                        viewBox="0 0 128 128"
-                        className="h-32 w-32 flex-shrink-0 text-slate-600"
-                      >
-                        {/* レーダーのガイド */}
-                        <circle
-                          cx="64"
-                          cy="64"
-                          r="40"
-                          className="fill-slate-900/40 stroke-slate-700/60"
-                          strokeDasharray="4 4"
-                        />
-                        <circle
-                          cx="64"
-                          cy="64"
-                          r="26"
-                          className="fill-transparent stroke-slate-700/50"
-                          strokeDasharray="4 4"
-                        />
-                        <circle
-                          cx="64"
-                          cy="64"
-                          r="14"
-                          className="fill-transparent stroke-slate-700/40"
-                          strokeDasharray="4 4"
-                        />
-                        {/* 軸 */}
-                        <line x1="64" y1="16" x2="64" y2="112" className="stroke-slate-700/60" />
-                        <line x1="16" y1="64" x2="112" y2="64" className="stroke-slate-700/60" />
-                        {/* 値ポリゴン */}
-                        <polygon
-                          points={skillRadarPoints}
-                          className="fill-wa-ruri/30 stroke-wa-asagi/80"
-                        />
-                      </svg>
-                      <div className="grid flex-1 grid-cols-2 gap-2 text-[11px] text-slate-300">
-                        <div className="rounded-xl bg-slate-900/60 p-2">
-                          <p className="font-wa-serif text-[11px] text-slate-200">
-                            {uiText.skillVocabTitle}
-                          </p>
-                          <p className="mt-1 text-[10px] text-slate-400">
-                            {uiText.skillVocabDesc}
-                          </p>
-                        </div>
-                        <div className="rounded-xl bg-slate-900/60 p-2">
-                          <p className="font-wa-serif text-[11px] text-slate-200">
-                            {uiText.skillNaturalTitle}
-                          </p>
-                          <p className="mt-1 text-[10px] text-slate-400">
-                            {uiText.skillNaturalDesc}
-                          </p>
-                        </div>
-                        <div className="rounded-xl bg-slate-900/60 p-2">
-                          <p className="font-wa-serif text-[11px] text-slate-200">
-                            {uiText.skillGrammarTitle}
-                          </p>
-                          <p className="mt-1 text-[10px] text-slate-400">
-                            {uiText.skillGrammarDesc}
-                          </p>
-                        </div>
-                        <div className="rounded-xl bg-slate-900/60 p-2">
-                          <p className="font-wa-serif text-[11px] text-slate-200">
-                            {uiText.skillPaceTitle}
-                          </p>
-                          <p className="mt-1 text-[10px] text-slate-400">
-                            {uiText.skillPaceDesc}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Vocabulary Section: My単語帳ギャラリー */}
-                <section className="space-y-3 rounded-2xl border border-slate-800/60 bg-slate-950/80 p-4 shadow-glass backdrop-blur-xl sm:p-5">
-                  <div className="mb-1 flex items-center justify-between">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                      {uiText.myVocabularyHeading}
-                    </p>
-                    <span className="text-[11px] text-slate-400">
-                      {formatVocabSavedLine(uiText, vocab.length)}
-                    </span>
-                  </div>
-                  <div className="flex gap-3 overflow-x-auto pb-1 text-sm">
-                    {vocab.slice(0, 12).map((v) => (
-                      <div
-                        key={v.id}
-                        className="min-w-[160px] max-w-[200px] flex-1 rounded-xl border border-slate-800/80 bg-slate-900/70 px-3 py-2.5 shadow-glass backdrop-blur-md"
-                      >
-                        <div className="mb-1 flex items-center justify-between gap-1">
-                          <p className="truncate text-[13px] font-medium text-slate-50">
-                            {v.word}
-                          </p>
-                          <span className="rounded-full bg-slate-900/80 px-2 py-0.5 text-[9px] font-semibold text-wa-asagi border border-slate-700/80">
-                            JLPT {jlptLevel}
-                          </span>
-                        </div>
-                        {v.translations[0] && (
-                          <p className="truncate text-[11px] text-slate-300">
-                            {v.translations[0]}
-                          </p>
-                        )}
-                        {v.romaji && (
-                          <p className="text-[10px] text-slate-500">{v.romaji}</p>
-                        )}
-                        <p className="mt-1 text-[10px] text-slate-500">
-                          {uiText.savedOnPrefix}{" "}
-                          {new Date(v.id).toLocaleDateString(dateLocale, {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </p>
-                        {v.exampleSentences[0] && (
-                          <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-slate-400">
-                            「{v.exampleSentences[0]}」
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                {/* AI Insight Card: 今週の褒め言葉 */}
-                <section className="rounded-2xl border border-slate-800/60 bg-slate-950/80 p-4 shadow-glass backdrop-blur-xl sm:p-5">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    {uiText.weekCheerTitle}
-                  </p>
-                  <div className="mt-3 rounded-2xl border border-wa-kinari/20 bg-gradient-to-br from-slate-900/80 via-slate-950/80 to-slate-900/60 px-4 py-3 text-[13px] leading-relaxed text-slate-100 shadow-glass">
-                    <p>{formatWeekCheer(uiText, vocab.length)}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveView("chat")}
-                    className="btn-wa-hover btn-wa-hover-ruri mt-4 inline-flex items-center justify-center rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-4 py-2.5 text-[12px] font-medium text-slate-100"
-                  >
-                    {uiText.reflectWeekInChat}
-                  </button>
-                </section>
-              </>
-            )}
+              </div>
+            </section>
           </div>
         )}
 
@@ -2616,7 +2652,7 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
               </p>
               <div className={`divide-y rounded-2xl ${isLightTheme ? "divide-neutral-200 bg-[#f8f7f4]" : "divide-slate-800/80 bg-slate-900/40"}`}>
                 <a
-                  href="mailto:support@yomu-app.example.com"
+                  href="mailto:support@frensei.jp"
                   className={`flex w-full cursor-pointer items-center gap-3 px-3 py-3 text-left ${
                     isLightTheme ? "hover:bg-[#f3f1ed] active:bg-[#eeece6]" : "hover:bg-slate-900/80 active:bg-slate-800/80"
                   }`}
@@ -2865,7 +2901,7 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
                     {isAssistant ? (
                       <div className="flex w-full max-w-[min(100%,40rem)] flex-col gap-2">
                         <div
-                          className={`rounded-2xl px-3 py-2.5 sm:px-3.5 sm:py-2.5 ${
+                          className={`rounded-2xl px-3.5 py-3 sm:px-4 sm:py-3.5 ${
                             "rounded-bl-md border border-slate-700/45 bg-slate-800/50 text-slate-100 shadow-sm"
                           }`}
                         >
@@ -2874,16 +2910,29 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
                               {msg.topicLabel}
                             </p>
                           ) : null}
-                          <p className="inline break-words">
-                            {renderMessageWithVocab(
-                              displayText,
-                              furiganaOn,
-                              (phrase, reading) => setVocabMenu({ phrase, reading }),
-                              (msg.chatContext?.highlightPhrases ?? []).map(
-                                (p) => [p.phrase, p.reading] as [string, string],
-                              ),
-                            )}
-                          </p>
+                          <AssistantMessageBody
+                            text={displayText}
+                            payload={msg.senseiPayload}
+                            renderInline={(line) =>
+                              renderMessageWithVocab(
+                                line,
+                                furiganaOn,
+                                (phrase, reading, romaji) =>
+                                  setVocabMenu({
+                                    phrase,
+                                    reading,
+                                    romaji,
+                                  }),
+                                (msg.chatContext?.highlightPhrases ?? []).map((p) =>
+                                  [p.phrase, p.romaji ?? p.reading, p.romaji] as [
+                                    string,
+                                    string,
+                                    string?,
+                                  ],
+                                ),
+                              )
+                            }
+                          />
                           {msg.topicFeedback ? (
                             <div className="mt-3 border-t border-slate-700/40 pt-2">
                               <TopicActions
@@ -2903,6 +2952,16 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
                                     },
                                     msg.topicFeedback!.userAnswer,
                                   );
+                                  void logBetaEvent({
+                                    eventType: "topic_submit",
+                                    userId: habitUserId,
+                                    sessionId: currentSessionId,
+                                    route: "/",
+                                    metadata: {
+                                      source: "topic_actions_save",
+                                      topicId: msg.topicFeedback!.topicId,
+                                    },
+                                  });
                                   setMessages((prev) =>
                                     prev.map((m2) =>
                                       m2.id === msg.id && m2.topicFeedback
@@ -3042,6 +3101,15 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
             </div>
 
             <div className="relative flex flex-shrink-0 flex-col pb-safe pt-2">
+              <BetaFeedbackPrompt
+                visible={activeView === "chat" && betaFeedbackVisible}
+                userId={habitUserId}
+                source="chat"
+                sessionId={currentSessionId}
+                appVersion={process.env.NEXT_PUBLIC_APP_VERSION}
+                onSubmitted={() => setBetaFeedbackVisible(false)}
+                onSkipped={() => setBetaFeedbackVisible(false)}
+              />
               {ftueShowPicker ? <FtuePracticePicker onPick={beginFtue} /> : null}
               {topicSelectorMode !== "hidden" && !ftueShowPicker ? (
                 <TopicSelector
@@ -3349,6 +3417,18 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
             <span className="pointer-events-none">Progress</span>
           </motion.button>
 
+          {/* Vocabulary → 専用ページ */}
+          <Link
+            href="/vocabulary"
+            aria-label={uiText.vocabLibPageTitle}
+            className="flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-slate-500 hover:text-slate-300 sm:min-h-[52px] sm:text-[11px]"
+          >
+            <Library className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
+            <span className="pointer-events-none max-w-[4.5rem] truncate text-center sm:max-w-[5.5rem]">
+              {uiText.myVocabularyHeading}
+            </span>
+          </Link>
+
           {/* More */}
           <motion.button
             type="button"
@@ -3439,7 +3519,8 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
           />
           <div className="fixed left-4 right-4 top-1/2 z-[220] max-w-sm -translate-y-1/2 rounded-2xl border border-yomu-glassBorder bg-yomu-glass p-4 shadow-glass backdrop-blur-xl sm:left-1/2 sm:right-auto sm:w-[calc(100%-2rem)] sm:-translate-x-1/2">
             <p className="mb-3 text-[13px] text-slate-200">
-              “{vocabMenu.phrase}” ({vocabMenu.reading})
+              “{vocabMenu.phrase}” ({vocabMenu.reading}
+              {vocabMenu.romaji ? ` / ${vocabMenu.romaji}` : ""})
             </p>
             <div className="flex gap-2">
               <button
@@ -3453,7 +3534,7 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
                 type="button"
                 disabled={vocabAdding}
                 onClick={async () => {
-                  await handleAddVocab(vocabMenu.phrase, vocabMenu.reading);
+                  await handleAddVocab(vocabMenu.phrase, vocabMenu.romaji || vocabMenu.reading);
                   setVocabMenu(null);
                 }}
                 className="btn-wa-hover-ruri flex-1 rounded-xl bg-wa-ruri py-3 text-[12px] font-medium text-slate-50 hover:bg-wa-asagi disabled:opacity-60 sm:py-2.5"
@@ -3475,5 +3556,19 @@ export default function YomuPrototypePage({ initialView = "home", embedded = fal
         @keyframes blink { 0%,100%{opacity:.3} 50%{opacity:1} }
       `}</style>
     </div>
+  );
+}
+
+export default function YomuPrototypePage(props: YomuPrototypePageProps = {}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[100dvh] items-center justify-center bg-[#020617] text-sm text-slate-400">
+          Loading…
+        </div>
+      }
+    >
+      <YomuPrototypePageInner {...props} />
+    </Suspense>
   );
 }

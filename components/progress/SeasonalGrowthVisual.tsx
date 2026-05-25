@@ -24,18 +24,10 @@ function SpringArt({ stage, className, glowOpacity }: { stage: SeasonStage; clas
             <stop offset="100%" stopColor="#f472b6" />
           </linearGradient>
         </defs>
-        <path
-          d="M30 165 Q 70 120 110 95 T 185 55"
-          fill="none"
-          stroke="rgba(148,163,184,0.55)"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-        />
+        <path d="M28 165 Q 70 126 112 96 T 190 55" fill="none" stroke="rgba(148,163,184,0.55)" strokeWidth="3.5" strokeLinecap="round" />
         <path d="M110 95 Q 130 75 168 68" fill="none" stroke="rgba(148,163,184,0.4)" strokeWidth="2.2" strokeLinecap="round" />
-        {stage >= 1 ? (
-          <circle cx="182" cy="56" r={stage >= 2 ? 7 : 5} fill={stage >= 2 ? "#86efac" : "#fbcfe8"} opacity={0.95} />
-        ) : null}
-        {stage >= 1 && stage < 2 ? <circle cx="182" cy="56" r="3" fill="#fef3c7" /> : null}
+        {stage >= 1 ? <circle cx="182" cy="56" r="4.5" fill="#fbcfe8" opacity={0.95} /> : null}
+        {stage >= 2 ? <circle cx="182" cy="56" r="7" fill="#86efac" opacity={0.95} /> : null}
         {stage >= 3 ? (
           <g>
             {[0, 1, 2, 3].map((i) => {
@@ -105,29 +97,42 @@ function AutumnArt({
 }
 
 function SummerArt({ stage, className, glowOpacity }: { stage: SeasonStage; className: string; glowOpacity: number }) {
-  const gScale = 0.75 + stage * 0.06;
-  const summerTf = "translate(110 92) scale(" + String(gScale) + ") translate(-110 -92)";
+  const shell = stage >= 2 ? 1 : 0;
+  const burst = stage >= 3 ? 1 : 0;
+  const full = stage >= 4 ? 1 : 0;
   return (
     <div className={`relative flex items-end justify-center ${className}`}>
-      <div className="pointer-events-none absolute inset-0 rounded-3xl bg-emerald-400/25 blur-3xl" style={{ opacity: glowOpacity }} aria-hidden />
+      <div className="pointer-events-none absolute inset-0 rounded-3xl bg-fuchsia-400/20 blur-3xl" style={{ opacity: glowOpacity }} aria-hidden />
       <svg viewBox="0 0 220 180" className="relative z-[1] h-44 w-full max-w-[280px] sm:h-52" aria-hidden>
-        <g transform={summerTf}>
-          <path
-            d="M40 165 Q 85 120 118 95 Q 155 65 195 58"
-            fill="none"
-            stroke="rgba(100,116,139,0.45)"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-          <ellipse cx="125" cy="82" rx="58" ry="42" fill="#22c55e" opacity={0.85} />
-          <ellipse cx="95" cy="95" rx="34" ry="28" fill="#16a34a" opacity={0.78} />
-          <ellipse cx="152" cy="72" rx="36" ry="28" fill="#4ade80" opacity={0.72} />
-        </g>
-        {stage >= 3 ? (
-          <circle cx="188" cy="38" r="14" fill="#fde047" opacity={0.9} />
-        ) : (
-          <circle cx="188" cy="38" r="10" fill="#fde047" opacity={0.45} />
-        )}
+        <rect x="0" y="0" width="220" height="180" fill="rgba(15,23,42,0.65)" />
+        <circle cx="112" cy="92" r={shell ? 8 : 4} fill="#fef08a" opacity={0.9} />
+        {shell ? <circle cx="112" cy="92" r="18" fill="none" stroke="rgba(250,204,21,0.55)" strokeWidth="1.5" /> : null}
+        {burst ? (
+          <g strokeLinecap="round">
+            {Array.from({ length: full ? 16 : 10 }, (_, i) => {
+              const a = (Math.PI * 2 * i) / (full ? 16 : 10);
+              const inner = 20;
+              const outer = full ? 54 : 40;
+              const x1 = 112 + Math.cos(a) * inner;
+              const y1 = 92 + Math.sin(a) * inner;
+              const x2 = 112 + Math.cos(a) * outer;
+              const y2 = 92 + Math.sin(a) * outer;
+              const colors = ["#fef08a", "#f9a8d4", "#a5f3fc", "#c4b5fd"];
+              return (
+                <line
+                  key={i}
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke={colors[i % colors.length]}
+                  strokeWidth={full ? 2.6 : 2}
+                  opacity={0.9}
+                />
+              );
+            })}
+          </g>
+        ) : null}
       </svg>
     </div>
   );
@@ -138,25 +143,27 @@ function WinterArt({ stage, className, glowOpacity }: { stage: SeasonStage; clas
     <div className={`relative flex items-end justify-center ${className}`}>
       <div className="pointer-events-none absolute inset-0 rounded-3xl bg-sky-400/15 blur-3xl" style={{ opacity: glowOpacity }} aria-hidden />
       <svg viewBox="0 0 220 180" className="relative z-[1] h-44 w-full max-w-[280px] sm:h-52" aria-hidden>
-        <path
-          d="M38 168 Q 78 125 118 88 Q 158 52 198 45"
-          fill="none"
-          stroke="rgba(148,163,184,0.5)"
-          strokeWidth="2.8"
-          strokeLinecap="round"
-        />
-        {[0, 1, 2, 3, 4].map((i) => (
+        <rect x="0" y="0" width="220" height="180" fill="rgba(15,23,42,0.5)" />
+        {Array.from({ length: stage >= 2 ? 14 : 8 }, (_, i) => (
           <circle
             key={i}
-            cx={48 + i * 28}
-            cy={118 + (i % 2) * 8}
-            r={1.8}
+            cx={24 + (i * 13) % 200}
+            cy={30 + ((i * 19) % 110)}
+            r={stage >= 1 ? 2 : 1.5}
             fill="white"
-            opacity={stage >= 2 ? 0.55 : 0.2}
+            opacity={stage >= 1 ? 0.55 : 0.25}
           />
         ))}
-        {stage >= 3 ? <circle cx="168" cy="62" r="16" fill="#fef08a" opacity={0.35 + stage * 0.08} /> : null}
-        {stage >= 4 ? <circle cx="168" cy="62" r="8" fill="#fef9c3" opacity={0.85} /> : null}
+        {stage >= 2 ? <circle cx="112" cy="126" r="24" fill="#e2e8f0" /> : null}
+        {stage >= 3 ? <circle cx="112" cy="96" r="16" fill="#f1f5f9" /> : null}
+        {stage >= 4 ? (
+          <g>
+            <circle cx="106" cy="94" r="1.6" fill="#0f172a" />
+            <circle cx="118" cy="94" r="1.6" fill="#0f172a" />
+            <path d="M106 102 Q112 106 118 102" fill="none" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M96 108 Q112 118 128 108" fill="none" stroke="#ef4444" strokeWidth="4" strokeLinecap="round" />
+          </g>
+        ) : null}
       </svg>
     </div>
   );

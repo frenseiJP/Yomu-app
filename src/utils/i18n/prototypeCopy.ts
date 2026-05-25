@@ -1,7 +1,7 @@
 import type { Region } from "@/src/utils/region/region";
 import type { Lang } from "./types";
 
-/** ホーム（YomuPrototypePage）の表示文言。appLang / yomu_lang と同期させる */
+/** ホーム（Frenseiプロトタイプ）の表示文言。appLang / yomu_lang と同期させる */
 export type PrototypeSettingsText = {
   title: string;
   subtitle: string;
@@ -180,6 +180,39 @@ export type PrototypeUiText = {
   habitFixedLine: string;
   habitStartMission: string;
   habitReviewNow: string;
+  /** /vocabulary — list & detail (aligned with app display language) */
+  vocabLibPageTitle: string;
+  vocabLibPageSubtitle: string;
+  /** "{n}" = number */
+  vocabLibCountSaved: string;
+  vocabLibCountReview: string;
+  vocabLibFilterAll: string;
+  vocabLibFilterPhrase: string;
+  vocabLibFilterWord: string;
+  vocabLibFilterReview: string;
+  vocabLibSearchPh: string;
+  vocabLibSearchSr: string;
+  vocabLibEmpty: string;
+  vocabLibBackAria: string;
+  vocabTypeWord: string;
+  vocabTypePhrase: string;
+  vocabTypeCorrection: string;
+  vocabDetailSavedPrefix: string;
+  vocabDetailMeaning: string;
+  vocabDetailExample: string;
+  vocabDetailReading: string;
+  vocabDetailCorrectionPair: string;
+  vocabDetailYourSentence: string;
+  vocabDetailCorrectedLabel: string;
+  vocabDetailNote: string;
+  vocabDetailAiNote: string;
+  vocabDetailTags: string;
+  vocabDetailTopicOnly: string;
+  vocabActionDelete: string;
+  vocabActionMarkReviewed: string;
+  vocabActionClose: string;
+  vocabDeleteConfirm: string;
+  vocabCloseAria: string;
 };
 
 const SETTINGS_EN: PrototypeSettingsText = {
@@ -214,7 +247,7 @@ const UI_EN: PrototypeUiText = {
   featureLine:
     "Furigana · Tone · Culture notes · Vocabulary · Voice in one view.",
   furigana: "Furigana",
-  tone: "How Yomu sounds",
+  tone: "How Frensei sounds",
   casual: "Like a friend",
   casualHint: "plain & warm",
   neutral: "Everyday polite",
@@ -312,7 +345,7 @@ const UI_EN: PrototypeUiText = {
   contactTitle: "Contact",
   contactDesc: "Report bugs or share feedback via email.",
   termsTitle: "Terms of service",
-  termsDesc: "Read the conditions for using Yomu.",
+  termsDesc: "Read the conditions for using Frensei.",
   privacyTitle: "Privacy policy",
   privacyDesc: "How we handle data and protect your privacy.",
   quickPrompt1: "Meaning of Itadakimasu（いただきます）",
@@ -327,7 +360,7 @@ const UI_EN: PrototypeUiText = {
   imagePlaceholderLabel: "Image placeholder:",
   tipLabel: "Tip:",
   chatWelcomeBody:
-    "Hi, I'm Yomu. Let's learn Japanese together—including the culture behind the language. Send any phrase you're curious about, like Itadakimasu, Otsukaresama, or Yoroshiku onegaishimasu.",
+    "Hi, I'm Frensei. Let's learn Japanese together—including the culture behind the language. Send any phrase you're curious about, like Itadakimasu, Otsukaresama, or Yoroshiku onegaishimasu.",
   chatWelcomeCulturalNote:
     "Everyday Japanese phrases often carry cultural meaning about gratitude, relationships, and shared time.",
   chatWelcomeTipsNote:
@@ -375,6 +408,40 @@ const UI_EN: PrototypeUiText = {
   habitFixedLine: "{n} reviews cleared",
   habitStartMission: "Open chat",
   habitReviewNow: "Review now",
+  vocabLibPageTitle: "Vocabulary",
+  vocabLibPageSubtitle:
+    "Your personal learning library — not a dictionary. Corrections, phrases, and words you chose to keep.",
+  vocabLibCountSaved: "{n} saved",
+  vocabLibCountReview: "{n} to review",
+  vocabLibFilterAll: "All",
+  vocabLibFilterPhrase: "Phrase",
+  vocabLibFilterWord: "Word",
+  vocabLibFilterReview: "Review",
+  vocabLibSearchPh: "Search term, meaning, or tags…",
+  vocabLibSearchSr: "Search vocabulary",
+  vocabLibEmpty:
+    "No entries match. Try another search, clear the tag filter, or save phrases from chat.",
+  vocabLibBackAria: "Back to app",
+  vocabTypeWord: "Word",
+  vocabTypePhrase: "Phrase",
+  vocabTypeCorrection: "Correction",
+  vocabDetailSavedPrefix: "Saved",
+  vocabDetailMeaning: "Meaning / context",
+  vocabDetailExample: "Example",
+  vocabDetailReading: "Reading",
+  vocabDetailCorrectionPair: "Correction pair",
+  vocabDetailYourSentence: "Your sentence",
+  vocabDetailCorrectedLabel: "Corrected",
+  vocabDetailNote: "Note",
+  vocabDetailAiNote: "AI note",
+  vocabDetailTags: "Tags",
+  vocabDetailTopicOnly:
+    "This entry is linked from Topic Practice history. Delete and review apply only to items in your vocabulary store.",
+  vocabActionDelete: "Delete",
+  vocabActionMarkReviewed: "Mark reviewed",
+  vocabActionClose: "Close",
+  vocabDeleteConfirm: "Remove this entry from your library?",
+  vocabCloseAria: "Close",
 };
 
 const SETTINGS_JA: PrototypeSettingsText = {
@@ -409,7 +476,7 @@ const UI_JA: PrototypeUiText = {
   featureLine:
     "ふりがな · トーン · 文化メモ · 語彙 · 音声をひと画面で。",
   furigana: "ふりがな",
-  tone: "Yomuの話し方",
+  tone: "Frenseiの話し方",
   casual: "友だち口調",
   casualHint: "タメ口であたたかく",
   neutral: "丁寧な日常会話",
@@ -503,7 +570,7 @@ const UI_JA: PrototypeUiText = {
   contactTitle: "お問い合わせ",
   contactDesc: "不具合やご意見はメールでお知らせください。",
   termsTitle: "利用規約",
-  termsDesc: "Yomu の利用条件を確認できます。",
+  termsDesc: "Frensei の利用条件を確認できます。",
   privacyTitle: "プライバシーポリシー",
   privacyDesc: "データの取り扱いとプライバシーの保護について。",
   quickPrompt1: "「いただきます」の意味を教えて",
@@ -518,7 +585,7 @@ const UI_JA: PrototypeUiText = {
   imagePlaceholderLabel: "画像（プレースホルダー）:",
   tipLabel: "ヒント:",
   chatWelcomeBody:
-    "こんにちは、Yomu です。日本語と、そのうしろにある文化や空気をいっしょに味わいながら学んでいきましょう。気になるフレーズ（「いただきます」「お疲れ様」「よろしくお願いします」など）を送ってみてください。",
+    "こんにちは、Frensei です。日本語と、そのうしろにある文化や空気をいっしょに味わいながら学んでいきましょう。気になるフレーズ（「いただきます」「お疲れ様」「よろしくお願いします」など）を送ってみてください。",
   chatWelcomeCulturalNote:
     "日常の日本語には、感謝や関係性、共有の時間など、文化的なニュアンスが重なっていることがよくあります。",
   chatWelcomeTipsNote:
@@ -565,6 +632,40 @@ const UI_JA: PrototypeUiText = {
   habitFixedLine: "復習クリア {n}",
   habitStartMission: "チャットで始める",
   habitReviewNow: "復習する",
+  vocabLibPageTitle: "語彙ライブラリ",
+  vocabLibPageSubtitle:
+    "辞書ではなく、あなたが残した学びの置き場です。矯正・表現・単語を、選んだものだけをここに。",
+  vocabLibCountSaved: "{n} 件保存",
+  vocabLibCountReview: "復習 {n} 件",
+  vocabLibFilterAll: "すべて",
+  vocabLibFilterPhrase: "表現",
+  vocabLibFilterWord: "語",
+  vocabLibFilterReview: "復習",
+  vocabLibSearchPh: "語句・意味・タグで検索…",
+  vocabLibSearchSr: "語彙を検索",
+  vocabLibEmpty:
+    "該当する項目がありません。検索を変える・タグを外す・チャットから表現を保存、を試してください。",
+  vocabLibBackAria: "アプリに戻る",
+  vocabTypeWord: "語",
+  vocabTypePhrase: "表現",
+  vocabTypeCorrection: "矯正",
+  vocabDetailSavedPrefix: "保存",
+  vocabDetailMeaning: "意味・文脈",
+  vocabDetailExample: "例文",
+  vocabDetailReading: "読み",
+  vocabDetailCorrectionPair: "矯正のペア",
+  vocabDetailYourSentence: "あなたの文",
+  vocabDetailCorrectedLabel: "修正",
+  vocabDetailNote: "メモ",
+  vocabDetailAiNote: "AIメモ",
+  vocabDetailTags: "タグ",
+  vocabDetailTopicOnly:
+    "この項目はトピック練習の履歴に紐づいています。削除と復習は、語彙ストアに保存した項目にのみ適用されます。",
+  vocabActionDelete: "削除",
+  vocabActionMarkReviewed: "復習済みにする",
+  vocabActionClose: "閉じる",
+  vocabDeleteConfirm: "この項目をライブラリから削除しますか？",
+  vocabCloseAria: "閉じる",
 };
 
 const SETTINGS_KO: PrototypeSettingsText = {
@@ -599,7 +700,7 @@ const UI_KO: PrototypeUiText = {
   featureLine:
     "후리가나 · 말투 · 문화 메모 · 어휘 · 음성을 한 화면에서.",
   furigana: "후리가나",
-  tone: "Yomu 말투",
+  tone: "Frensei 말투",
   casual: "친구처럼",
   casualHint: "편하고 따뜻하게",
   neutral: "일상 존댓말",
@@ -693,7 +794,7 @@ const UI_KO: PrototypeUiText = {
   contactTitle: "문의",
   contactDesc: "버그나 의견을 이메일로 알려 주세요.",
   termsTitle: "이용약관",
-  termsDesc: "Yomu 이용 조건을 확인합니다.",
+  termsDesc: "Frensei 이용 조건을 확인합니다.",
   privacyTitle: "개인정보 처리방침",
   privacyDesc: "데이터 처리와 개인정보 보호에 대해 설명합니다.",
   quickPrompt1: "「いただきます」의 의미 설명",
@@ -708,7 +809,7 @@ const UI_KO: PrototypeUiText = {
   imagePlaceholderLabel: "이미지(플레이스홀더):",
   tipLabel: "팁:",
   chatWelcomeBody:
-    "안녕하세요, Yomu입니다. 일본어와 그 뒤에 있는 문화를 함께 익혀 가요. 「いただきます」「お疲れ様」「よろしくお願いします」처럼 궁금한 표현을 보내 주세요.",
+    "안녕하세요, Frensei입니다. 일본어와 그 뒤에 있는 문화를 함께 익혀 가요. 「いただきます」「お疲れ様」「よろしくお願いします」처럼 궁금한 표현을 보내 주세요.",
   chatWelcomeCulturalNote:
     "일상 일본어에는 감사, 관계, 함께 보낸 시간 등 문화적 뉘앙스가 담기는 경우가 많습니다.",
   chatWelcomeTipsNote:
@@ -755,6 +856,40 @@ const UI_KO: PrototypeUiText = {
   habitFixedLine: "복습 완료 {n}회",
   habitStartMission: "채팅으로 시작",
   habitReviewNow: "지금 복습",
+  vocabLibPageTitle: "어휘",
+  vocabLibPageSubtitle:
+    "사전이 아니라, 당신이 골라 남긴 학습 기록입니다. 교정·표현·단어를 한곳에 모읍니다.",
+  vocabLibCountSaved: "저장 {n}개",
+  vocabLibCountReview: "복습 {n}개",
+  vocabLibFilterAll: "전체",
+  vocabLibFilterPhrase: "표현",
+  vocabLibFilterWord: "단어",
+  vocabLibFilterReview: "복습",
+  vocabLibSearchPh: "단어·뜻·태그로 검색…",
+  vocabLibSearchSr: "어휘 검색",
+  vocabLibEmpty:
+    "일치하는 항목이 없어요. 검색을 바꾸거나 태그를 지우거나, 채팅에서 표현을 저장해 보세요.",
+  vocabLibBackAria: "앱으로 돌아가기",
+  vocabTypeWord: "단어",
+  vocabTypePhrase: "표현",
+  vocabTypeCorrection: "교정",
+  vocabDetailSavedPrefix: "저장",
+  vocabDetailMeaning: "의미·맥락",
+  vocabDetailExample: "예문",
+  vocabDetailReading: "읽기",
+  vocabDetailCorrectionPair: "교정 쌍",
+  vocabDetailYourSentence: "내 문장",
+  vocabDetailCorrectedLabel: "수정",
+  vocabDetailNote: "메모",
+  vocabDetailAiNote: "AI 메모",
+  vocabDetailTags: "태그",
+  vocabDetailTopicOnly:
+    "이 항목은 토픽 연습 기록과 연결되어 있습니다. 삭제와 복습은 어휘에 저장한 항목에만 적용됩니다.",
+  vocabActionDelete: "삭제",
+  vocabActionMarkReviewed: "복습 완료",
+  vocabActionClose: "닫기",
+  vocabDeleteConfirm: "이 항목을 라이브러리에서 제거할까요?",
+  vocabCloseAria: "닫기",
 };
 
 const SETTINGS_ZH: PrototypeSettingsText = {
@@ -788,7 +923,7 @@ const UI_ZH: PrototypeUiText = {
   coachLine: "日语聊天 · 文化教练",
   featureLine: "注音 · 语气 · 文化笔记 · 词汇 · 语音，一屏搞定。",
   furigana: "注音（ふりがな）",
-  tone: "Yomu 的语气",
+  tone: "Frensei 的语气",
   casual: "像朋友",
   casualHint: "随意、亲切",
   neutral: "日常礼貌",
@@ -879,7 +1014,7 @@ const UI_ZH: PrototypeUiText = {
   contactTitle: "联系",
   contactDesc: "通过邮件反馈问题或建议。",
   termsTitle: "服务条款",
-  termsDesc: "查看使用 Yomu 的条件。",
+  termsDesc: "查看使用 Frensei 的条件。",
   privacyTitle: "隐私政策",
   privacyDesc: "了解我们如何处理数据并保护隐私。",
   quickPrompt1: "解释「いただきます」的含义",
@@ -893,7 +1028,7 @@ const UI_ZH: PrototypeUiText = {
   imagePlaceholderLabel: "图片（占位）:",
   tipLabel: "提示:",
   chatWelcomeBody:
-    "你好，我是 Yomu。让我们一起学习日语以及语言背后的文化。请发送你感兴趣的表达，例如「いただきます」「お疲れ様」「よろしくお願いします」等。",
+    "你好，我是 Frensei。让我们一起学习日语以及语言背后的文化。请发送你感兴趣的表达，例如「いただきます」「お疲れ様」「よろしくお願いします」等。",
   chatWelcomeCulturalNote:
     "日常日语里常常叠着感谢、人际关系与共同时间等文化层面的意味。",
   chatWelcomeTipsNote:
@@ -940,6 +1075,39 @@ const UI_ZH: PrototypeUiText = {
   habitFixedLine: "复习过关 {n} 次",
   habitStartMission: "去聊天开始",
   habitReviewNow: "现在复习",
+  vocabLibPageTitle: "词汇库",
+  vocabLibPageSubtitle:
+    "不是词典，而是你主动留下的学习库：保存过的纠正、表达和词汇。",
+  vocabLibCountSaved: "已保存 {n} 条",
+  vocabLibCountReview: "待复习 {n} 条",
+  vocabLibFilterAll: "全部",
+  vocabLibFilterPhrase: "表达",
+  vocabLibFilterWord: "词",
+  vocabLibFilterReview: "复习",
+  vocabLibSearchPh: "搜索词、释义或标签…",
+  vocabLibSearchSr: "搜索词汇",
+  vocabLibEmpty: "没有匹配项。可更换搜索、清除标签，或在聊天中保存表达。",
+  vocabLibBackAria: "返回应用",
+  vocabTypeWord: "词",
+  vocabTypePhrase: "表达",
+  vocabTypeCorrection: "纠正",
+  vocabDetailSavedPrefix: "保存于",
+  vocabDetailMeaning: "含义 / 语境",
+  vocabDetailExample: "例句",
+  vocabDetailReading: "读音",
+  vocabDetailCorrectionPair: "纠正对照",
+  vocabDetailYourSentence: "你的句子",
+  vocabDetailCorrectedLabel: "修改后",
+  vocabDetailNote: "备注",
+  vocabDetailAiNote: "AI 备注",
+  vocabDetailTags: "标签",
+  vocabDetailTopicOnly:
+    "此条目与主题练习历史关联。仅对已存入词汇库的项目可删除与复习。",
+  vocabActionDelete: "删除",
+  vocabActionMarkReviewed: "标为已复习",
+  vocabActionClose: "关闭",
+  vocabDeleteConfirm: "要从库中移除此条吗？",
+  vocabCloseAria: "关闭",
 };
 
 const SETTINGS_BY_LANG: Record<Lang, PrototypeSettingsText> = {

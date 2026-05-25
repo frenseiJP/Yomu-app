@@ -59,7 +59,7 @@ export const DICTIONARY: Record<Lang, Record<string, string>> = {
     onboardingSettingsLanguageLabel: "設定言語",
     onboardingSubmitButton: "設定を完了して始める",
 
-    chatHeaderTitle: "Yomu — 日本語学習",
+    chatHeaderTitle: "Frensei — 日本語学習",
     chatGreetingPrefix: "こんにちは、",
     chatGreetingSuffix: "さん",
     chatLogoutButton: "ログアウト",
@@ -124,7 +124,7 @@ export const DICTIONARY: Record<Lang, Record<string, string>> = {
     onboardingSettingsLanguageLabel: "Settings language",
     onboardingSubmitButton: "Finish setup & start",
 
-    chatHeaderTitle: "Yomu — Japanese Learning",
+    chatHeaderTitle: "Frensei — Japanese Learning",
     chatGreetingPrefix: "Hello,",
     chatGreetingSuffix: "",
     chatLogoutButton: "Log out",
@@ -191,7 +191,7 @@ export const DICTIONARY: Record<Lang, Record<string, string>> = {
     onboardingSettingsLanguageLabel: "설정 언어",
     onboardingSubmitButton: "설정 완료하고 시작",
 
-    chatHeaderTitle: "Yomu — 일본어 학습",
+    chatHeaderTitle: "Frensei — 일본어 학습",
     chatGreetingPrefix: "안녕하세요,",
     chatGreetingSuffix: "님",
     chatLogoutButton: "로그아웃",
@@ -256,7 +256,7 @@ export const DICTIONARY: Record<Lang, Record<string, string>> = {
     onboardingSettingsLanguageLabel: "设置语言",
     onboardingSubmitButton: "完成设置并开始",
 
-    chatHeaderTitle: "Yomu — 日语学习",
+    chatHeaderTitle: "Frensei — 日语学习",
     chatGreetingPrefix: "你好，",
     chatGreetingSuffix: "",
     chatLogoutButton: "退出登录",

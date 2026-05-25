@@ -3,14 +3,14 @@ import Link from "next/link";
 const CONTACT_EMAIL = "frensei.jp@gmail.com";
 
 export default function ContactPage() {
-  const mailSubject = encodeURIComponent("Yomu に関するお問い合わせ");
+  const mailSubject = encodeURIComponent("Frensei に関するお問い合わせ");
   const mailHref = `mailto:${CONTACT_EMAIL}?subject=${mailSubject}`;
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
       <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <section className="rounded-3xl border border-pink-400/60 bg-slate-950/90 p-6 shadow-[0_20px_70px_rgba(236,72,153,0.18)] sm:p-8">
-          <p className="text-xs tracking-[0.18em] text-pink-200">YOMU CONTACT</p>
+          <p className="text-xs tracking-[0.18em] text-pink-200">FRENSEI CONTACT</p>
           <h1 className="mt-2 font-wa-serif text-2xl font-semibold text-slate-50 sm:text-3xl">
             お問い合わせ
           </h1>

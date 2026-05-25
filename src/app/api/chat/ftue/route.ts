@@ -1,11 +1,17 @@
+import {
+  buildOpenAiChatSystemPrompt,
+  SENSEI_CHAT_TEMPERATURE,
+} from "@/lib/chat/openAiChatSystem";
 import { parseFtueCoachPayload } from "@/lib/ftue/format";
 import { consumeRateLimit, getClientIp } from "@/lib/security/rateLimit";
+import { logBetaEventServer } from "@/lib/analytics/server";
 
 const OPENAI_MODEL = "gpt-4o-mini";
 const MAX_USER_SENTENCE_CHARS = 1_000;
 const MAX_PROMPT_EN_CHARS = 300;
 const MAX_HISTORY_TURNS = 6;
 const MAX_HISTORY_CONTENT_CHARS = 400;
+const MAX_REQUEST_BODY_BYTES = 20_000;
 
 type UiLang = "ja" | "en" | "zh" | "ko";
 
@@ -13,28 +19,6 @@ function normalizeUiLang(raw: unknown): UiLang {
   if (raw === "ja" || raw === "en" || raw === "zh" || raw === "ko") return raw;
   return "en";
 }
-
-const SYSTEM = `You are a concise Japanese coach for a first-time learner drill.
-
-The learner is translating this English into natural Japanese (polite / neutral tone is safest unless context says casual):
-{{PROMPT_EN}}
-
-They just wrote a Japanese attempt (may be imperfect).
-
-Return ONLY valid JSON with these keys:
-- "niceLine": short praise, default tone like "Nice 👍" (emoji ok)
-- "correctedSentence": ONE best natural Japanese sentence for the meaning (no quotes around it)
-- "whyEnglish": 1–2 short sentences in SIMPLE English about nuance / politeness / word choice
-- "otherWay1": another natural Japanese wording (short)
-- "otherWay2": another natural Japanese wording (short)
-
-Rules:
-- whyEnglish must be easy English (CEFR A2 level).
-- correctedSentence should improve their line when possible; if already perfect, polish lightly or offer a natural synonym flow.
-- Keep each field concise and mobile-readable (avoid long paragraphs).
-- Keep the learner in flow; never end with session-closing language.
-- Do not use farewell endings like "See you tomorrow".
-- Do not include markdown. No keys other than the five above.`;
 
 export async function POST(req: Request): Promise<Response> {
   const ip = getClientIp(req);
@@ -44,6 +28,11 @@ export async function POST(req: Request): Promise<Response> {
     windowMs: 60_000,
   });
   if (!rl.ok) {
+    await logBetaEventServer({
+      eventType: "api_rate_limited",
+      route: "/api/chat/ftue",
+      metadata: { status: 429 },
+    });
     return Response.json(
       { error: "Too many requests" },
       {
@@ -61,17 +50,35 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const body = await req.json().catch(() => ({}));
+  const raw = await req.text().catch(() => "");
+  if (raw.length > MAX_REQUEST_BODY_BYTES) {
+    await logBetaEventServer({
+      eventType: "api_payload_too_large",
+      route: "/api/chat/ftue",
+      metadata: { status: 413, limitBytes: MAX_REQUEST_BODY_BYTES },
+    });
+    return Response.json({ error: "Payload too large" }, { status: 413 });
+  }
+  let body: unknown = {};
+  if (raw.trim()) {
+    try {
+      body = JSON.parse(raw) as unknown;
+    } catch {
+      body = {};
+    }
+  }
   const userSentence =
-    typeof body.userSentence === "string"
-      ? body.userSentence.trim().slice(0, MAX_USER_SENTENCE_CHARS)
+    typeof (body as { userSentence?: unknown }).userSentence === "string"
+      ? (body as { userSentence: string }).userSentence.trim().slice(0, MAX_USER_SENTENCE_CHARS)
       : "";
   const promptEn =
-    typeof body.promptEnglish === "string"
-      ? body.promptEnglish.trim().slice(0, MAX_PROMPT_EN_CHARS)
+    typeof (body as { promptEnglish?: unknown }).promptEnglish === "string"
+      ? (body as { promptEnglish: string }).promptEnglish.trim().slice(0, MAX_PROMPT_EN_CHARS)
       : "";
-  const uiLang = normalizeUiLang(body.language);
-  const history = Array.isArray(body.history) ? body.history : [];
+  const uiLang = normalizeUiLang((body as { language?: unknown }).language);
+  const history = Array.isArray((body as { history?: unknown }).history)
+    ? (body as { history: unknown[] }).history
+    : [];
 
   if (!userSentence) {
     return Response.json({ error: "userSentence required" }, { status: 400 });
@@ -93,7 +100,16 @@ export async function POST(req: Request): Promise<Response> {
     .map((h) => `${h.role}: ${h.content.slice(0, MAX_HISTORY_CONTENT_CHARS)}`)
     .join("\n");
 
-  const system = SYSTEM.replace("{{PROMPT_EN}}", promptBlock);
+  const { systemPrompt } = buildOpenAiChatSystemPrompt({
+    languageFromClient: uiLang,
+    tone: "neutral",
+    messages: [{ role: "user", content: userSentence }],
+    mode: "structured_json",
+  });
+
+  const system =
+    systemPrompt +
+    `\n\n=== FTUE DRILL ===\nThe learner is translating this English into natural Japanese:\n${promptBlock}`;
 
   const userContent = [
     `UI language (for minor tone only): ${uiLang}`,
@@ -111,7 +127,7 @@ export async function POST(req: Request): Promise<Response> {
     },
     body: JSON.stringify({
       model: OPENAI_MODEL,
-      temperature: 0.45,
+      temperature: SENSEI_CHAT_TEMPERATURE,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },
@@ -121,6 +137,11 @@ export async function POST(req: Request): Promise<Response> {
   });
 
   if (!openaiRes.ok) {
+    await logBetaEventServer({
+      eventType: "api_error",
+      route: "/api/chat/ftue",
+      metadata: { status: 200, reason: "openai_failed_fallback" },
+    });
     return Response.json(
       { error: "openai_failed", fallback: true },
       { status: 200, headers: { "cache-control": "no-store" } },
@@ -142,7 +163,7 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: "json_parse", fallback: true }, { status: 200 });
   }
 
-  const coach = parseFtueCoachPayload(parsed);
+  const coach = parseFtueCoachPayload(parsed, userSentence);
   if (!coach) {
     return Response.json({ error: "invalid_shape", fallback: true }, { status: 200 });
   }

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { consumeRateLimit, getClientIp } from "@/lib/security/rateLimit";
+import { logBetaEventServer } from "@/lib/analytics/server";
 
 const MODEL = "gpt-4o-mini";
 const MAX_ASSISTANT_TEXT_CHARS = 20_000;
 const MAX_USER_TEXT_CHARS = 2_000;
+const MAX_REQUEST_BODY_BYTES = 30_000;
 
 type UiLang = "ja" | "en" | "zh" | "ko";
 
@@ -19,12 +21,16 @@ function normalizeUiLang(raw: unknown): UiLang {
   return "en";
 }
 
-type PhrasePair = { phrase: string; reading: string };
+type PhrasePair = { phrase: string; reading: string; romaji?: string };
 
 function isPhrasePair(x: unknown): x is PhrasePair {
   if (!x || typeof x !== "object") return false;
   const o = x as Record<string, unknown>;
-  return typeof o.phrase === "string" && typeof o.reading === "string";
+  return (
+    typeof o.phrase === "string" &&
+    typeof o.reading === "string" &&
+    (typeof o.romaji === "undefined" || typeof o.romaji === "string")
+  );
 }
 
 function parsePhrases(raw: unknown, max: number): PhrasePair[] {
@@ -35,6 +41,7 @@ function parsePhrases(raw: unknown, max: number): PhrasePair[] {
       out.push({
         phrase: item.phrase.trim(),
         reading: item.reading.trim() || item.phrase.trim(),
+        romaji: typeof item.romaji === "string" && item.romaji.trim() ? item.romaji.trim() : undefined,
       });
       if (out.length >= max) break;
     }
@@ -61,6 +68,11 @@ export async function POST(req: Request): Promise<Response> {
     windowMs: 60_000,
   });
   if (!rl.ok) {
+    await logBetaEventServer({
+      eventType: "api_rate_limited",
+      route: "/api/chat/context",
+      metadata: { status: 429 },
+    });
     return NextResponse.json(
       { error: "Too many requests" },
       {
@@ -78,7 +90,23 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const body = await req.json().catch(() => ({}));
+  const raw = await req.text().catch(() => "");
+  if (raw.length > MAX_REQUEST_BODY_BYTES) {
+    await logBetaEventServer({
+      eventType: "api_payload_too_large",
+      route: "/api/chat/context",
+      metadata: { status: 413, limitBytes: MAX_REQUEST_BODY_BYTES },
+    });
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  }
+  let body: Record<string, unknown> = {};
+  if (raw.trim()) {
+    try {
+      body = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      body = {};
+    }
+  }
   const assistantText =
     typeof body.assistantText === "string"
       ? body.assistantText.trim().slice(0, MAX_ASSISTANT_TEXT_CHARS)
@@ -97,13 +125,14 @@ export async function POST(req: Request): Promise<Response> {
 
   const instruction = [
     "Return ONLY one JSON object (no markdown) with keys:",
-    "highlightPhrases: array of {phrase, reading} — 3 to 8 Japanese words or short phrases that appear verbatim in the assistant reply OR are clearly the focal teaching term in that reply (e.g. user asked about 三択 → include 三択).",
+    "highlightPhrases: array of {phrase, reading, romaji} — 3 to 8 Japanese words or short phrases that appear verbatim in the assistant reply OR are clearly the focal teaching term in that reply (e.g. user asked about 三択 → include 三択).",
     "followUps: array of exactly 3 short strings — possible NEXT user messages to continue the lesson, written entirely in "
       + langName +
       ".",
     "bestFollowUpIndex: integer 0, 1, or 2 — which followUps entry is the BEST continuation (deeper, on-topic, builds on the assistant reply). The other two should be plausible but weaker, slightly off-topic, or generic.",
     "Shuffle mentally: do not always put the best follow-up first.",
-    "reading: hiragana or romaji for Japanese phrase field.",
+    "reading: hiragana reading for phrase (for internal use).",
+    "romaji: Hepburn romaji (lowercase ascii) — UI shows phrase as: phrase (romaji) for tap-to-save.",
   ].join("\n");
 
   const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -120,7 +149,7 @@ export async function POST(req: Request): Promise<Response> {
         {
           role: "system",
           content:
-            "You output compact JSON only. Keys: highlightPhrases, followUps, bestFollowUpIndex.",
+            "You output compact JSON only. Keys: highlightPhrases, followUps, bestFollowUpIndex. In highlightPhrases each item includes phrase, reading, romaji.",
         },
         {
           role: "user",
@@ -136,6 +165,11 @@ export async function POST(req: Request): Promise<Response> {
   });
 
   if (!openaiRes.ok) {
+    await logBetaEventServer({
+      eventType: "api_error",
+      route: "/api/chat/context",
+      metadata: { status: 502, reason: "openai_request_failed" },
+    });
     return NextResponse.json(
       { error: "OpenAI request failed" },
       { status: 502 },
@@ -150,6 +184,11 @@ export async function POST(req: Request): Promise<Response> {
   try {
     parsed = JSON.parse(content) as Record<string, unknown>;
   } catch {
+    await logBetaEventServer({
+      eventType: "api_error",
+      route: "/api/chat/context",
+      metadata: { status: 502, reason: "invalid_json_from_model" },
+    });
     return NextResponse.json({ error: "Invalid JSON from model" }, { status: 502 });
   }
 
@@ -161,6 +200,11 @@ export async function POST(req: Request): Promise<Response> {
       : 0;
   bestFollowUpIndex = Math.min(2, Math.max(0, bestFollowUpIndex));
   if (followUps.length < 3) {
+    await logBetaEventServer({
+      eventType: "api_error",
+      route: "/api/chat/context",
+      metadata: { status: 502, reason: "insufficient_follow_ups" },
+    });
     return NextResponse.json(
       { error: "Model returned fewer than 3 followUps" },
       { status: 502 },

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { getLangClient } from "@/src/utils/i18n/clientLang";
 import { ArrowLeft, FileText, MessageCircle, Printer } from "lucide-react";
+import FeedbackSheetForm from "@/components/feedback/FeedbackSheetForm";
 import { activeDaysToWeekDots, getProgressSnapshot, getUserStats } from "@/lib/habit/progress";
 import { buildSeasonalProgressState } from "@/lib/progress/seasonal";
 import { listTopicPracticeResultsByUser } from "@/lib/topic/service";
@@ -45,6 +46,19 @@ export default function LearningReportPage() {
         uiLang: appLang === "ja" || appLang === "ko" || appLang === "zh" ? appLang : "en",
       }),
     [appLang, snapshot, stats, weekDots],
+  );
+
+  const reportContext = useMemo(
+    () => ({
+      streak: stats.streak,
+      chatMessages: snapshot.totalChatMessages,
+      missionsCompleted: snapshot.missionsCompletedCount,
+      reviewsCompleted: snapshot.reviewsCompletedCount,
+      topicPractices: stats.totalTopicPractices,
+      vocabSaved,
+      learningDays: snapshot.learningDays.length,
+    }),
+    [snapshot, stats, vocabSaved],
   );
 
   const card = "rounded-2xl border border-slate-800/80 bg-slate-950/80 p-4 sm:p-5";
@@ -94,23 +108,29 @@ export default function LearningReportPage() {
           <>
             <h2 className="mt-2 font-wa-serif text-lg text-slate-50">ご意見・ご感想をお聞かせください</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-300">
-              ベータ版の使い心地や不具合、こうしてほしいことなど、専用ページからお送りいただけます。レポートを見ながら気づいたことも、ぜひ書いてください。
+              レポートを見ながら気づいたこと（使い心地、不具合、こうしてほしいことなど）をその場で送れます。内容はチームのスプレッドシートに届きます。
             </p>
           </>
         ) : (
           <>
             <h2 className="mt-2 font-wa-serif text-lg text-slate-50">Share your feedback</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-300">
-              Tell us what works, what breaks, and what you wish Frensei did next. Open the commentary page — same place as “bugs & impressions” in the app.
+              Send impressions while you review this snapshot — bugs, ideas, what felt natural or confusing. Comments go straight to our team spreadsheet.
             </p>
           </>
         )}
+        <FeedbackSheetForm
+          embedded
+          route="/report"
+          source="report"
+          reportContext={reportContext}
+        />
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
             href="/feedback"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-pink-500 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_12px_36px_rgba(236,72,153,0.35)] transition hover:bg-pink-400"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-600 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-900"
           >
-            {appLang === "ja" ? "ご意見ページを開く" : "Open feedback page"}
+            {appLang === "ja" ? "フィードバック専用ページ" : "Full feedback page"}
           </Link>
           <Link
             href="/"

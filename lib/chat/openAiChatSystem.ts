@@ -1,5 +1,11 @@
 import type { CoachContextPayload } from "@/lib/habit/types";
 import { formatCoachContextForSystem } from "@/lib/habit/coach";
+import { JAPANESE_PHRASE_STYLE_RULE } from "@/lib/chat/japaneseFormat";
+import { inferReplyModeHint, replyModeHintBlock } from "@/lib/chat/replyMode";
+import {
+  SENSEI_SYSTEM_PROMPT,
+  buildLearnerProfileBlock,
+} from "@/lib/chat/senseiSystemPrompt";
 
 export function parseCoachContextPayload(raw: unknown): CoachContextPayload | null {
   if (!raw || typeof raw !== "object") return null;
@@ -27,57 +33,25 @@ export function parseCoachContextPayload(raw: unknown): CoachContextPayload | nu
     streak,
     lastMissionSummary,
     lastSummary,
-    coachToneNote:
-      coachToneNote ||
-      "You are a calm, supportive Japanese coach. Be encouraging without being loud.",
+    coachToneNote,
   };
 }
 
-/** モデルが日本語システム文に引きずられないよう、核は英語で記述 */
-export const BASE_SYSTEM_CORE = `
-You are "Frensei" (in-app coach name may appear as Yomu): an AI Japanese coach focused on sounding natural in real life — nuance, politeness, and what native speakers would actually say — not textbook drills or exam cramming.
-Assume the learner is around JLPT N3 level and often cares about business-appropriate Japanese.
-Write in a warm, curious, partner-like tone (explore together; do not grade the learner).
-When you give feedback, prefer concrete, natural rewrites and short "why" notes over abstract grammar lectures.
-Keep the conversation going: invite one small next step (e.g. try again, tweak tone, or a follow-up line). Do not close the chat with farewells like "see you tomorrow" or imply the session is over.
-
-STRICT BANNED SUBSTRINGS (do not output these anywhere: headings, body, bullets, parentheses, mixed scripts):
-- 共感
-- 回答
-- 解説
-- 質問
-
-Also avoid corny section titles in any language that mirror those labels (e.g. standalone "Answer", "Explanation", "Question" as headings).
-
-Guidelines:
-- If the user asks a direct question, answer it clearly (without using the banned substrings).
-- You may add short Japanese examples, quotes, vocabulary, or readings when teaching Japanese.
-- Markdown is fine if headings never contain the banned substrings.
-- Explain grammar / keigo types (polite, respectful, humble) when helpful, in the OUTPUT LANGUAGE specified above.
-
-The OUTPUT LANGUAGE block at the top of this system message overrides everything else about which language to use for explanations.
-`.trim();
-
-export const BASE_SYSTEM_JA_EXTRA = `
-（日本語UI向けの補足）
-- メインの説明・文化メモ・文法の話はすべて自然な日本語で書いてください。
-- 必要なら英語・中国語・韓国語を短く添えてもよい。
+export const BASE_SYSTEM_JA_UI_EXTRA = `
+=== OUTPUT LANGUAGE (Japanese UI) ===
+Write explanations, grammar notes, and coaching in natural Japanese.
+Japanese examples MUST still use: Japanese (romaji) — English meaning (keep the English gloss after the em dash).
 `.trim();
 
 const JA_TONE_INSTRUCTIONS: Record<string, string> = {
   casual: `
-【重要】あなたの返答の文体は「カジュアル」にしてください。
-- です・ます調ではなく、タメ口（だよ・だね・〜しよう・〜してね）で話す。
-- 友達に話すような、親しみやすくラフな日本語で書く。
+TONE for Japanese examples: casual / friendly (だ・である調, タメ口). Do not use stiff です・ます unless teaching contrast.
 `,
   neutral: `
-【重要】あなたの返答の文体は「標準」（です・ます調）にしてください。
-- 丁寧だが堅くしすぎない、一般的な敬体で書く。
+TONE for Japanese examples: standard polite (です・ます). Natural everyday politeness.
 `,
   business: `
-【重要】あなたの返答の文体は「ビジネス」にしてください。
-- 敬語を丁寧に（です・ます、謙譲語・尊敬語を適宜使い、いただきます・申し上げます・ございます などを自然に含める）。
-- ビジネスメールや商談で使える丁寧な日本語で書く。
+TONE for Japanese examples: business-appropriate (敬語・です・ます). Respectful forms (いただく, 申し上げる, ございます) when natural.
 `,
 };
 
@@ -87,7 +61,7 @@ export function detectLanguageFromText(text: string): "ja" | "en" | "zh" | "ko" 
   if (/[ぁ-んァ-ン]/.test(t)) return "ja";
   if (/[一-龠]/.test(t)) return "zh";
   if (/[a-zA-Z]/.test(t)) return "en";
-  return "ja";
+  return "en";
 }
 
 export function getToneInstruction(lang: "ja" | "en" | "zh" | "ko", toneKey: string): string {
@@ -95,12 +69,12 @@ export function getToneInstruction(lang: "ja" | "en" | "zh" | "ko", toneKey: str
     return JA_TONE_INSTRUCTIONS[toneKey] ?? JA_TONE_INSTRUCTIONS.neutral;
   }
   if (toneKey === "casual") {
-    return "TONE: Casual / friendly — relaxed wording, not stiff.";
+    return "TONE for Japanese examples: Casual / friendly — relaxed wording.";
   }
   if (toneKey === "business") {
-    return "TONE: Business — polite, professional, clear.";
+    return "TONE for Japanese examples: Business — polite, professional keigo when appropriate.";
   }
-  return "TONE: Neutral — polite and natural, not overly stiff.";
+  return "TONE for Japanese examples: Neutral polite — natural です・ます.";
 }
 
 export type UiLang = "ja" | "en" | "zh" | "ko";
@@ -118,38 +92,39 @@ export function normalizeUiLang(raw: unknown): UiLang | null {
 }
 
 export function buildOutputLanguageBlock(uiLang: UiLang): string {
-  const name = UI_LANG_NAME[uiLang];
   if (uiLang === "ja") {
-    return [
-      "=== OUTPUT LANGUAGE (HIGHEST PRIORITY) ===",
-      "The app UI language is Japanese.",
-      "Write your ENTIRE reply (explanations, cultural notes, grammar notes, tips) in natural Japanese.",
-      "You may include short non-Japanese glosses only when helpful for learning.",
-    ].join("\n");
+    return BASE_SYSTEM_JA_UI_EXTRA;
   }
+  const name = UI_LANG_NAME[uiLang];
   return [
-    "=== OUTPUT LANGUAGE (HIGHEST PRIORITY) ===",
-    `The app UI language is ${name} (${uiLang}).`,
-    `You MUST write your ENTIRE reply (all explanations, cultural notes, grammar notes, tips, and meta commentary) in ${name}.`,
-    "Japanese may appear ONLY as short examples, quoted phrases, vocabulary items, readings (furigana/romaji), or sample sentences for teaching.",
-    "Even if the user writes entirely in Japanese, keep the main teaching explanation in " +
-      name +
-      "; do not switch the main explanation to Japanese.",
+    "=== OUTPUT LANGUAGE ===",
+    `Write all explanations and coaching in ${name}.`,
+    "Japanese appears only in examples using: Japanese (romaji) — English meaning.",
+    "Even if the user writes in Japanese, keep explanations in " + name + ".",
   ].join("\n");
 }
 
 const STRUCTURED_JSON_BLOCK = `
-=== STRUCTURED OUTPUT (MANDATORY) ===
-Return ONLY one JSON object (no markdown code fences, no text before or after JSON) with exactly these keys:
-"niceLine", "correctedSentence", "whyEnglish", "otherWay1", "otherWay2"
+=== STRUCTURED OUTPUT (JSON only — choose mode first) ===
+Return ONLY one JSON object (no markdown fences).
 
-Field meanings:
-- niceLine: one short warm line (emoji ok). Never a farewell or "see you tomorrow".
-- correctedSentence: ONE natural Japanese sentence that best matches what the learner meant in their latest message. Apply the TONE instruction (casual / neutral / business). If their Japanese is already strong, polish lightly or offer a slightly more native phrasing.
-- whyEnglish: 1–2 short, very simple sentences explaining nuance, politeness, or word choice. The CONTENT language must follow OUTPUT LANGUAGE above (e.g. if UI is Japanese, write this field in Japanese even though the key name says whyEnglish).
-- otherWay1, otherWay2: two different short natural Japanese alternatives (same politeness level as correctedSentence when possible).
+STEP 1 — Set "replyMode" to exactly one of:
+- "explain" — general questions about Japan, Japanese, grammar, culture, meaning, comparisons. The user is NOT asking you to fix a sentence they wrote.
+- "reading" — how to read, pronounce, or say a word/phrase/kanji. Focus on reading/pronunciation, not rewriting their message as a full sentence.
+- "correction" — the user submitted Japanese (or clearly wants their line rewritten). Use correction fields below.
 
-Do not include any other keys. Do not include "Better:", "Why:", or section headers in JSON values — plain string values only.
+STEP 2 — Fields by mode:
+
+If replyMode is "explain" OR "reading":
+  Required: "replyMode", "answer"
+  Optional: "niceLine"
+  "answer" = full teaching reply in prose (follow OUTPUT LANGUAGE). Use Japanese (romaji) — English meaning for examples.
+  Do NOT include correctedSentence, studentSentence, or otherWay1/2.
+
+If replyMode is "correction":
+  Required: "replyMode", "niceLine", "studentSentence", "studentRomaji", "correctedSentence", "correctedRomaji", "correctedEnglish", "whyEnglish", "otherWay1", "otherWay1Romaji", "otherWay1English", "otherWay2", "otherWay2Romaji", "otherWay2English"
+
+Plain string values only — no markdown fences inside JSON values.
 `.trim();
 
 export type ChatOpenAiMode = "freeform_stream" | "structured_json";
@@ -183,23 +158,42 @@ export function buildOpenAiChatSystemPrompt(params: {
   const uiLang: UiLang =
     normalizeUiLang(params.languageFromClient) ?? detectLanguageFromText(lastUserText);
 
+  const coach = parseCoachContextPayload(params.coachContext);
+  const learnerProfile = buildLearnerProfileBlock({
+    uiLang,
+    streak: coach?.streak,
+    jlptLevel: "N3",
+    phase: 3,
+  });
+
   const toneInstruction = getToneInstruction(uiLang, toneKey);
   const languageBlock = buildOutputLanguageBlock(uiLang);
-  const coachAppendix = formatCoachContextForSystem(parseCoachContextPayload(params.coachContext));
+  const coachAppendix = formatCoachContextForSystem(coach);
 
-  let core = BASE_SYSTEM_CORE;
+  let core = SENSEI_SYSTEM_PROMPT;
+  const modeHint =
+    params.mode === "structured_json" && lastUserText
+      ? replyModeHintBlock(inferReplyModeHint(lastUserText), lastUserText)
+      : "";
+
   if (params.mode === "structured_json") {
     core += "\n\n" + STRUCTURED_JSON_BLOCK;
   }
 
-  const systemPrompt =
-    languageBlock +
-    "\n\n" +
-    toneInstruction +
-    "\n\n" +
-    core +
-    (uiLang === "ja" ? "\n" + BASE_SYSTEM_JA_EXTRA : "") +
-    coachAppendix;
+  const systemPrompt = [
+    learnerProfile,
+    languageBlock,
+    toneInstruction,
+    modeHint,
+    JAPANESE_PHRASE_STYLE_RULE,
+    core,
+    coachAppendix,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   return { systemPrompt, uiLang };
 }
+
+/** Sensei-recommended sampling temperature */
+export const SENSEI_CHAT_TEMPERATURE = 0.55;

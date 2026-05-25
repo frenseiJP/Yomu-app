@@ -9,6 +9,7 @@ import {
   generateTopicFeedback,
   saveTopicPracticeResult,
 } from "@/lib/topic/service";
+import { logBetaEvent } from "@/lib/analytics/client";
 import { getTodaysTopicPrompt } from "@/lib/topic/todaysTopic";
 import type { TopicFeedback } from "@/lib/topic/types";
 
@@ -61,6 +62,16 @@ export default function TopicGuidedLearning({
       const id = `topic_turn_${Date.now()}`;
       setFeedback(fb);
       saveTopicPracticeResult(userId, "topic_guided_tab", topic.id, fb, text);
+      void logBetaEvent({
+        eventType: "topic_submit",
+        userId,
+        sessionId: "topic_guided_tab",
+        route: "/",
+        metadata: {
+          topicId: topic.id,
+          answerLength: text.length,
+        },
+      });
       const assistantBlob = buildSyntheticAssistantText(fb);
       const corrected =
         fb.correctedAnswer.trim() || guessCorrectedSentence(text, assistantBlob) || fb.correctedAnswer;
@@ -228,6 +239,16 @@ export default function TopicGuidedLearning({
                     disabled={cand.alreadySaved}
                     onClick={() => {
                       saveCandidateToVocabulary(cand, userId);
+                      void logBetaEvent({
+                        eventType: "vocabulary_save",
+                        userId,
+                        sessionId: "topic_guided_tab",
+                        route: "/",
+                        metadata: {
+                          source: "topic_guided_candidate",
+                          candidateType: cand.type,
+                        },
+                      });
                       setSaveCandidates((prev) =>
                         prev.map((c2) => (c2.id === cand.id ? { ...c2, alreadySaved: true } : c2)),
                       );

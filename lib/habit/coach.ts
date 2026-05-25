@@ -8,7 +8,7 @@ import type { UserProgressV1 } from "@/lib/habit/types";
 
 const PROGRESS_KIND = "progress_v1";
 
-const COACH_IDENTITY = `You are a calm, supportive Japanese coach. Be encouraging without being loud. Celebrate small wins. If the learner struggled recently, acknowledge it gently and offer one concrete next step.`;
+const COACH_IDENTITY = `Sensei mode: warm professional teacher. Celebrate small wins. If the learner struggled recently, acknowledge gently and offer one concrete next step.`;
 
 /** Client: gather context for the next chat completion */
 export function buildCoachContext(userId: string): CoachContextPayload {

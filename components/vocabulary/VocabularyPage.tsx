@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { ArrowLeft, MessageCircle, Sparkles } from "lucide-react";
 import VocabularyCategoryFilters from "@/components/vocabulary/VocabularyCategoryFilters";
 import VocabularyDetailPanel from "@/components/vocabulary/VocabularyDetailPanel";
 import VocabularyHeader from "@/components/vocabulary/VocabularyHeader";
@@ -18,9 +19,14 @@ import {
 } from "@/lib/vocabulary/service";
 import type { VocabularyFilterState, VocabularyItem } from "@/lib/vocabulary/types";
 import { useVocabularyUserId } from "@/lib/vocabulary/useVocabularyUserId";
+import { getLangClient } from "@/src/utils/i18n/clientLang";
+import { dateLocaleForLang, getPrototypeCopy } from "@/src/utils/i18n/prototypeCopy";
+import type { Lang } from "@/src/utils/i18n/types";
 
 export default function VocabularyPage() {
+  const pathname = usePathname();
   const userId = useVocabularyUserId();
+  const [appLang, setAppLang] = useState<Lang>("en");
   const [refreshKey, setRefreshKey] = useState(0);
   const [selected, setSelected] = useState<VocabularyItem | null>(null);
   const [filter, setFilter] = useState<VocabularyFilterState>({
@@ -28,6 +34,13 @@ export default function VocabularyPage() {
     category: "all",
     tag: "",
   });
+
+  useEffect(() => {
+    setAppLang(getLangClient());
+  }, [pathname]);
+
+  const { uiText } = useMemo(() => getPrototypeCopy(appLang), [appLang]);
+  const dateLocale = useMemo(() => dateLocaleForLang(appLang), [appLang]);
 
   const all = useMemo(() => getVocabularyLibrary(userId), [userId, refreshKey]);
   const items = useMemo(() => filterVocabulary(all, filter), [all, filter]);
@@ -47,10 +60,11 @@ export default function VocabularyPage() {
 
   const handleDelete = useCallback(() => {
     if (!selected || !isPersistedVocabularyItem(selected)) return;
+    if (typeof window !== "undefined" && !window.confirm(uiText.vocabDeleteConfirm)) return;
     removeVocabularyItem(selected.id);
     setSelected(null);
     bump();
-  }, [selected, bump]);
+  }, [selected, bump, uiText.vocabDeleteConfirm]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -66,20 +80,25 @@ export default function VocabularyPage() {
         <Link
           href="/"
           className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-slate-700/80 text-slate-400 transition-colors hover:bg-slate-900 hover:text-slate-200"
-          aria-label="Back to app"
+          aria-label={uiText.vocabLibBackAria}
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div className="min-w-0 flex-1">
-          <VocabularyHeader total={all.length} reviewCount={reviewCount} />
+          <VocabularyHeader total={all.length} reviewCount={reviewCount} ui={uiText} />
         </div>
       </div>
 
-      <VocabularySearchBar value={filter.query} onChange={(q) => setFilter((p) => ({ ...p, query: q }))} />
+      <VocabularySearchBar
+        value={filter.query}
+        onChange={(q) => setFilter((p) => ({ ...p, query: q }))}
+        ui={uiText}
+      />
 
       <VocabularyCategoryFilters
         active={filter.category}
         onChange={(category) => setFilter((p) => ({ ...p, category }))}
+        ui={uiText}
       />
 
       <VocabularyTagChips
@@ -89,13 +108,42 @@ export default function VocabularyPage() {
       />
 
       <section className="space-y-2 pb-4">
-        {items.length === 0 ? (
+        {all.length === 0 ? (
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-6">
+            <h2 className="text-base font-semibold text-slate-100">Your vocabulary library is empty for now.</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-400">
+              Save useful phrases, corrections, and words from Chat or Topic Practice to build your personal Japanese
+              library.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                href="/chat"
+                className="inline-flex items-center gap-2 rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30"
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                Start chatting
+              </Link>
+              <Link
+                href="/topic"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-3.5 py-2 text-xs font-medium text-slate-200 hover:bg-slate-900"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Try Topic Practice
+              </Link>
+            </div>
+          </div>
+        ) : items.length === 0 ? (
           <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 p-6 text-center text-sm text-slate-400">
-            No entries match. Try another search, clear the tag filter, or save phrases from chat.
+            {uiText.vocabLibEmpty}
           </div>
         ) : (
           items.map((item) => (
-            <VocabularyListRow key={item.id} item={item} onOpen={() => setSelected(item)} />
+            <VocabularyListRow
+              key={item.id}
+              item={item}
+              ui={uiText}
+              onOpen={() => setSelected(item)}
+            />
           ))
         )}
       </section>
@@ -106,10 +154,9 @@ export default function VocabularyPage() {
           canMutate={isPersistedVocabularyItem(selected)}
           onClose={() => setSelected(null)}
           onReview={handleReview}
-          onDelete={() => {
-            if (typeof window !== "undefined" && !window.confirm("Remove this entry from your library?")) return;
-            handleDelete();
-          }}
+          onDelete={handleDelete}
+          ui={uiText}
+          dateLocale={dateLocale}
         />
       ) : null}
     </div>

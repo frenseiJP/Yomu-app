@@ -156,7 +156,7 @@ export default function LoginPage() {
           <BookOpen className="h-5 w-5" />
         </div>
         <span className="font-wa-serif text-lg font-semibold text-slate-100">
-          Yomu
+          Frensei
         </span>
       </Link>
 
@@ -324,7 +324,7 @@ export default function LoginPage() {
       </div>
 
       <p className="mt-6 text-center text-xs text-slate-500">
-        Frensei (Yomu) — Japanese and culture, together.
+        Frensei — Japanese and culture, together.
       </p>
     </div>
   );

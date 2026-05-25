@@ -1,10 +1,26 @@
-import { buildOpenAiChatSystemPrompt } from "@/lib/chat/openAiChatSystem";
+import {
+  buildOpenAiChatSystemPrompt,
+  SENSEI_CHAT_TEMPERATURE,
+} from "@/lib/chat/openAiChatSystem";
 import { consumeRateLimit, getClientIp } from "@/lib/security/rateLimit";
+import { logBetaEventServer } from "@/lib/analytics/server";
 
 const OPENAI_MODEL = "gpt-4o-mini";
 const MAX_MESSAGES = 12;
 const MAX_MESSAGE_CHARS = 2_000;
 const MAX_TOTAL_CHARS = 10_000;
+const MAX_REQUEST_BODY_BYTES = 50_000;
+
+async function parseJsonBodyWithLimit(req: Request): Promise<unknown | null> {
+  const raw = await req.text().catch(() => "");
+  if (raw.length > MAX_REQUEST_BODY_BYTES) return null;
+  if (!raw.trim()) return {};
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return {};
+  }
+}
 
 function clampMessages(raw: unknown): { role: "user" | "assistant"; content: string }[] {
   if (!Array.isArray(raw)) return [];
@@ -33,6 +49,11 @@ export async function POST(req: Request): Promise<Response> {
     windowMs: 60_000,
   });
   if (!rl.ok) {
+    await logBetaEventServer({
+      eventType: "api_rate_limited",
+      route: "/api/chat",
+      metadata: { status: 429 },
+    });
     return Response.json(
       { error: "Too many requests" },
       {
@@ -50,7 +71,15 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBodyWithLimit(req);
+  if (body === null) {
+    await logBetaEventServer({
+      eventType: "api_payload_too_large",
+      route: "/api/chat",
+      metadata: { status: 413, limitBytes: MAX_REQUEST_BODY_BYTES },
+    });
+    return Response.json({ error: "Payload too large" }, { status: 413 });
+  }
   const { messages: rawMessages, tone, language: languageFromClient, coachContext } = body as {
     messages?: unknown;
     tone?: unknown;
@@ -79,7 +108,7 @@ export async function POST(req: Request): Promise<Response> {
     body: JSON.stringify({
       model: OPENAI_MODEL,
       stream: true,
-      temperature: 0.8,
+      temperature: SENSEI_CHAT_TEMPERATURE,
       messages: [
         { role: "system", content: systemPrompt },
         ...(Array.isArray(messages) ? messages : []),
@@ -88,6 +117,11 @@ export async function POST(req: Request): Promise<Response> {
   });
 
   if (!openaiRes.ok || !openaiRes.body) {
+    await logBetaEventServer({
+      eventType: "api_error",
+      route: "/api/chat",
+      metadata: { status: 502, reason: "openai_upstream_failed" },
+    });
     return new Response("Upstream AI request failed", { status: 502 });
   }
 

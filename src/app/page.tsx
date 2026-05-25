@@ -91,9 +91,9 @@ const INITIAL_ASSISTANT_MESSAGE: Message = {
   id: 1,
   role: "assistant",
   baseText:
-    "こんにちは。Yomu です。日本語と、そのうしろにある文化や空気をいっしょに味わいながら学んでいきましょう。まずは気になる日本語やフレーズを送ってみてください。たとえば「いただきます」「お疲れ様」「よろしくお願いします」などです。",
+    "こんにちは。Frensei です。日本語と、そのうしろにある文化や空気をいっしょに味わいながら学んでいきましょう。まずは気になる日本語やフレーズを送ってみてください。たとえば「いただきます」「お疲れ様」「よろしくお願いします」などです。",
   romaji:
-    "Konnichiwa. Yomu desu. Nihongo to, sono ushiro ni aru bunka ya kuuki o issho ni ajiwai nagara manande ikimashou. Mazu wa kininaru nihongo ya fureezu o okutte mite kudasai. Tatoeba ‘itadakimasu’, ‘otsukaresama’, ‘yoroshiku onegaishimasu’ nado desu.",
+    "Konnichiwa. Frensei desu. Nihongo to, sono ushiro ni aru bunka ya kuuki o issho ni ajiwai nagara manande ikimashou. Mazu wa kininaru nihongo ya fureezu o okutte mite kudasai. Tatoeba ‘itadakimasu’, ‘otsukaresama’, ‘yoroshiku onegaishimasu’ nado desu.",
   culturalNote:
     "In Japanese, everyday phrases often carry layers of cultural meaning—about gratitude, hierarchy, and shared time. We’ll slowly unwrap those layers together.",
   politeNote:
@@ -370,7 +370,7 @@ export default function YomuPrototypePage() {
             </div>
             <div>
               <p className="font-wa-serif text-base font-semibold tracking-tight text-slate-50">
-                Yomu — 日本文化AIコーチ
+                Frensei — 日本文化AIコーチ
               </p>
               <p className="mt-0.5 text-[11px] text-slate-400">
                 世界一「空気ごと」学べる日本語アプリのプロトタイプ
@@ -583,7 +583,7 @@ export default function YomuPrototypePage() {
                           読
                         </div>
                         <span className="text-[11px] text-slate-500">
-                          Yomu · {formatTime(msg.createdAt)}
+                          Frensei · {formatTime(msg.createdAt)}
                         </span>
                         <button
                           type="button"

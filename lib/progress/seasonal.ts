@@ -461,7 +461,53 @@ export function buildSeasonalProgressState(params: {
   const progressRatio = Math.max(0, Math.min(1, weighted / 60));
   const stage = Math.min(4, Math.floor(progressRatio * 5)) as SeasonStage;
 
-  const block = COPY[season][stage][L];
+  const base = COPY[season][stage][L];
+  const enSeasonLine: Record<Season, string> = {
+    spring: "Your Japanese is starting to bloom.",
+    summer: "Your effort is lighting up the sky.",
+    autumn: "Your expressions are deepening like autumn leaves.",
+    winter: "You’re building quietly, one step at a time.",
+  };
+  const enStageLine: Record<Season, Record<SeasonStage, string>> = {
+    spring: {
+      0: "A quiet branch is waiting.",
+      1: "A new tiny bud has appeared.",
+      2: "Your bud is turning green.",
+      3: "Your sakura is beginning to bloom.",
+      4: "Your sakura is in full bloom.",
+    },
+    summer: {
+      0: "A quiet night sky is ready.",
+      1: "A small spark has appeared.",
+      2: "A first firework is opening.",
+      3: "Large fireworks are spreading.",
+      4: "The sky is full of fireworks.",
+    },
+    autumn: {
+      0: "Your leaves are still green.",
+      1: "Leaves are turning yellow.",
+      2: "Leaves are turning orange.",
+      3: "Maple red is showing clearly.",
+      4: "A vivid autumn canopy is here.",
+    },
+    winter: {
+      0: "Light snow has started.",
+      1: "Snow is gathering.",
+      2: "A small snowman has appeared.",
+      3: "Your snowman is getting bigger.",
+      4: "Your snowman is complete with a scarf.",
+    },
+  };
+
+  const block =
+    L === "en"
+      ? {
+          moment: enSeasonLine[season],
+          story: enStageLine[season][stage],
+          cheer: base.cheer,
+          home: base.home,
+        }
+      : base;
   return {
     season,
     stage,

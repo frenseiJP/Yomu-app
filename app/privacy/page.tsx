@@ -70,12 +70,12 @@ export default function PrivacyPage() {
     <div className="min-h-screen bg-[#020617] text-slate-100">
       <main id="top" className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <section className="rounded-3xl border border-pink-400/60 bg-slate-950/90 p-6 shadow-[0_20px_70px_rgba(236,72,153,0.16)] sm:p-8">
-          <p className="text-xs tracking-[0.18em] text-pink-200">YOMU PRIVACY POLICY</p>
+          <p className="text-xs tracking-[0.18em] text-pink-200">FRENSEI PRIVACY POLICY</p>
           <h1 className="mt-2 font-wa-serif text-2xl font-semibold text-slate-50 sm:text-3xl">
             プライバシーポリシー
           </h1>
           <p className="mt-4 text-sm leading-relaxed text-slate-200">
-            Yomu（ベータ版）における個人情報および利用データの取り扱い方針を定めます。Amazon
+            Frensei（ベータ版）における個人情報および利用データの取り扱い方針を定めます。Amazon
             アソシエイト・プログラムへの参加および Cookie を用いた広告配信についても、本条項で説明します。
           </p>
         </section>

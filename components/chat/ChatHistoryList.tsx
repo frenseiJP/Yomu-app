@@ -1,35 +1,70 @@
 "use client";
 
-import { useChatHistory } from "../../hooks/useChatHistory";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createClient } from "@/src/utils/supabase/client";
+import { getSessions, getMessages, removeSession } from "@/lib/chat/service";
+import { useVocabularyUserId } from "@/lib/vocabulary/useVocabularyUserId";
 import { ChatHistoryItem } from "./ChatHistoryItem";
-import Link from "next/link";
+
+function latestPreview(userId: string, sessionId: string): string {
+  const msgs = getMessages(userId, sessionId);
+  if (msgs.length === 0) return "";
+  const last = msgs[msgs.length - 1];
+  const t = last.content.trim().replace(/\s+/g, " ");
+  return t.length > 140 ? `${t.slice(0, 140)}…` : t;
+}
 
 export function ChatHistoryList() {
-  const { sessions, loaded, removeSession } = useChatHistory();
+  const userId = useVocabularyUserId();
+  const [tick, setTick] = useState(0);
+  const [chatBase, setChatBase] = useState<"/chat" | "/">("/");
 
-  if (!loaded) {
-    return (
-      <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-8 text-center text-sm text-slate-400">
-        Loading…
-      </div>
-    );
-  }
+  useEffect(() => {
+    let cancelled = false;
+    void createClient()
+      .auth.getUser()
+      .then(({ data }) => {
+        if (!cancelled) setChatBase(data.user ? "/chat" : "/");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const sessions = useMemo(() => {
+    void tick;
+    return getSessions(userId);
+  }, [userId, tick]);
+
+  const bump = useCallback(() => setTick((n) => n + 1), []);
+
+  useEffect(() => {
+    const onFocus = () => bump();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [bump]);
+
+  const handleDelete = useCallback(
+    (sessionId: string) => {
+      if (typeof window !== "undefined" && !window.confirm("Delete this chat session?")) return;
+      removeSession(userId, sessionId);
+      bump();
+    },
+    [userId, bump],
+  );
 
   if (sessions.length === 0) {
     return (
       <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-8 text-center">
-        <p className="mb-2 text-sm font-medium text-slate-200">
-          No chat history yet
+        <p className="text-sm font-medium leading-relaxed text-slate-200">
+          No learning history yet. Start a chat to begin building your Japanese learning journey.
         </p>
-        <p className="mb-4 text-xs text-slate-500">
-          Start a conversation in AI chat and it will show up here.
-        </p>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 rounded-full bg-[#155EEF] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#1B6CFF]"
+        <a
+          href={chatBase === "/chat" ? "/chat" : "/"}
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#155EEF] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#1B6CFF]"
         >
-          Home
-        </Link>
+          Start chatting
+        </a>
       </div>
     );
   }
@@ -38,7 +73,13 @@ export function ChatHistoryList() {
     <ul className="space-y-3">
       {sessions.map((session) => (
         <li key={session.id}>
-          <ChatHistoryItem session={session} onDelete={removeSession} />
+          <ChatHistoryItem
+            title={session.title}
+            updatedAt={session.updatedAt}
+            preview={latestPreview(userId, session.id)}
+            href={`${chatBase}?session=${encodeURIComponent(session.id)}`}
+            onDelete={() => handleDelete(session.id)}
+          />
         </li>
       ))}
     </ul>

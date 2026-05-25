@@ -1,9 +1,9 @@
--- Yomu: ユーザープロフィール（オンボーディング・設定・チャット連携）
+-- Frensei: ユーザープロフィール（オンボーディング・設定・チャット連携）
 -- Supabase SQL Editor で実行するか: supabase db push
 
 CREATE TABLE IF NOT EXISTS public.user_profiles (
   user_id UUID PRIMARY KEY REFERENCES auth.users (id) ON DELETE CASCADE,
-  display_name TEXT NOT NULL DEFAULT 'Yomu',
+  display_name TEXT NOT NULL DEFAULT 'Frensei',
   icon TEXT NOT NULL DEFAULT '🌸',
   kokuseki TEXT NOT NULL DEFAULT 'OTHER',
   first_language TEXT NOT NULL DEFAULT 'ja',

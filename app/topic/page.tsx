@@ -1,5 +1,5 @@
-import YomuPrototypePage from "@/app/YomuPrototypePage";
+import TopicPracticePage from "@/components/topic/TopicPracticePage";
 
 export default function TopicPage() {
-  return <YomuPrototypePage initialView="topic" />;
+  return <TopicPracticePage />;
 }

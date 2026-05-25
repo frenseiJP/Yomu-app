@@ -5,10 +5,11 @@ import "./globals.css";
 import { AuthProvider } from "@/src/contexts/AuthContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import Footer from "@/components/Footer";
+import PageViewLogger from "@/components/analytics/PageViewLogger";
 
 export const metadata: Metadata = {
-  title: "Yomu — Japanese learning coach",
-  description: "Yomu: learn Japanese and culture with AI.",
+  title: "Frensei — AI Japanese Learning Coach",
+  description: "Learn Japanese naturally with Frensei, your AI-powered Japanese coach. Practice real conversations, master culture, and build vocabulary with personalized AI guidance.",
   applicationName: "Frensei",
   manifest: "/manifest.webmanifest",
   icons: {
@@ -19,6 +20,31 @@ export const metadata: Metadata = {
     capable: true,
     title: "Frensei",
     statusBarStyle: "black-translucent",
+  },
+  metadataBase: new URL("https://frensei.jp"),
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    type: "website",
+    url: "https://frensei.jp/",
+    title: "Frensei — AI Japanese Learning Coach",
+    description: "Learn Japanese naturally with Frensei, your AI-powered Japanese coach. Practice real conversations, master culture, and build vocabulary with personalized AI guidance.",
+    siteName: "Frensei",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Frensei — AI Japanese Learning Coach",
+    description: "Learn Japanese naturally with Frensei, your AI-powered Japanese coach. Practice real conversations, master culture, and build vocabulary.",
+  },
+  keywords: ["Japanese learning", "learn Japanese", "AI Japanese coach", "Japanese conversation", "Japanese vocabulary", "Japanese culture", "language learning app"],
+  verification: {
+    google: ["x_j1VD9gtwLSj-qa4yoF6dNuXQlPP4SmFHTjFuQiW7M", "UelaJh9VHjLSsZejNMGRQnVQ9Hefccz-OdO5341nt2A"],
   },
 };
 
@@ -41,6 +67,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <AuthProvider>
             <LanguageProvider>
+              <PageViewLogger />
               {children}
               <Analytics />
               <Footer />

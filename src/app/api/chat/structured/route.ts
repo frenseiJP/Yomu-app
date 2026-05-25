@@ -1,11 +1,27 @@
-import { buildOpenAiChatSystemPrompt } from "@/lib/chat/openAiChatSystem";
-import { parseFtueCoachPayload } from "@/lib/ftue/format";
+import {
+  buildOpenAiChatSystemPrompt,
+  SENSEI_CHAT_TEMPERATURE,
+} from "@/lib/chat/openAiChatSystem";
+import { parseSenseiChatPayload } from "@/lib/ftue/format";
 import { consumeRateLimit, getClientIp } from "@/lib/security/rateLimit";
+import { logBetaEventServer } from "@/lib/analytics/server";
 
 const OPENAI_MODEL = "gpt-4o-mini";
 const MAX_MESSAGES = 12;
 const MAX_MESSAGE_CHARS = 2_000;
 const MAX_TOTAL_CHARS = 10_000;
+const MAX_REQUEST_BODY_BYTES = 50_000;
+
+async function parseJsonBodyWithLimit(req: Request): Promise<unknown | null> {
+  const raw = await req.text().catch(() => "");
+  if (raw.length > MAX_REQUEST_BODY_BYTES) return null;
+  if (!raw.trim()) return {};
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return {};
+  }
+}
 
 function clampMessages(raw: unknown): { role: "user" | "assistant"; content: string }[] {
   if (!Array.isArray(raw)) return [];
@@ -34,6 +50,11 @@ export async function POST(req: Request): Promise<Response> {
     windowMs: 60_000,
   });
   if (!rl.ok) {
+    await logBetaEventServer({
+      eventType: "api_rate_limited",
+      route: "/api/chat/structured",
+      metadata: { status: 429 },
+    });
     return Response.json(
       { error: "Too many requests" },
       {
@@ -51,7 +72,15 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = await parseJsonBodyWithLimit(req);
+  if (body === null) {
+    await logBetaEventServer({
+      eventType: "api_payload_too_large",
+      route: "/api/chat/structured",
+      metadata: { status: 413, limitBytes: MAX_REQUEST_BODY_BYTES },
+    });
+    return Response.json({ error: "Payload too large" }, { status: 413 });
+  }
   const { messages: rawMessages, tone, language: languageFromClient, coachContext } = body as {
     messages?: unknown;
     tone?: unknown;
@@ -59,6 +88,8 @@ export async function POST(req: Request): Promise<Response> {
     coachContext?: unknown;
   };
   const messages = clampMessages(rawMessages);
+  const lastUser = [...messages].reverse().find((m) => m.role === "user");
+  const lastUserText = lastUser?.content ?? "";
 
   const { systemPrompt } = buildOpenAiChatSystemPrompt({
     languageFromClient,
@@ -76,7 +107,7 @@ export async function POST(req: Request): Promise<Response> {
     },
     body: JSON.stringify({
       model: OPENAI_MODEL,
-      temperature: 0.55,
+      temperature: SENSEI_CHAT_TEMPERATURE,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
@@ -86,6 +117,11 @@ export async function POST(req: Request): Promise<Response> {
   });
 
   if (!openaiRes.ok) {
+    await logBetaEventServer({
+      eventType: "api_error",
+      route: "/api/chat/structured",
+      metadata: { status: 200, reason: "openai_failed_fallback" },
+    });
     return Response.json(
       { error: "openai_failed", fallback: true },
       { status: 200, headers: { "cache-control": "no-store" } },
@@ -107,7 +143,7 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: "json_parse", fallback: true }, { status: 200 });
   }
 
-  const coach = parseFtueCoachPayload(parsed);
+  const coach = parseSenseiChatPayload(parsed, lastUserText);
   if (!coach) {
     return Response.json(
       { error: "invalid_shape", fallback: true },
