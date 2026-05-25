@@ -93,6 +93,7 @@ import {
   removeSession,
   startNewChatSession,
 } from "@/lib/chat/service";
+import { useChatInputIme } from "@/lib/chat/useChatInputIme";
 import SessionDrawer from "@/components/chat/SessionDrawer";
 import TopicGuidedLearning from "@/components/topic/TopicGuidedLearning";
 import TopicSelector from "@/components/topic/TopicSelector";
@@ -733,6 +734,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     buildWelcomeMessage(getLangClient()),
   ]);
   const [input, setInput] = useState("");
+  const { onCompositionStart, onCompositionEnd, handleEnterKeyDown } = useChatInputIme();
   const [isTyping, setIsTyping] = useState(false);
   const [politeness, setPoliteness] = useState<Politeness>("casual");
   const [furiganaOn, setFuriganaOn] = useState(true);
@@ -3423,11 +3425,12 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     value={input}
                     disabled={ftueShowPicker}
                     onChange={(e) => setInput(e.target.value)}
+                    onCompositionStart={onCompositionStart}
+                    onCompositionEnd={onCompositionEnd}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
+                      handleEnterKeyDown(e, () => {
                         if (input.trim() && !ftueShowPicker) handleSend(input);
-                      }
+                      });
                     }}
                     placeholder={uiText.inputPlaceholder}
                     className="max-h-32 w-full resize-none border-0 bg-transparent text-[13px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"

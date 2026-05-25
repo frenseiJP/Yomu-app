@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useChatInputIme } from "@/lib/chat/useChatInputIme";
 
 type Props = {
   value: string;
@@ -12,6 +13,7 @@ type Props = {
 
 export default function ChatInput({ value, setValue, onSend, loading, placeholder }: Props) {
   const ref = useRef<HTMLTextAreaElement | null>(null);
+  const { onCompositionStart, onCompositionEnd, handleEnterKeyDown } = useChatInputIme();
 
   useEffect(() => {
     ref.current?.focus();
@@ -24,11 +26,12 @@ export default function ChatInput({ value, setValue, onSend, loading, placeholde
         rows={1}
         value={value}
         onChange={(e) => setValue(e.target.value)}
+        onCompositionStart={onCompositionStart}
+        onCompositionEnd={onCompositionEnd}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
+          handleEnterKeyDown(e, () => {
             if (!loading && value.trim()) onSend();
-          }
+          });
         }}
         placeholder={placeholder}
         className="max-h-32 w-full resize-none border-0 bg-transparent text-[13px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-0"
