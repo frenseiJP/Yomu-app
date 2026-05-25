@@ -51,7 +51,7 @@ function parseAppsScriptResponse(text: string): FeedbackSheetsResult {
     return { ok: false, reason: "request_failed" };
   }
 
-  return { ok: true };
+  return { ok: false, reason: "request_failed" };
 }
 
 export async function postFeedbackToGoogleSheets(
@@ -69,21 +69,37 @@ export async function postFeedbackToGoogleSheets(
       },
       body: JSON.stringify(payload),
       cache: "no-store",
-      redirect: "follow",
+      redirect: "manual",
     });
 
-    const text = await res.text();
+    const text = await readAppsScriptResponseText_(res);
     const parsed = parseAppsScriptResponse(text);
     if (!parsed.ok) return parsed;
 
-    // Apps Script may return 200 with JSON even after redirects
     if (text.includes('"ok":true') || text.includes('"ok": true')) {
       return { ok: true };
     }
 
-    if (!res.ok) return { ok: false, reason: "request_failed" };
-    return { ok: true };
+    return { ok: false, reason: "request_failed" };
   } catch {
     return { ok: false, reason: "request_failed" };
   }
+}
+
+/** GAS web apps POST → 302 → GET echo URL; following blindly breaks with 405. */
+async function readAppsScriptResponseText_(res: Response): Promise<string> {
+  if (res.status === 302 || res.status === 303) {
+    const location = res.headers.get("location");
+    if (location) {
+      const follow = await fetch(location, {
+        method: "GET",
+        headers: { Accept: "application/json, text/plain, */*" },
+        cache: "no-store",
+        redirect: "follow",
+      });
+      return follow.text();
+    }
+  }
+
+  return res.text();
 }

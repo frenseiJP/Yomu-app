@@ -13,12 +13,21 @@ else
 fi
 
 echo ""
-echo "→ Next steps in Google Apps Script:"
-echo "  1. Open your spreadsheet → Extensions → Apps Script"
-echo "  2. Replace Code.gs with the clipboard contents"
-echo "  3. Deploy → New deployment → Web app"
+echo "→ If Extensions → Apps Script shows「ファイルを開くことができません」:"
+echo "  Use STANDALONE setup (works around multi-account / Google bugs):"
+echo ""
+echo "  1. Create a spreadsheet → copy ID from URL:"
+echo "     https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit"
+echo "  2. Open https://script.google.com/home in INCOGNITO with ONE Google account"
+echo "  3. New project → paste clipboard → set SPREADSHEET_ID at top of Code.gs"
+echo "  4. Deploy → New deployment → Web app"
 echo "     Execute as: Me | Who has access: Anyone"
-echo "  4. If the /exec URL changes, update FEEDBACK_SHEETS_WEBHOOK_URL"
+echo "  5. Update FEEDBACK_SHEETS_WEBHOOK_URL (.env.local + Vercel)"
+echo ""
+echo "→ Otherwise (Extensions menu works):"
+echo "  1. Spreadsheet → Extensions → Apps Script"
+echo "  2. Replace Code.gs with clipboard (leave SPREADSHEET_ID empty)"
+echo "  3. Deploy → New deployment → Web app (same settings)"
 echo ""
 
 if command -v open >/dev/null 2>&1; then

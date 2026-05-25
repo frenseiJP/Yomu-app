@@ -1,21 +1,35 @@
 /**
  * Frensei beta feedback → Google Spreadsheet
  *
- * Setup:
- * 1. Open your spreadsheet → Extensions → Apps Script
- * 2. Replace Code.gs with this file (or merge doGet/doPost)
- * 3. Deploy → New deployment → Web app
- *    - Execute as: Me
- *    - Who has access: Anyone
- * 4. Set FEEDBACK_SHEETS_WEBHOOK_URL to the /exec URL in .env.local / Vercel
+ * IMPORTANT: Set SPREADSHEET_ID below to the spreadsheet you want to collect feedback in.
+ * Copy from URL: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit
+ *
+ * Deploy → New deployment → Web app
+ *   Execute as: Me | Who has access: Anyone
  */
+
+// ← Paste your spreadsheet ID here (required for reliable writes)
+const SPREADSHEET_ID = "";
 
 const SHEET_NAME = "Feedback";
 
 function doGet() {
-  return ContentService.createTextOutput(
-    JSON.stringify({ ok: true, message: "Frensei feedback webhook is running." }),
-  ).setMimeType(ContentService.MimeType.JSON);
+  try {
+    const ss = getSpreadsheet_();
+    return jsonResponse({
+      ok: true,
+      message: "Frensei feedback webhook is running.",
+      spreadsheetId: ss.getId(),
+      spreadsheetUrl: ss.getUrl(),
+      sheetName: SHEET_NAME,
+    });
+  } catch (err) {
+    return jsonResponse({
+      ok: false,
+      error: String(err),
+      hint: "Set SPREADSHEET_ID at the top of Code.gs to your spreadsheet ID.",
+    });
+  }
 }
 
 function doPost(e) {
@@ -25,7 +39,8 @@ function doPost(e) {
     }
 
     const data = JSON.parse(e.postData.contents);
-    const sheet = getOrCreateSheet_();
+    const ss = getSpreadsheet_();
+    const sheet = getOrCreateSheet_(ss);
 
     sheet.appendRow([
       data.createdAt || new Date().toISOString(),
@@ -37,14 +52,38 @@ function doPost(e) {
       data.reportContext || "",
     ]);
 
-    return jsonResponse({ ok: true });
+    return jsonResponse({
+      ok: true,
+      spreadsheetId: ss.getId(),
+      spreadsheetUrl: ss.getUrl(),
+      sheetName: sheet.getName(),
+      row: sheet.getLastRow(),
+    });
   } catch (err) {
-    return jsonResponse({ ok: false, error: String(err) });
+    return jsonResponse({
+      ok: false,
+      error: String(err),
+      hint: "Set SPREADSHEET_ID at the top of Code.gs to your spreadsheet ID.",
+    });
   }
 }
 
-function getOrCreateSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+function getSpreadsheet_() {
+  if (SPREADSHEET_ID) {
+    return SpreadsheetApp.openById(SPREADSHEET_ID);
+  }
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (ss) return ss;
+  } catch (err) {
+    // fall through
+  }
+  throw new Error(
+    "SPREADSHEET_ID is not set. Paste your spreadsheet ID into Code.gs (const SPREADSHEET_ID = \"...\").",
+  );
+}
+
+function getOrCreateSheet_(ss) {
   let sheet = ss.getSheetByName(SHEET_NAME);
   const headers = [
     "createdAt",

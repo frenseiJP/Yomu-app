@@ -127,6 +127,13 @@ import { ftueEnglishPromptForMode, getFtueFreeOpening, getFtueOpening } from "@/
 import type { FtueCoachPayload, FtuePracticeMode } from "@/lib/ftue/types";
 import { markBetaFeedbackPromptShown, shouldShowBetaFeedbackPrompt } from "@/lib/feedback/service";
 import { logBetaEvent } from "@/lib/analytics/client";
+import FrenseiTutorial from "@/components/tutorial/FrenseiTutorial";
+import {
+  getTutorialCompleted,
+  markTutorialCompleted,
+  markTutorialShownThisSession,
+  wasTutorialShownThisSession,
+} from "@/lib/tutorial/storage";
 
 type Role = "user" | "assistant";
 type Politeness = "casual" | "neutral" | "business";
@@ -765,6 +772,9 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const [followUpFeedback, setFollowUpFeedback] = useState<null | "nice" | "ok">(null);
   const [betaFeedbackVisible, setBetaFeedbackVisible] = useState(false);
   const [betaFeedbackShownInSession, setBetaFeedbackShownInSession] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialManualOpen, setTutorialManualOpen] = useState(false);
+  const tutorialAutoTriggeredRef = useRef(false);
   const [currentTopic, setCurrentTopic] = useState("");
   const [activeView, setActiveView] = useState<TabView>(initialView);
   const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
@@ -938,6 +948,27 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       mounted = false;
     };
   }, [refreshHabitData, refreshChatSessions, sessionFromUrl]);
+
+  useEffect(() => {
+    if (habitUserId === "guest") return;
+    if (activeView !== "home") return;
+    if (tutorialManualOpen) return;
+    if (tutorialAutoTriggeredRef.current) return;
+    if (getTutorialCompleted(habitUserId)) return;
+    if (wasTutorialShownThisSession(habitUserId)) return;
+    if (isTyping) return;
+    if (choiceSheet) return;
+
+    tutorialAutoTriggeredRef.current = true;
+    markTutorialShownThisSession(habitUserId);
+    setTutorialOpen(true);
+  }, [activeView, habitUserId, isTyping, choiceSheet, tutorialManualOpen]);
+
+  const closeTutorial = useCallback(() => {
+    if (habitUserId !== "guest") markTutorialCompleted(habitUserId);
+    setTutorialOpen(false);
+    setTutorialManualOpen(false);
+  }, [habitUserId]);
 
   useEffect(() => {
     setStoredUiTheme(uiTheme);
@@ -2421,6 +2452,21 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             </Link>
             <button
               type="button"
+              onClick={() => {
+                setTutorialManualOpen(true);
+                setTutorialOpen(true);
+              }}
+              className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-wa-ruri/40"
+            >
+              <p className="text-sm text-slate-100">
+                {appLang === "ja" ? "Frensei の使い方" : "How to use Frensei"}
+              </p>
+              <p className="mt-0.5 text-xs text-slate-400">
+                {appLang === "ja" ? "60秒のクイックガイド" : "60-second quick guide"}
+              </p>
+            </button>
+            <button
+              type="button"
               onClick={() => setActiveView("settings")}
               className="rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left"
             >
@@ -3208,6 +3254,15 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           onDismiss={dismissMissionToast}
         />
       ) : null}
+
+      <FrenseiTutorial
+        open={tutorialOpen}
+        userId={habitUserId}
+        route="/"
+        isJa={appLang === "ja"}
+        manual={tutorialManualOpen}
+        onClose={closeTutorial}
+      />
 
       {/* 言語・地域: タップで開くボトムシート（一覧を1画面に並べない） */}
       {choiceSheet && (
