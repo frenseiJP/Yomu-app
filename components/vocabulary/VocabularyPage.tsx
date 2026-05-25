@@ -208,6 +208,7 @@ export default function VocabularyPage() {
           title={vocabTutorialHint.title}
           body={vocabTutorialHint.body}
           cta={vocabTutorialHint.cta}
+          placement="top-right"
           skipLabel={isJa ? "スキップ" : "Skip"}
           onSkip={skipVocabTutorial}
           onCta={goToProgressTutorial}

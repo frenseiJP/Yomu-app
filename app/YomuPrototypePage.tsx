@@ -1153,7 +1153,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const initX = window.innerWidth - 64;
+    const initX = 12;
     const initY = window.innerHeight - 170;
     setReportFabPos(clampReportFabPos(initX, initY));
   }, [clampReportFabPos]);
@@ -3484,6 +3484,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               title={hint.title}
               body={hint.body}
               cta={hint.cta}
+              placement="top-right"
               skipLabel={appLang === "ja" ? "スキップ" : "Skip"}
               onSkip={() => skipGuidedTutorial(guidedStep)}
               onCta={
@@ -3508,7 +3509,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               body={hint.body}
               cta={hint.cta}
               skipLabel={appLang === "ja" ? "スキップ" : "Skip"}
-              docked
+              placement="bottom"
               onSkip={() => skipGuidedTutorial("progress_intro")}
               onCta={() => {
                 advanceGuidedStep("complete");
@@ -3528,7 +3529,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               body={finish.body}
               cta={finish.cta}
               skipLabel={appLang === "ja" ? "スキップ" : "Skip"}
-              docked
+              placement="bottom"
               onSkip={completeGuidedTutorial}
               onCta={() => {
                 completeGuidedTutorial();
