@@ -6,6 +6,8 @@ export const BETA_EVENT_TYPES = [
   "vocabulary_save",
   "feedback_submit",
   "tutorial_shown",
+  "tutorial_started",
+  "tutorial_step_completed",
   "tutorial_completed",
   "tutorial_skipped",
   "api_rate_limited",

@@ -19,8 +19,15 @@ import {
 } from "@/lib/vocabulary/service";
 import type { VocabularyFilterState, VocabularyItem } from "@/lib/vocabulary/types";
 import { useVocabularyUserId } from "@/lib/vocabulary/useVocabularyUserId";
-import { getLangClient } from "@/src/utils/i18n/clientLang";
+import TutorialHintCard from "@/components/tutorial/TutorialHintCard";
+import { getTutorialHintCopy } from "@/lib/tutorial/copy";
+import {
+  clearGuidedTutorialSession,
+  readGuidedTutorialSession,
+  writeGuidedTutorialSession,
+} from "@/lib/tutorial/session";
 import { dateLocaleForLang, getPrototypeCopy } from "@/src/utils/i18n/prototypeCopy";
+import { getLangClient } from "@/src/utils/i18n/clientLang";
 import type { Lang } from "@/src/utils/i18n/types";
 
 export default function VocabularyPage() {
@@ -48,6 +55,34 @@ export default function VocabularyPage() {
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const reviewCount = useMemo(() => all.filter((x) => isVocabularyDueForReview(x, today)).length, [all, today]);
+
+  const [tutorialHighlightId, setTutorialHighlightId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const sess = readGuidedTutorialSession();
+    if (sess?.step === "vocabulary_intro") {
+      setTutorialHighlightId(sess.savedVocabularyId ?? null);
+    }
+  }, [refreshKey]);
+
+  const isJa = appLang === "ja";
+  const vocabTutorialHint =
+    readGuidedTutorialSession()?.step === "vocabulary_intro"
+      ? getTutorialHintCopy("vocabulary_intro", isJa)
+      : null;
+
+  const goToProgressTutorial = useCallback(() => {
+    writeGuidedTutorialSession({
+      step: "progress_intro",
+      startedAt: readGuidedTutorialSession()?.startedAt ?? new Date().toISOString(),
+    });
+    window.location.assign("/");
+  }, []);
+
+  const skipVocabTutorial = useCallback(() => {
+    clearGuidedTutorialSession();
+    setTutorialHighlightId(null);
+  }, []);
 
   const bump = useCallback(() => setRefreshKey((k) => k + 1), []);
 
@@ -138,12 +173,20 @@ export default function VocabularyPage() {
           </div>
         ) : (
           items.map((item) => (
-            <VocabularyListRow
+            <div
               key={item.id}
-              item={item}
-              ui={uiText}
-              onOpen={() => setSelected(item)}
-            />
+              className={
+                tutorialHighlightId && item.id === tutorialHighlightId
+                  ? "rounded-2xl ring-2 ring-wa-ruri/55 ring-offset-2 ring-offset-[#020617]"
+                  : undefined
+              }
+            >
+              <VocabularyListRow
+                item={item}
+                ui={uiText}
+                onOpen={() => setSelected(item)}
+              />
+            </div>
           ))
         )}
       </section>
@@ -157,6 +200,17 @@ export default function VocabularyPage() {
           onDelete={handleDelete}
           ui={uiText}
           dateLocale={dateLocale}
+        />
+      ) : null}
+
+      {vocabTutorialHint ? (
+        <TutorialHintCard
+          title={vocabTutorialHint.title}
+          body={vocabTutorialHint.body}
+          cta={vocabTutorialHint.cta}
+          skipLabel={isJa ? "スキップ" : "Skip"}
+          onSkip={skipVocabTutorial}
+          onCta={goToProgressTutorial}
         />
       ) : null}
     </div>

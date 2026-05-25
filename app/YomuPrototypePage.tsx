@@ -127,13 +127,23 @@ import { ftueEnglishPromptForMode, getFtueFreeOpening, getFtueOpening } from "@/
 import type { FtueCoachPayload, FtuePracticeMode } from "@/lib/ftue/types";
 import { markBetaFeedbackPromptShown, shouldShowBetaFeedbackPrompt } from "@/lib/feedback/service";
 import { logBetaEvent } from "@/lib/analytics/client";
-import FrenseiTutorial from "@/components/tutorial/FrenseiTutorial";
+import GuidedTutorialWelcome from "@/components/tutorial/GuidedTutorialWelcome";
+import TutorialHintCard from "@/components/tutorial/TutorialHintCard";
+import { getFinishCopy, getTutorialHintCopy } from "@/lib/tutorial/copy";
+import { createTutorialFallbackSaveCandidate } from "@/lib/tutorial/fallbackSave";
+import {
+  clearGuidedTutorialSession,
+  readGuidedTutorialSession,
+  writeGuidedTutorialSession,
+} from "@/lib/tutorial/session";
 import {
   getTutorialCompleted,
   markTutorialCompleted,
   markTutorialShownThisSession,
   wasTutorialShownThisSession,
 } from "@/lib/tutorial/storage";
+import type { GuidedTutorialStep } from "@/lib/tutorial/types";
+import { TUTORIAL_SUGGESTED_SENTENCE } from "@/lib/tutorial/types";
 
 type Role = "user" | "assistant";
 type Politeness = "casual" | "neutral" | "business";
@@ -772,9 +782,11 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const [followUpFeedback, setFollowUpFeedback] = useState<null | "nice" | "ok">(null);
   const [betaFeedbackVisible, setBetaFeedbackVisible] = useState(false);
   const [betaFeedbackShownInSession, setBetaFeedbackShownInSession] = useState(false);
-  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialWelcomeOpen, setTutorialWelcomeOpen] = useState(false);
   const [tutorialManualOpen, setTutorialManualOpen] = useState(false);
+  const [guidedStep, setGuidedStep] = useState<GuidedTutorialStep | null>(null);
   const tutorialAutoTriggeredRef = useRef(false);
+  const guidedAssistantMsgIdRef = useRef<number | null>(null);
   const [currentTopic, setCurrentTopic] = useState("");
   const [activeView, setActiveView] = useState<TabView>(initialView);
   const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
@@ -961,14 +973,179 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
     tutorialAutoTriggeredRef.current = true;
     markTutorialShownThisSession(habitUserId);
-    setTutorialOpen(true);
+    setTutorialWelcomeOpen(true);
   }, [activeView, habitUserId, isTyping, choiceSheet, tutorialManualOpen]);
 
-  const closeTutorial = useCallback(() => {
+  const skipGuidedTutorial = useCallback(
+    (step?: GuidedTutorialStep) => {
+      void logBetaEvent({
+        eventType: "tutorial_skipped",
+        userId: habitUserId,
+        route: "/",
+        metadata: { step: step ?? guidedStep ?? "welcome" },
+      });
+      if (habitUserId !== "guest") markTutorialCompleted(habitUserId);
+      clearGuidedTutorialSession();
+      setGuidedStep(null);
+      setTutorialWelcomeOpen(false);
+      setTutorialManualOpen(false);
+      guidedAssistantMsgIdRef.current = null;
+    },
+    [guidedStep, habitUserId],
+  );
+
+  const completeGuidedTutorial = useCallback(() => {
+    void logBetaEvent({
+      eventType: "tutorial_completed",
+      userId: habitUserId,
+      route: "/",
+    });
     if (habitUserId !== "guest") markTutorialCompleted(habitUserId);
-    setTutorialOpen(false);
+    clearGuidedTutorialSession();
+    setGuidedStep(null);
+    setTutorialWelcomeOpen(false);
     setTutorialManualOpen(false);
+    guidedAssistantMsgIdRef.current = null;
   }, [habitUserId]);
+
+  const advanceGuidedStep = useCallback(
+    (next: GuidedTutorialStep) => {
+      void logBetaEvent({
+        eventType: "tutorial_step_completed",
+        userId: habitUserId,
+        route: "/",
+        metadata: { step: guidedStep ?? "welcome" },
+      });
+      setGuidedStep(next);
+      writeGuidedTutorialSession({
+        step: next,
+        chatSessionId: currentSessionId ?? undefined,
+        assistantMessageId: guidedAssistantMsgIdRef.current ?? undefined,
+      });
+    },
+    [guidedStep, habitUserId, currentSessionId],
+  );
+
+  const startTutorialChatSession = useCallback(() => {
+    writeFtuePersist({ pickerDone: true });
+    setFtueShowPicker(false);
+    setRetentionMissionChatOpen(false);
+    setTopicSelectorMode("hidden");
+    setActiveTopicPrompt(null);
+    const s = startNewChatSession(habitUserId);
+    setCurrentSessionId(s.id);
+    setChatSessions(getSessions(habitUserId));
+    setFtueCoachActive(true);
+    setFtuePracticeKind("natural");
+    ftueFreePathRef.current = false;
+    ftueCoachingAttemptRef.current = 0;
+    const opening = getFtueOpening("natural");
+    const nowIso = new Date().toISOString();
+    addAssistantMessage(habitUserId, s.id, opening);
+    setMessages([
+      {
+        id: Date.now(),
+        role: "assistant",
+        baseText: opening,
+        createdAt: nowIso,
+        replyTone: politenessRef.current,
+        ftueAnchored: true,
+      },
+    ]);
+    setInput(TUTORIAL_SUGGESTED_SENTENCE);
+    setActiveView("chat");
+    setSessionDrawerOpen(false);
+    writeGuidedTutorialSession({
+      step: "chat_intro",
+      chatSessionId: s.id,
+      startedAt: new Date().toISOString(),
+    });
+    setGuidedStep("chat_intro");
+  }, [habitUserId]);
+
+  const startGuidedTutorial = useCallback(() => {
+    void logBetaEvent({
+      eventType: "tutorial_started",
+      userId: habitUserId,
+      route: "/",
+      metadata: { manual: tutorialManualOpen },
+    });
+    setTutorialWelcomeOpen(false);
+    startTutorialChatSession();
+  }, [habitUserId, startTutorialChatSession, tutorialManualOpen]);
+
+  useEffect(() => {
+    if (habitUserId === "guest") return;
+    const sess = readGuidedTutorialSession();
+    if (!sess) return;
+    if (sess.step === "vocabulary_intro") return;
+    if (sess.step === "complete") return;
+    setGuidedStep(sess.step);
+    if (sess.step === "progress_intro") {
+      setActiveView("progress");
+    }
+    if (sess.assistantMessageId) guidedAssistantMsgIdRef.current = sess.assistantMessageId;
+    if (sess.chatSessionId) setCurrentSessionId(sess.chatSessionId);
+  }, [habitUserId]);
+
+  useEffect(() => {
+    if (!guidedStep || guidedStep !== "chat_intro") return;
+    const sent = messages.some(
+      (m) => m.role === "user" && m.baseText.trim().includes("遅れ"),
+    );
+    if (sent) advanceGuidedStep("chat_sent");
+  }, [messages, guidedStep, advanceGuidedStep]);
+
+  useEffect(() => {
+    if (!guidedStep || (guidedStep !== "chat_sent" && guidedStep !== "correction_seen")) return;
+    if (isTyping) return;
+    const assistants = messages.filter((m) => m.role === "assistant" && m.baseText.trim());
+    const last = assistants[assistants.length - 1];
+    if (!last) return;
+    guidedAssistantMsgIdRef.current = last.id;
+    writeGuidedTutorialSession({
+      step: guidedStep === "chat_sent" ? "correction_seen" : guidedStep,
+      assistantMessageId: last.id,
+      chatSessionId: currentSessionId ?? undefined,
+    });
+    if (guidedStep === "chat_sent") {
+      advanceGuidedStep("correction_seen");
+    }
+  }, [messages, isTyping, guidedStep, advanceGuidedStep, currentSessionId]);
+
+  useEffect(() => {
+    if (guidedStep !== "correction_seen") return;
+    const t = window.setTimeout(() => advanceGuidedStep("save_prompt"), 2500);
+    return () => window.clearTimeout(t);
+  }, [guidedStep, advanceGuidedStep]);
+
+  useEffect(() => {
+    if (guidedStep !== "save_prompt") return;
+    const assistants = messages.filter((m) => m.role === "assistant");
+    const last = assistants[assistants.length - 1];
+    if (!last) return;
+    const hasSaves = (last.chatContext?.saveCandidates?.length ?? 0) > 0;
+    if (hasSaves) return;
+    const fallback = createTutorialFallbackSaveCandidate(
+      currentSessionId ?? undefined,
+      String(last.id),
+    );
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === last.id
+          ? {
+              ...m,
+              chatContext: {
+                highlightPhrases: m.chatContext?.highlightPhrases ?? [],
+                followUps: m.chatContext?.followUps ?? (["", "", ""] as [string, string, string]),
+                bestFollowUpIndex: m.chatContext?.bestFollowUpIndex ?? 0,
+                saveCandidates: [fallback],
+              },
+            }
+          : m,
+      ),
+    );
+  }, [guidedStep, messages, currentSessionId]);
 
   useEffect(() => {
     setStoredUiTheme(uiTheme);
@@ -2332,7 +2509,16 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               </div>
             </header>
 
-            <SeasonalProgressCard state={seasonalState} isLightTheme={isLightTheme} />
+            <div
+              id="tutorial-progress-highlight"
+              className={
+                guidedStep === "progress_intro" || guidedStep === "complete"
+                  ? "rounded-2xl ring-2 ring-wa-ruri/50 ring-offset-2 ring-offset-slate-950"
+                  : undefined
+              }
+            >
+              <SeasonalProgressCard state={seasonalState} isLightTheme={isLightTheme} />
+            </div>
 
             <section className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
@@ -2453,8 +2639,10 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             <button
               type="button"
               onClick={() => {
+                clearGuidedTutorialSession();
                 setTutorialManualOpen(true);
-                setTutorialOpen(true);
+                setTutorialWelcomeOpen(true);
+                setGuidedStep(null);
               }}
               className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-wa-ruri/40"
             >
@@ -2949,6 +3137,11 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                         <div
                           className={`rounded-2xl px-3.5 py-3 sm:px-4 sm:py-3.5 ${
                             "rounded-bl-md border border-slate-700/45 bg-slate-800/50 text-slate-100 shadow-sm"
+                          } ${
+                            guidedStep === "correction_seen" &&
+                            guidedAssistantMsgIdRef.current === msg.id
+                              ? "ring-2 ring-wa-ruri/55 ring-offset-2 ring-offset-slate-950"
+                              : ""
                           }`}
                         >
                           {msg.topicLabel ? (
@@ -3068,7 +3261,11 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                           </div>
                         ) : null}
                         {hasSaves ? (
-                          <div className="space-y-2 border-t border-slate-800/35 pt-2">
+                          <div
+                            className={`space-y-2 border-t border-slate-800/35 pt-2 ${
+                              guidedStep === "save_prompt" ? "rounded-xl ring-2 ring-pink-400/40 ring-offset-2 ring-offset-slate-950" : ""
+                            }`}
+                          >
                             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                               Recommended to save
                             </p>
@@ -3092,8 +3289,9 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                                 <button
                                   type="button"
                                   disabled={cand.alreadySaved}
+                                  data-tutorial-save={guidedStep === "save_prompt" ? "1" : undefined}
                                   onClick={() => {
-                                    saveCandidateToVocabulary(cand, habitUserId);
+                                    const result = saveCandidateToVocabulary(cand, habitUserId);
                                     setMessages((prev) =>
                                       prev.map((m2) =>
                                         m2.id === msg.id && m2.chatContext?.saveCandidates
@@ -3109,6 +3307,16 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                                           : m2,
                                       ),
                                     );
+                                    if (guidedStep === "save_prompt") {
+                                      writeGuidedTutorialSession({
+                                        step: "vocabulary_intro",
+                                        savedVocabularyId: result.item.id,
+                                        chatSessionId: currentSessionId ?? undefined,
+                                        assistantMessageId: guidedAssistantMsgIdRef.current ?? undefined,
+                                      });
+                                      setGuidedStep("vocabulary_intro");
+                                      window.location.assign("/vocabulary");
+                                    }
                                   }}
                                   className="mt-2 rounded-md border border-wa-ruri/45 bg-wa-ruri/15 px-2.5 py-1.5 text-[11px] font-semibold text-slate-100 disabled:border-slate-700/80 disabled:bg-slate-800/60 disabled:text-slate-500"
                                 >
@@ -3255,14 +3463,82 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         />
       ) : null}
 
-      <FrenseiTutorial
-        open={tutorialOpen}
-        userId={habitUserId}
-        route="/"
+      <GuidedTutorialWelcome
+        open={tutorialWelcomeOpen}
         isJa={appLang === "ja"}
-        manual={tutorialManualOpen}
-        onClose={closeTutorial}
+        onStart={startGuidedTutorial}
+        onSkip={() => skipGuidedTutorial("welcome")}
       />
+
+      {guidedStep &&
+      activeView === "chat" &&
+      (guidedStep === "chat_intro" ||
+        guidedStep === "chat_sent" ||
+        guidedStep === "correction_seen" ||
+        guidedStep === "save_prompt") ? (
+        (() => {
+          const hint = getTutorialHintCopy(guidedStep, appLang === "ja");
+          if (!hint) return null;
+          return (
+            <TutorialHintCard
+              title={hint.title}
+              body={hint.body}
+              cta={hint.cta}
+              skipLabel={appLang === "ja" ? "スキップ" : "Skip"}
+              onSkip={() => skipGuidedTutorial(guidedStep)}
+              onCta={
+                guidedStep === "chat_intro"
+                  ? () => setInput(TUTORIAL_SUGGESTED_SENTENCE)
+                  : guidedStep === "correction_seen"
+                    ? () => advanceGuidedStep("save_prompt")
+                    : undefined
+              }
+            />
+          );
+        })()
+      ) : null}
+
+      {guidedStep && activeView === "progress" && guidedStep === "progress_intro" ? (
+        (() => {
+          const hint = getTutorialHintCopy("progress_intro", appLang === "ja");
+          if (!hint) return null;
+          return (
+            <TutorialHintCard
+              title={hint.title}
+              body={hint.body}
+              cta={hint.cta}
+              skipLabel={appLang === "ja" ? "スキップ" : "Skip"}
+              docked
+              onSkip={() => skipGuidedTutorial("progress_intro")}
+              onCta={() => {
+                advanceGuidedStep("complete");
+                setActiveView("home");
+              }}
+            />
+          );
+        })()
+      ) : null}
+
+      {guidedStep === "complete" && activeView === "home" ? (
+        (() => {
+          const finish = getFinishCopy(appLang === "ja");
+          return (
+            <TutorialHintCard
+              title={finish.title}
+              body={finish.body}
+              cta={finish.cta}
+              skipLabel={appLang === "ja" ? "スキップ" : "Skip"}
+              docked
+              onSkip={completeGuidedTutorial}
+              onCta={() => {
+                completeGuidedTutorial();
+                if (retentionMissionDay) startRetentionDailyMissionChat();
+                else setActiveView("chat");
+              }}
+            />
+          );
+        })()
+      ) : null}
 
       {/* 言語・地域: タップで開くボトムシート（一覧を1画面に並べない） */}
       {choiceSheet && (
