@@ -8,6 +8,7 @@ import { getStoredUiTheme } from "@/src/utils/theme/theme";
 import { useVocabularyUserId } from "@/lib/vocabulary/useVocabularyUserId";
 import { logBetaEvent } from "@/lib/analytics/client";
 import { guessCorrectedSentence } from "@/lib/save-candidates/guess-correction";
+import { SaveCandidateList } from "@/components/save-candidates/SaveCandidateList";
 import { recommendCandidatesForMessage, saveCandidateToVocabulary } from "@/lib/save-candidates/service";
 import type { SaveCandidate } from "@/lib/save-candidates/types";
 import { TOPIC_PROMPTS, generateTopicFeedback, saveTopicPracticeResult } from "@/lib/topic/service";
@@ -160,40 +161,25 @@ export default function TopicPracticePage() {
             </ul>
           </div>
 
-          {saveCandidates.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-400">Save to Vocabulary</p>
-              {saveCandidates.map((cand) => (
-                <div key={cand.id} className="rounded-xl border border-slate-700/80 bg-slate-900/60 px-3 py-2.5">
-                  <p className="text-[11px] text-slate-400">{cand.label}</p>
-                  <p className="text-sm text-slate-100">{cand.primaryText}</p>
-                  <button
-                    type="button"
-                    disabled={cand.alreadySaved}
-                    onClick={() => {
-                      saveCandidateToVocabulary(cand, userId);
-                      void logBetaEvent({
-                        eventType: "vocabulary_save",
-                        userId,
-                        sessionId: "topic_page",
-                        route: "/topic",
-                        metadata: {
-                          source: "topic_candidate",
-                          candidateType: cand.type,
-                        },
-                      });
-                      setSaveCandidates((prev) =>
-                        prev.map((it) => (it.id === cand.id ? { ...it, alreadySaved: true } : it)),
-                      );
-                    }}
-                    className="mt-2 rounded-md border border-wa-ruri/50 bg-wa-ruri/20 px-2.5 py-1 text-xs font-medium text-slate-100 disabled:border-slate-700 disabled:bg-slate-800/70 disabled:text-slate-500"
-                  >
-                    {cand.alreadySaved ? "Saved" : "Save"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : null}
+          <SaveCandidateList
+            candidates={saveCandidates}
+            onSave={(cand) => {
+              saveCandidateToVocabulary(cand, userId);
+              void logBetaEvent({
+                eventType: "vocabulary_save",
+                userId,
+                sessionId: "topic_page",
+                route: "/topic",
+                metadata: {
+                  source: "topic_candidate",
+                  candidateType: cand.type,
+                },
+              });
+              setSaveCandidates((prev) =>
+                prev.map((it) => (it.id === cand.id ? { ...it, alreadySaved: true } : it)),
+              );
+            }}
+          />
 
           <button
             type="button"

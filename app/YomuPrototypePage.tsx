@@ -108,6 +108,7 @@ import {
 import type { TopicPrompt, TopicFeedback } from "@/lib/topic/types";
 import type { SaveCandidate } from "@/lib/save-candidates/types";
 import { guessCorrectedSentence } from "@/lib/save-candidates/guess-correction";
+import { SaveCandidateList } from "@/components/save-candidates/SaveCandidateList";
 import { recommendCandidatesForMessage, saveCandidateToVocabulary } from "@/lib/save-candidates/service";
 import FtuePracticePicker from "@/components/chat/FtuePracticePicker";
 import AssistantMessageBody from "@/components/chat/AssistantMessageBody";
@@ -465,12 +466,6 @@ function buildWelcomeMessage(lang: Lang): Message {
 function formatTime(dateIso: string) {
   const d = new Date(dateIso);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-function formatSaveCandidateHeading(c: SaveCandidate): string {
-  if (c.type === "correction") return "[Correction]";
-  if (c.type === "phrase") return "[Useful phrase]";
-  return "[Word]";
 }
 
 function applyPoliteness(text: string, level: Politeness): string {
@@ -3263,70 +3258,39 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                           </div>
                         ) : null}
                         {hasSaves ? (
-                          <div
-                            className={`space-y-2 border-t border-slate-800/35 pt-2 ${
-                              guidedStep === "save_prompt" ? "rounded-xl ring-2 ring-pink-400/40 ring-offset-2 ring-offset-slate-950" : ""
-                            }`}
-                          >
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                              Recommended to save
-                            </p>
-                            {saveList.map((cand) => (
-                              <div
-                                key={cand.id}
-                                className="rounded-lg border border-slate-700/50 bg-slate-900/45 px-2.5 py-2"
-                              >
-                                <p className="text-[10px] font-semibold text-slate-400">
-                                  {formatSaveCandidateHeading(cand)}
-                                </p>
-                                <p className="mt-1 text-[13px] font-medium leading-snug text-slate-50">
-                                  {cand.primaryText}
-                                </p>
-                                {cand.secondaryText ? (
-                                  <p className="mt-1 text-[11px] text-slate-400">{cand.secondaryText}</p>
-                                ) : null}
-                                {cand.explanation ? (
-                                  <p className="mt-0.5 text-[11px] text-slate-500">{cand.explanation}</p>
-                                ) : null}
-                                <button
-                                  type="button"
-                                  disabled={cand.alreadySaved}
-                                  data-tutorial-save={guidedStep === "save_prompt" ? "1" : undefined}
-                                  onClick={() => {
-                                    const result = saveCandidateToVocabulary(cand, habitUserId);
-                                    setMessages((prev) =>
-                                      prev.map((m2) =>
-                                        m2.id === msg.id && m2.chatContext?.saveCandidates
-                                          ? {
-                                              ...m2,
-                                              chatContext: {
-                                                ...m2.chatContext,
-                                                saveCandidates: m2.chatContext.saveCandidates.map((c2) =>
-                                                  c2.id === cand.id ? { ...c2, alreadySaved: true } : c2,
-                                                ),
-                                              },
-                                            }
-                                          : m2,
-                                      ),
-                                    );
-                                    if (guidedStep === "save_prompt") {
-                                      writeGuidedTutorialSession({
-                                        step: "vocabulary_intro",
-                                        savedVocabularyId: result.item.id,
-                                        chatSessionId: currentSessionId ?? undefined,
-                                        assistantMessageId: guidedAssistantMsgIdRef.current ?? undefined,
-                                      });
-                                      setGuidedStep("vocabulary_intro");
-                                      window.location.assign("/vocabulary");
-                                    }
-                                  }}
-                                  className="mt-2 rounded-md border border-wa-ruri/45 bg-wa-ruri/15 px-2.5 py-1.5 text-[11px] font-semibold text-slate-100 disabled:border-slate-700/80 disabled:bg-slate-800/60 disabled:text-slate-500"
-                                >
-                                  {cand.alreadySaved ? "Saved" : "[Save]"}
-                                </button>
-                              </div>
-                            ))}
-                          </div>
+                          <SaveCandidateList
+                            candidates={saveList}
+                            highlight={guidedStep === "save_prompt"}
+                            saveDataAttr={guidedStep === "save_prompt" ? "1" : undefined}
+                            onSave={(cand) => {
+                              const result = saveCandidateToVocabulary(cand, habitUserId);
+                              setMessages((prev) =>
+                                prev.map((m2) =>
+                                  m2.id === msg.id && m2.chatContext?.saveCandidates
+                                    ? {
+                                        ...m2,
+                                        chatContext: {
+                                          ...m2.chatContext,
+                                          saveCandidates: m2.chatContext.saveCandidates.map((c2) =>
+                                            c2.id === cand.id ? { ...c2, alreadySaved: true } : c2,
+                                          ),
+                                        },
+                                      }
+                                    : m2,
+                                ),
+                              );
+                              if (guidedStep === "save_prompt") {
+                                writeGuidedTutorialSession({
+                                  step: "vocabulary_intro",
+                                  savedVocabularyId: result.item.id,
+                                  chatSessionId: currentSessionId ?? undefined,
+                                  assistantMessageId: guidedAssistantMsgIdRef.current ?? undefined,
+                                });
+                                setGuidedStep("vocabulary_intro");
+                                window.location.assign("/vocabulary");
+                              }
+                            }}
+                          />
                         ) : null}
                       </div>
                     ) : (

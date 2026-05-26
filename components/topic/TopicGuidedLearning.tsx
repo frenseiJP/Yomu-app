@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Sparkles, Users } from "lucide-react";
 import { guessCorrectedSentence } from "@/lib/save-candidates/guess-correction";
+import { SaveCandidateList } from "@/components/save-candidates/SaveCandidateList";
 import { recommendCandidatesForMessage, saveCandidateToVocabulary } from "@/lib/save-candidates/service";
 import type { SaveCandidate } from "@/lib/save-candidates/types";
 import {
@@ -210,57 +211,33 @@ export default function TopicGuidedLearning({
             </ul>
           </section>
 
-          {saveCandidates.length > 0 ? (
-            <section
-              className={`${card} space-y-2.5 p-4 sm:p-5 ${
-                isLightTheme ? "border-neutral-200 bg-white" : "border-slate-800/80 bg-yomu-glass/80"
-              }`}
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Recommended to save
-              </p>
-              {saveCandidates.map((cand) => (
-                <div
-                  key={cand.id}
-                  className={`rounded-lg border px-2.5 py-2 ${
-                    isLightTheme ? "border-neutral-200 bg-neutral-50" : "border-slate-700/70 bg-slate-900/70"
-                  }`}
-                >
-                  <p className="text-[10px] font-semibold text-slate-400">{cand.label}</p>
-                  <p className="mt-0.5 text-[12px] text-slate-100">{cand.primaryText}</p>
-                  {cand.secondaryText ? (
-                    <p className="mt-0.5 text-[10px] text-slate-400">{cand.secondaryText}</p>
-                  ) : null}
-                  {cand.explanation ? (
-                    <p className="mt-0.5 text-[10px] text-slate-500">{cand.explanation}</p>
-                  ) : null}
-                  <button
-                    type="button"
-                    disabled={cand.alreadySaved}
-                    onClick={() => {
-                      saveCandidateToVocabulary(cand, userId);
-                      void logBetaEvent({
-                        eventType: "vocabulary_save",
-                        userId,
-                        sessionId: "topic_guided_tab",
-                        route: "/",
-                        metadata: {
-                          source: "topic_guided_candidate",
-                          candidateType: cand.type,
-                        },
-                      });
-                      setSaveCandidates((prev) =>
-                        prev.map((c2) => (c2.id === cand.id ? { ...c2, alreadySaved: true } : c2)),
-                      );
-                    }}
-                    className="mt-2 rounded-md border border-wa-ruri/50 bg-wa-ruri/20 px-2.5 py-1 text-[10px] font-medium text-slate-100 disabled:border-slate-700 disabled:bg-slate-800/70 disabled:text-slate-500"
-                  >
-                    {cand.alreadySaved ? "Saved" : "Save"}
-                  </button>
-                </div>
-              ))}
-            </section>
-          ) : null}
+          <div
+            className={
+              saveCandidates.length > 0
+                ? `${card} p-4 sm:p-5 ${isLightTheme ? "border-neutral-200 bg-white" : "border-slate-800/80 bg-yomu-glass/80"}`
+                : undefined
+            }
+          >
+            <SaveCandidateList
+              candidates={saveCandidates}
+              onSave={(cand) => {
+                saveCandidateToVocabulary(cand, userId);
+                void logBetaEvent({
+                  eventType: "vocabulary_save",
+                  userId,
+                  sessionId: "topic_guided_tab",
+                  route: "/",
+                  metadata: {
+                    source: "topic_guided_candidate",
+                    candidateType: cand.type,
+                  },
+                });
+                setSaveCandidates((prev) =>
+                  prev.map((c2) => (c2.id === cand.id ? { ...c2, alreadySaved: true } : c2)),
+                );
+              }}
+            />
+          </div>
         </>
       ) : null}
 
