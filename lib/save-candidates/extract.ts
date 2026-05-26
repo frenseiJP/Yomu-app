@@ -1,4 +1,14 @@
+import { makeSaveCandidate } from "@/lib/save-candidates/enrich";
+import {
+  isJapaneseSnippet,
+  jpCharCount,
+  splitIntoSnippets,
+  stripSnippet,
+  toJapaneseOnly,
+} from "@/lib/save-candidates/japanese";
 import type { GetRecommendedSaveCandidatesParams, SaveCandidate } from "@/lib/save-candidates/types";
+
+export { jpCharCount, splitIntoSnippets } from "@/lib/save-candidates/japanese";
 
 const PARTICLES = new Set([
   "は",
@@ -32,34 +42,20 @@ const LOW_VALUE_TOKENS = new Set([
 ]);
 
 const LIMITS = {
-  word: { min: 2, max: 8 },
+  word: { min: 1, max: 8 },
   phrase: { min: 2, max: 18 },
-  correction: { max: 22 },
+  hardMax: 24,
 } as const;
 
 function norm(s: string): string {
   return s.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-export function jpCharCount(s: string): number {
-  return (s.match(/[ぁ-んァ-ン一-龯]/g) ?? []).length;
-}
-
 function isNoiseLine(s: string): boolean {
-  const t = s.trim();
-  if (!t) return true;
-  if (/^(nice|better|why|other ways|try again)/i.test(t)) return true;
-  if (/^・/.test(t) && t.length < 6) return true;
-  if (/これは|使える|表現です|丁寧な/.test(t) && jpCharCount(t) > 12) return true;
+  const t = stripSnippet(s);
+  if (!t || !isJapaneseSnippet(t)) return true;
+  if (/これは|使える|表現です|丁寧な|レストランで/.test(t) && jpCharCount(t) > 10) return true;
   return false;
-}
-
-function stripSnippet(s: string): string {
-  return s
-    .replace(/^[\s・\-*]+/, "")
-    .replace(/[。．.!?！？…]+$/g, "")
-    .replace(/\s+/g, "")
-    .trim();
 }
 
 function isParticleOnly(line: string): boolean {
@@ -96,7 +92,7 @@ export function extractBetterLineFromCoachText(ai: string): string | null {
   const first = block[1]
     .split("\n")
     .map((l) => stripSnippet(l))
-    .find((l) => /[ぁ-んァ-ン一-龯]/.test(l) && l.length >= 2 && !isNoiseLine(l));
+    .find((l) => isJapaneseSnippet(l) && jpCharCount(l) >= 2 && !isNoiseLine(l));
   return first ?? null;
 }
 
@@ -106,35 +102,27 @@ function extractOtherWayBullets(ai: string): string[] {
   return block[1]
     .split("\n")
     .map((l) => stripSnippet(l.replace(/^・\s*/, "")))
-    .filter((l) => /[ぁ-んァ-ン一-龯]/.test(l) && l.length >= 2 && !isNoiseLine(l));
+    .filter((l) => isJapaneseSnippet(l) && jpCharCount(l) >= 2 && !isNoiseLine(l));
 }
 
 function jpLines(text: string): string[] {
   return text
     .split(/\n|。|！|!|？|\?/)
     .map(stripSnippet)
-    .filter((s) => /[ぁ-んァ-ン一-龯]/.test(s) && s.length >= 2 && !isNoiseLine(s));
-}
-
-export function splitIntoSnippets(line: string): string[] {
-  const cleaned = stripSnippet(line);
-  if (!cleaned) return [];
-  const parts = cleaned
-    .split(/[、,，。．.!?！？\n]+/)
-    .map(stripSnippet)
-    .filter((p) => /[ぁ-んァ-ン一-龯]/.test(p) && p.length >= 2);
-  if (parts.length > 0) return parts;
-  return [cleaned];
+    .filter((s) => isJapaneseSnippet(s) && jpCharCount(s) >= 2 && !isNoiseLine(s));
 }
 
 function phraseScore(line: string, sourceBoost = 0): number {
   const len = jpCharCount(line);
   let s = sourceBoost * 4;
   if (len >= LIMITS.phrase.min && len <= LIMITS.phrase.max) s += 12;
-  else if (len <= LIMITS.correction.max) s += 4;
-  else s -= 8;
-  if (/すみません|ください|どこですか|遅れ/.test(line) && len <= 14) s += 2;
-  if (len > LIMITS.phrase.max) s -= 6;
+  else if (len <= LIMITS.hardMax) s += 3;
+  else s -= 10;
+  if (/すみません|ください|どこですか|遅れ|気をつけ/.test(line) && len <= 14) s += 2;
+  if (len <= 10) s += 2;
+  if (len <= 6) s += 1;
+  if (/は/.test(line) && len > 7) s -= 4;
+  if (len > LIMITS.phrase.max) s -= 8;
   return s;
 }
 
@@ -144,19 +132,20 @@ function fitsPhrase(line: string): boolean {
     len >= LIMITS.phrase.min &&
     len <= LIMITS.phrase.max &&
     !isParticleOnly(line) &&
-    !isNoiseLine(line)
+    !isNoiseLine(line) &&
+    isJapaneseSnippet(line)
   );
 }
 
 function fitsWordToken(p: string): boolean {
   const len = jpCharCount(p);
+  if (len === 1 && !/[一-龯]/.test(p)) return false;
   return (
     len >= LIMITS.word.min &&
     len <= LIMITS.word.max &&
-    /[ぁ-んァ-ン一-龯]/.test(p) &&
+    isJapaneseSnippet(p) &&
     !LOW_VALUE_TOKENS.has(p) &&
-    !isParticleOnly(p) &&
-    !/^[ぁ-ん]{1,2}$/.test(p)
+    !isParticleOnly(p)
   );
 }
 
@@ -165,8 +154,10 @@ type ScoredSnippet = { text: string; boost: number };
 function collectSnippets(ai: string): ScoredSnippet[] {
   const scored = new Map<string, number>();
   const add = (line: string, boost: number) => {
-    for (const sn of splitIntoSnippets(line)) {
-      if (!/[ぁ-んァ-ン一-龯]/.test(sn)) continue;
+    const jpLine = toJapaneseOnly(line);
+    if (!jpLine) return;
+    for (const sn of splitIntoSnippets(jpLine)) {
+      if (!isJapaneseSnippet(sn) || jpCharCount(sn) > LIMITS.hardMax) continue;
       const prev = scored.get(sn) ?? 0;
       scored.set(sn, Math.max(prev, boost));
     }
@@ -180,42 +171,46 @@ function collectSnippets(ai: string): ScoredSnippet[] {
   return [...scored.entries()].map(([text, boost]) => ({ text, boost }));
 }
 
-function pickPhraseFromSnippets(
+function pickPhrases(
   snippets: ScoredSnippet[],
   existing: Set<string>,
   skipNorm: Set<string>,
-): string | null {
-  const candidates = snippets
-    .filter(({ text }) => fitsPhrase(text))
-    .filter(({ text }) => {
-      const n = norm(text);
-      if (existing.has(n) || skipNorm.has(n)) return false;
-      return true;
-    });
-  if (candidates.length === 0) return null;
-  candidates.sort((a, b) => phraseScore(b.text, b.boost) - phraseScore(a.text, a.boost));
-  return candidates[0]?.text ?? null;
+  max: number,
+): string[] {
+  const chosen: string[] = [];
+  const used = new Set(existing);
+
+  while (chosen.length < max) {
+    const candidates = snippets
+      .filter(({ text }) => fitsPhrase(text))
+      .filter(({ text }) => {
+        const n = norm(text);
+        if (used.has(n) || skipNorm.has(n)) return false;
+        if (chosen.some((c) => isNearDuplicate(c, text))) return false;
+        return true;
+      });
+    if (candidates.length === 0) break;
+    candidates.sort((a, b) => phraseScore(b.text, b.boost) - phraseScore(a.text, a.boost));
+    const pick = candidates[0]!.text;
+    chosen.push(pick);
+    used.add(norm(pick));
+  }
+  return chosen;
 }
 
-function isAcceptableWordToken(p: string, existing: Set<string>): boolean {
-  if (!fitsWordToken(p)) return false;
-  if (existing.has(norm(p))) return false;
-  if (/^[はがをにでのともねよか]+$/.test(p)) return false;
-  return true;
-}
-
-function pickWord(snippets: ScoredSnippet[], existing: Set<string>): string | null {
+function pickWord(snippets: ScoredSnippet[], existing: Set<string>, skip: string[]): string | null {
   const scored: { token: string; score: number }[] = [];
   for (const { text: line, boost } of snippets) {
+    if (skip.some((s) => isNearDuplicate(s, line))) continue;
     const pieces = [
       line,
       ...line.split(/[、,\s「」『』]/).map((p) => stripSnippet(p)),
     ];
     for (const p of pieces) {
-      if (!isAcceptableWordToken(p, existing)) continue;
+      if (!fitsWordToken(p) || existing.has(norm(p))) continue;
       let score = 5 + boost * 2;
       if (/[一-龯]/.test(p)) score += 2;
-      if (jpCharCount(p) >= 3 && jpCharCount(p) <= 6) score += 1;
+      if (jpCharCount(p) >= 2 && jpCharCount(p) <= 4) score += 1;
       scored.push({ token: p, score });
     }
   }
@@ -241,146 +236,70 @@ function wasSavedRecently(
   });
 }
 
-function buildCorrection(user?: string, corrected?: string): { user: string; corrected: string } | null {
-  if (!user || !corrected) return null;
-  if (norm(user) === norm(corrected)) return null;
-  return { user: user.trim(), corrected: corrected.trim() };
-}
-
-function shortenCorrectionText(corrected: string): string | null {
-  const trimmed = stripSnippet(corrected);
-  if (jpCharCount(trimmed) <= LIMITS.correction.max) return trimmed;
-  const parts = splitIntoSnippets(trimmed)
-    .filter((p) => jpCharCount(p) >= 2 && jpCharCount(p) <= LIMITS.correction.max)
-    .sort((a, b) => phraseScore(b) - phraseScore(a));
-  return parts[0] ?? null;
-}
-
-function inferCorrectionNote(user: string, corrected: string): string {
-  const u = user.replace(/\s+/g, "");
-  const c = corrected.replace(/\s+/g, "");
-  if (c.includes("は") && !u.includes("は") && /どこ|だれ|いつ|なに|なん|誰/.test(u)) {
-    return "Add は for a natural question.";
-  }
-  if (/ですか|ますか/.test(c) && !/ですか|ますか/.test(u)) {
-    return "Polite question ending.";
-  }
-  if (/ください/.test(c) && !/ください/.test(u)) {
-    return "Polite request pattern.";
-  }
-  return "Sounds more natural.";
-}
-
-export function inferPhraseNote(phrase: string): string {
-  if (/すみません|申し訳|ごめん|失礼/.test(phrase)) return "sounds apologetic";
-  if (/ください|お願い/.test(phrase)) return "polite request";
-  if (/ですか|ますか|でしょうか/.test(phrase)) return "useful question pattern";
-  if (/遅れ|遅刻|遅く/.test(phrase)) return "about being late";
-  if (/辛い|おいしい|ください/.test(phrase)) return "useful in daily situations";
-  if (/どこ/.test(phrase)) return "asking where";
-  return "useful in conversation";
-}
-
 export function getRecommendedSaveCandidates(params: GetRecommendedSaveCandidatesParams): SaveCandidate[] {
   const existingTerms = new Set(params.existingItems.map((x) => norm(x.term)));
   const out: SaveCandidate[] = [];
-  const usedNorm = new Set<string>();
+  let index = 0;
 
   const snippets = collectSnippets(params.aiMessageContent);
-
-  const betterLine = extractBetterLineFromCoachText(params.aiMessageContent);
-  const correctedFromParam =
-    params.correctedSentence?.trim() ||
-    (betterLine && params.userMessageContent && norm(betterLine) !== norm(params.userMessageContent)
-      ? betterLine
-      : undefined);
-
   const skipForPhrase = new Set<string>();
-  if (params.userMessageContent) skipForPhrase.add(norm(params.userMessageContent));
-
-  let phrase = pickPhraseFromSnippets(snippets, existingTerms, skipForPhrase);
-  if (!phrase && betterLine) {
-    const shortBetter = splitIntoSnippets(betterLine).find(fitsPhrase);
-    if (shortBetter && !isDuplicateOfSet(shortBetter, existingTerms)) phrase = shortBetter;
+  if (params.userMessageContent) {
+    skipForPhrase.add(norm(toJapaneseOnly(params.userMessageContent)));
   }
 
-  if (phrase) {
-    out.push({
-      id: `cand_phrase_${Date.now()}_0`,
-      type: "phrase",
-      label: "Phrase",
-      primaryText: phrase,
-      secondaryText: inferPhraseNote(phrase),
-      tags: ["phrase"],
-      sourceMessageId: params.messageId,
-      sourceSessionId: params.sessionId,
-      alreadySaved: false,
-    });
-    usedNorm.add(norm(phrase));
+  const firstPhrases = pickPhrases(snippets, existingTerms, skipForPhrase, 1);
+  const phraseTerms: string[] = [];
+
+  for (const phrase of firstPhrases) {
+    if (out.length >= 3) break;
+    out.push(
+      makeSaveCandidate({
+        type: "phrase",
+        term: phrase,
+        messageId: params.messageId,
+        sessionId: params.sessionId,
+        index: index++,
+      }),
+    );
+    phraseTerms.push(phrase);
     existingTerms.add(norm(phrase));
   }
 
-  const word = pickWord(snippets, existingTerms);
-  const phraseNorm = phrase ? norm(phrase) : "";
+  const word = pickWord(snippets, existingTerms, phraseTerms);
   if (
     word &&
-    norm(word) !== phraseNorm &&
-    !isDuplicateOfSet(word, usedNorm) &&
+    out.length < 3 &&
+    !phraseTerms.some((p) => isNearDuplicate(p, word)) &&
     !wasSavedRecently(params.existingItems, word)
   ) {
-    out.push({
-      id: `cand_word_${Date.now()}_1`,
-      type: "word",
-      label: "Word",
-      primaryText: word,
-      secondaryText: "key vocabulary",
-      tags: ["word"],
-      sourceMessageId: params.messageId,
-      sourceSessionId: params.sessionId,
-      alreadySaved: false,
-    });
-    usedNorm.add(norm(word));
+    out.push(
+      makeSaveCandidate({
+        type: "word",
+        term: word,
+        messageId: params.messageId,
+        sessionId: params.sessionId,
+        index: index++,
+      }),
+    );
+    phraseTerms.push(word);
     existingTerms.add(norm(word));
-  } else if (!word && out.length < 3) {
-    const secondPhrase = pickPhraseFromSnippets(snippets, existingTerms, skipForPhrase);
-    if (secondPhrase && !isDuplicateOfSet(secondPhrase, usedNorm)) {
-      out.push({
-        id: `cand_phrase_${Date.now()}_2`,
-        type: "phrase",
-        label: "Phrase",
-        primaryText: secondPhrase,
-        secondaryText: inferPhraseNote(secondPhrase),
-        tags: ["phrase"],
-        sourceMessageId: params.messageId,
-        sourceSessionId: params.sessionId,
-        alreadySaved: false,
-      });
-      usedNorm.add(norm(secondPhrase));
-      existingTerms.add(norm(secondPhrase));
-    }
   }
 
-  const rawCorrection = buildCorrection(params.userMessageContent, correctedFromParam);
-  if (rawCorrection && out.length < 3) {
-    const shortCorrected = shortenCorrectionText(rawCorrection.corrected);
-    if (
-      shortCorrected &&
-      jpCharCount(shortCorrected) <= LIMITS.correction.max &&
-      !isDuplicateOfSet(shortCorrected, usedNorm) &&
-      !existingTerms.has(norm(shortCorrected))
-    ) {
-      out.push({
-        id: `cand_corr_${Date.now()}`,
-        type: "correction",
-        label: "Correction",
-        primaryText: shortCorrected,
-        secondaryText: `Your answer: ${rawCorrection.user}`,
-        explanation: inferCorrectionNote(rawCorrection.user, shortCorrected),
-        tags: ["correction"],
-        sourceMessageId: params.messageId,
-        sourceSessionId: params.sessionId,
-        alreadySaved: false,
-      });
+  if (out.length < 3) {
+    const more = pickPhrases(snippets, existingTerms, skipForPhrase, 3 - out.length);
+    for (const phrase of more) {
+      if (out.length >= 3) break;
+      if (out.some((c) => isNearDuplicate(c.term, phrase))) continue;
+      out.push(
+        makeSaveCandidate({
+          type: "phrase",
+          term: phrase,
+          messageId: params.messageId,
+          sessionId: params.sessionId,
+          index: index++,
+        }),
+      );
+      existingTerms.add(norm(phrase));
     }
   }
 

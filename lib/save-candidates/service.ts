@@ -16,18 +16,29 @@ function makeId(): string {
   return `vocab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function candidateTerm(candidate: SaveCandidate): string {
+  return candidate.term || candidate.primaryText;
+}
+
+function candidateMeaning(candidate: SaveCandidate): string {
+  return candidate.meaning || candidate.secondaryText || "";
+}
+
 function toVocabularyItem(candidate: SaveCandidate, userId: string): VocabularyItem {
   const now = nowIso();
+  const term = candidateTerm(candidate);
+  const meaning = candidateMeaning(candidate);
+
   if (candidate.type === "correction") {
-    const corrected = candidate.primaryText;
     const userSentence = (candidate.secondaryText ?? "").replace(/^Your answer:\s*/i, "");
     return {
       id: makeId(),
       userId,
       type: "correction",
-      term: corrected,
+      term,
       userSentence,
-      correctedSentence: corrected,
+      correctedSentence: term,
+      meaning,
       mistakeNote: candidate.explanation,
       aiComment: "Saved from recommended correction.",
       sourceType: "chat",
@@ -40,15 +51,16 @@ function toVocabularyItem(candidate: SaveCandidate, userId: string): VocabularyI
       updatedAt: now,
     };
   }
+
   if (candidate.type === "phrase") {
     return {
       id: makeId(),
       userId,
       type: "phrase",
-      term: candidate.primaryText,
-      meaning: candidate.secondaryText,
-      exampleSentence: candidate.primaryText,
-      aiComment: candidate.explanation,
+      term,
+      meaning,
+      exampleSentence: candidate.exampleSentence ?? term,
+      exampleTranslation: candidate.exampleTranslation,
       sourceType: "chat",
       sourceSessionId: candidate.sourceSessionId,
       sourceMessageId: candidate.sourceMessageId,
@@ -59,12 +71,13 @@ function toVocabularyItem(candidate: SaveCandidate, userId: string): VocabularyI
       updatedAt: now,
     };
   }
+
   return {
     id: makeId(),
     userId,
     type: "word",
-    term: candidate.primaryText,
-    meaning: candidate.secondaryText,
+    term,
+    meaning,
     sourceType: "chat",
     sourceSessionId: candidate.sourceSessionId,
     sourceMessageId: candidate.sourceMessageId,
@@ -80,9 +93,11 @@ function findDuplicate(items: VocabularyItem[], item: VocabularyItem): Vocabular
   if (item.type === "correction") {
     const a = norm(item.userSentence ?? "");
     const b = norm(item.correctedSentence ?? "");
-    return items.find(
-      (x) => x.type === "correction" && norm(x.userSentence ?? "") === a && norm(x.correctedSentence ?? "") === b,
-    ) ?? null;
+    return (
+      items.find(
+        (x) => x.type === "correction" && norm(x.userSentence ?? "") === a && norm(x.correctedSentence ?? "") === b,
+      ) ?? null
+    );
   }
   const t = norm(item.term);
   return items.find((x) => x.type === item.type && norm(x.term) === t) ?? null;

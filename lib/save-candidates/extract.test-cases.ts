@@ -1,48 +1,94 @@
 import { getRecommendedSaveCandidates } from "@/lib/save-candidates/extract";
+import { jpCharCount } from "@/lib/save-candidates/japanese";
 
-/** Manual regression fixtures — run in dev console or a one-off script. */
+function terms(items: ReturnType<typeof getRecommendedSaveCandidates>): string[] {
+  return items.map((i) => i.term);
+}
+
+function hasLatin(items: ReturnType<typeof getRecommendedSaveCandidates>): boolean {
+  return items.some((i) => /[a-zA-Z]/.test(i.term + (i.meaning ?? "")));
+}
+
+/** Manual regression fixtures — run with npx tsx. */
 export const SAVE_CANDIDATE_EXTRACT_CASES = [
   {
-    name: "long apology splits into short phrases",
+    name: "long apology → short phrases",
     params: {
       aiMessageContent: `Better:
-すみません、遅れてしまいました。次回からはもっと早く来ます。
+すみません、遅れてしまいました。次回から気をつけます。
 Why: Softer apology.
 Other ways:
-・すみません
-・遅れてしまいました`,
+・遅れてしまいました
+・気をつけます`,
       userMessageContent: "すみません、遅れました",
-      messageId: "t1",
     },
     assert: (items: ReturnType<typeof getRecommendedSaveCandidates>) => {
-      const terms = items.map((i) => i.primaryText);
-      const maxLen = Math.max(...terms.map((t) => t.length));
-      return maxLen <= 22 && !terms.some((t) => t.includes("次回からはもっと早く"));
+      const t = terms(items);
+      return (
+        t.some((x) => x.includes("遅れてしまいました")) &&
+        t.some((x) => x.includes("気をつけます")) &&
+        !t.some((x) => x.includes("次回から"))
+      );
     },
   },
   {
-    name: "skips verbose explanation lines",
+    name: "skips restaurant explanation",
     params: {
       aiMessageContent: `Better:
 お願いします
-Why: これはレストランで注文するときに使える丁寧な表現です`,
+Why: これはレストランで使える丁寧な言い方です
+Other ways:
+・お願いします
+・これください`,
       userMessageContent: "おねがい",
     },
-    assert: (items: ReturnType<typeof getRecommendedSaveCandidates>) =>
-      !items.some((i) => i.primaryText.includes("レストラン")),
+    assert: (items: ReturnType<typeof getRecommendedSaveCandidates>) => {
+      const t = terms(items);
+      return t.some((x) => x.includes("お願い")) && !t.some((x) => x.includes("レストラン"));
+    },
   },
   {
-    name: "short correction allowed, long skipped",
+    name: "toilet question → word + phrase",
     params: {
       aiMessageContent: "Better:\nトイレはどこですか？\nWhy: Add は.",
       userMessageContent: "トイレどこ",
       correctedSentence: "トイレはどこですか？",
     },
     assert: (items: ReturnType<typeof getRecommendedSaveCandidates>) => {
-      const corr = items.find((i) => i.type === "correction");
-      if (!corr) return true;
-      return corr.primaryText.length <= 22;
+      const t = terms(items);
+      return t.includes("トイレ") || t.some((x) => x.includes("どこですか"));
     },
+  },
+  {
+    name: "phrases have example sentences",
+    params: {
+      aiMessageContent: "Other ways:\n・お願いします",
+      userMessageContent: "test",
+    },
+    assert: (items: ReturnType<typeof getRecommendedSaveCandidates>) =>
+      items.filter((i) => i.type === "phrase").every((i) => Boolean(i.exampleSentence && i.exampleTranslation)),
+  },
+  {
+    name: "no correction type in recommendations",
+    params: {
+      aiMessageContent: "Better:\nトイレはどこですか？",
+      userMessageContent: "トイレどこ",
+      correctedSentence: "トイレはどこですか？",
+    },
+    assert: (items: ReturnType<typeof getRecommendedSaveCandidates>) =>
+      !items.some((i) => i.type === "correction"),
+  },
+  {
+    name: "terms are Japanese-only and within hard max",
+    params: {
+      aiMessageContent: `Better:
+すみません、遅れてしまいました。
+Other ways:
+・すみません`,
+      userMessageContent: "late",
+    },
+    assert: (items: ReturnType<typeof getRecommendedSaveCandidates>) =>
+      items.every((i) => jpCharCount(i.term) <= 24 && !/[a-zA-Z]/.test(i.term)),
   },
 ] as const;
 

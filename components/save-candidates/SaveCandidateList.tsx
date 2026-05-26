@@ -8,13 +8,12 @@ function badgeClass(type: SaveCandidate["type"]): string {
   return "border-sky-500/40 bg-sky-500/10 text-sky-200";
 }
 
-function displayNote(cand: SaveCandidate): string | null {
-  if (cand.type === "correction") {
-    return cand.explanation?.trim() || null;
-  }
-  const note = cand.secondaryText?.trim();
-  if (!note || /^your answer:/i.test(note) || /^from this reply$/i.test(note)) return null;
-  return note;
+function displayTerm(cand: SaveCandidate): string {
+  return cand.term || cand.primaryText;
+}
+
+function displayMeaning(cand: SaveCandidate): string {
+  return cand.meaning || cand.secondaryText || "";
 }
 
 export function SaveCandidateList({
@@ -44,23 +43,34 @@ export function SaveCandidateList({
     >
       <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{title}</p>
       {candidates.map((cand) => {
-        const note = displayNote(cand);
+        const term = displayTerm(cand);
+        const meaning = displayMeaning(cand);
+        const isPhrase = cand.type === "phrase";
         return (
           <div
             key={cand.id}
-            className="flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/45 px-2 py-1.5"
+            className="flex items-start gap-2 rounded-lg border border-slate-700/50 bg-slate-900/45 px-2 py-1.5"
           >
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 space-y-0.5">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span
                   className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${badgeClass(cand.type)}`}
                 >
                   {cand.label}
                 </span>
-                <span className="truncate text-[13px] font-medium text-slate-50">{cand.primaryText}</span>
+                <span className="text-[13px] font-medium leading-snug text-slate-50">{term}</span>
               </div>
-              {note ? (
-                <p className="mt-0.5 truncate text-[10px] text-slate-400">{note}</p>
+              {isPhrase && cand.exampleSentence ? (
+                <p className="text-[10px] leading-snug text-slate-400">
+                  <span className="font-medium text-slate-500">Example: </span>
+                  <span className="text-slate-300">{cand.exampleSentence}</span>
+                </p>
+              ) : null}
+              {meaning ? (
+                <p className="text-[10px] leading-snug text-slate-400">
+                  <span className="font-medium text-slate-500">Meaning: </span>
+                  {meaning}
+                </p>
               ) : null}
             </div>
             <button
@@ -68,7 +78,7 @@ export function SaveCandidateList({
               disabled={cand.alreadySaved}
               data-tutorial-save={saveDataAttr}
               onClick={() => onSave(cand)}
-              className="shrink-0 rounded-md border border-wa-ruri/45 bg-wa-ruri/15 px-2 py-1 text-[10px] font-semibold text-slate-100 disabled:border-slate-700/80 disabled:bg-slate-800/60 disabled:text-slate-500"
+              className="mt-0.5 shrink-0 rounded-md border border-wa-ruri/45 bg-wa-ruri/15 px-2 py-1 text-[10px] font-semibold text-slate-100 disabled:border-slate-700/80 disabled:bg-slate-800/60 disabled:text-slate-500"
             >
               {cand.alreadySaved ? savedButtonLabel : saveButtonLabel}
             </button>

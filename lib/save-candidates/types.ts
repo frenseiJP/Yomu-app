@@ -1,10 +1,18 @@
-export type SaveCandidateType = "correction" | "phrase" | "word";
+export type SaveCandidateType = "word" | "phrase" | "correction";
 
 export interface SaveCandidate {
   id: string;
   type: SaveCandidateType;
   label: string;
+  /** Japanese term (primary display + storage). */
+  term: string;
+  /** Short English gloss for review. */
+  meaning: string;
+  exampleSentence?: string;
+  exampleTranslation?: string;
+  /** @deprecated Use `term`. */
   primaryText: string;
+  /** @deprecated Use `meaning`. */
   secondaryText?: string;
   explanation?: string;
   tags: string[];
