@@ -6,6 +6,8 @@ import SeasonalGrowthVisual from "@/components/progress/SeasonalGrowthVisual";
 type Props = {
   state: SeasonalProgressState;
   compact?: boolean;
+  /** Home column: center tree preview and copy. */
+  centered?: boolean;
   isLightTheme?: boolean;
   onOpenProgress?: () => void;
 };
@@ -83,6 +85,7 @@ function StreakWarmth({
 export default function SeasonalProgressCard({
   state,
   compact = false,
+  centered = false,
   isLightTheme = false,
   onOpenProgress,
 }: Props) {
@@ -95,25 +98,31 @@ export default function SeasonalProgressCard({
       <button
         type="button"
         onClick={onOpenProgress}
-        className={`${shell} w-full p-3 text-left transition hover:opacity-95 active:scale-[0.99]`}
+        className={`${shell} w-full p-4 transition hover:opacity-95 active:scale-[0.99] ${centered ? "text-center" : "p-3 text-left"}`}
       >
-        <div className="flex items-center gap-3">
-          <div className="relative h-14 w-20 flex-shrink-0 overflow-hidden rounded-xl opacity-95">
+        <div
+          className={
+            centered
+              ? "flex flex-col items-center gap-3"
+              : "flex items-center gap-3"
+          }
+        >
+          <div className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-xl opacity-95">
             <SeasonalGrowthVisual
               season={state.season}
               stage={state.stage}
               progressRatio={state.progressRatio}
-              className="scale-[0.55] -translate-y-1"
+              className={centered ? "scale-[0.62] -translate-y-1" : "scale-[0.55] -translate-y-1"}
             />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className={centered ? "w-full" : "min-w-0 flex-1"}>
             <p className={`font-wa-serif text-sm ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>
               {state.homePreviewLine}
             </p>
             <p className={`mt-0.5 text-[11px] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>
               {state.encouragementLine}
             </p>
-            <div className="mt-2 flex items-center gap-2">
+            <div className={`mt-2 flex items-center gap-2 ${centered ? "justify-center" : ""}`}>
               <StreakWarmth streakCount={state.streakCount} compact isLightTheme={isLightTheme} />
             </div>
           </div>

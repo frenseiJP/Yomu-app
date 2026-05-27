@@ -2355,100 +2355,88 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         {/* 初回・Daily Mission: 全画面表示 */}
         {activeView === "home" && (
           <div
-            className={`${shellViewFrame} ${pagePaddingX} py-4 sm:py-6 lg:py-8 ${retentionMissionDay ? shellWide : shellNarrow}`}
+            className={`${shellViewFrame} ${pagePaddingX} flex items-start justify-center py-4 sm:py-6 lg:py-8 ${shellNarrow}`}
           >
-            <div
-              className={
-                retentionMissionDay
-                  ? "grid w-full gap-3 pb-4 lg:grid-cols-2 lg:gap-6 lg:pb-6"
-                  : "w-full space-y-3 pb-4 lg:pb-6"
-              }
-            >
-              <div className={retentionMissionDay ? "min-w-0 space-y-3 lg:col-span-1" : "min-w-0 space-y-3"}>
-                <DailyUsefulPhraseCard
-                  phrase={dailyUsefulPhrase}
-                  isLightTheme={isLightTheme}
-                  onPractice={() => startDailyPhrasePractice()}
-                />
-                {retentionMissionDay ? (
-                  <>
-                    <section className="w-full rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                        Today&apos;s Mission
-                      </p>
-                      <p className="mt-2 font-wa-serif text-base leading-snug text-slate-50">
-                        {retentionMissionDay.mission.title}
-                      </p>
-                      <p className="mt-1 text-sm leading-relaxed text-slate-300">
-                        {retentionMissionDay.mission.prompt_en}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => startRetentionDailyMissionChat()}
-                        className="mt-3 inline-flex w-full justify-center rounded-xl bg-wa-ruri px-4 py-2.5 text-sm font-medium text-white hover:bg-wa-ruri/90 sm:w-auto"
-                      >
-                        Start
-                      </button>
-                    </section>
-
-                    <section className="w-full rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                        Continue Chat
-                      </p>
-                      {recentChatSummary ? (
-                        <button
-                          type="button"
-                          onClick={() => openSession(recentChatSummary.id)}
-                          className="mt-2 block w-full rounded-xl border border-slate-700/80 bg-slate-900/70 px-3 py-2.5 text-left hover:bg-slate-900"
-                        >
-                          <p className="line-clamp-1 text-sm font-medium text-slate-100">{recentChatSummary.title}</p>
-                          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-400">
-                            {recentChatSummary.preview}
-                          </p>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            createNewSession();
-                            setActiveView("chat");
-                          }}
-                          className="mt-2 inline-flex w-full justify-center rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30 sm:w-auto"
-                        >
-                          Start chatting
-                        </button>
-                      )}
-                    </section>
-                  </>
-                ) : null}
-              </div>
+            <div className="mx-auto flex w-full max-w-md flex-col items-center gap-3 pb-4 sm:max-w-lg lg:max-w-xl lg:pb-6">
+              <DailyUsefulPhraseCard
+                phrase={dailyUsefulPhrase}
+                isLightTheme={isLightTheme}
+                onPractice={() => startDailyPhrasePractice()}
+              />
 
               {retentionMissionDay ? (
-                <div className="min-w-0 space-y-3 lg:col-span-1">
-                  <SeasonalProgressCard
-                    state={seasonalState}
-                    compact
-                    isLightTheme={isLightTheme}
-                    onOpenProgress={() => setActiveView("progress")}
-                  />
+                <section className="w-full rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Today&apos;s Mission
+                  </p>
+                  <p className="mt-2 font-wa-serif text-base leading-snug text-slate-50">
+                    {retentionMissionDay.mission.title}
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-300">
+                    {retentionMissionDay.mission.prompt_en}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => startRetentionDailyMissionChat()}
+                    className="mt-3 inline-flex w-full justify-center rounded-xl bg-wa-ruri px-4 py-2.5 text-sm font-medium text-white hover:bg-wa-ruri/90"
+                  >
+                    Start
+                  </button>
+                </section>
+              ) : null}
 
-                  {dueReviews.words.length + dueReviews.mistakes.length > 0 ? (
-                    <section className="w-full rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                        Review
+              {retentionMissionDay ? (
+                <section className="w-full rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Continue Chat
+                  </p>
+                  {recentChatSummary ? (
+                    <button
+                      type="button"
+                      onClick={() => openSession(recentChatSummary.id)}
+                      className="mt-2 block w-full rounded-xl border border-slate-700/80 bg-slate-900/70 px-3 py-2.5 text-left hover:bg-slate-900"
+                    >
+                      <p className="line-clamp-1 text-sm font-medium text-slate-100">{recentChatSummary.title}</p>
+                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-400">
+                        {recentChatSummary.preview}
                       </p>
-                      <p className="mt-2 text-sm text-slate-200">
-                        You have {dueReviews.words.length + dueReviews.mistakes.length} items to review.
-                      </p>
-                      <Link
-                        href="/vocabulary"
-                        className="mt-3 inline-flex w-full justify-center rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30 sm:w-auto"
-                      >
-                        Open review
-                      </Link>
-                    </section>
-                  ) : null}
-                </div>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        createNewSession();
+                        setActiveView("chat");
+                      }}
+                      className="mt-2 inline-flex w-full justify-center rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30"
+                    >
+                      Start chatting
+                    </button>
+                  )}
+                </section>
+              ) : null}
+
+              <SeasonalProgressCard
+                state={seasonalState}
+                compact
+                centered
+                isLightTheme={isLightTheme}
+                onOpenProgress={() => setActiveView("progress")}
+              />
+
+              {dueReviews.words.length + dueReviews.mistakes.length > 0 ? (
+                <section className="w-full rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Review</p>
+                  <p className="mt-2 text-sm text-slate-200">
+                    You have {dueReviews.words.length + dueReviews.mistakes.length} items to review.
+                  </p>
+                  <Link
+                    href="/vocabulary"
+                    className="mt-3 inline-flex w-full justify-center rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30"
+                  >
+                    Open review
+                  </Link>
+                </section>
               ) : null}
             </div>
           </div>
