@@ -113,7 +113,6 @@ import { SaveCandidateList } from "@/components/save-candidates/SaveCandidateLis
 import { recommendCandidatesForMessage, saveCandidateToVocabulary } from "@/lib/save-candidates/service";
 import FtuePracticePicker from "@/components/chat/FtuePracticePicker";
 import AssistantMessageBody from "@/components/chat/AssistantMessageBody";
-import DailyUsefulPhraseCard from "@/components/habit/DailyUsefulPhraseCard";
 import BetaFeedbackPrompt from "@/components/feedback/BetaFeedbackPrompt";
 import {
   buildDailyPhrasePracticeOpener,
@@ -147,10 +146,10 @@ import {
 } from "@/lib/tutorial/storage";
 import type { GuidedTutorialStep } from "@/lib/tutorial/types";
 import { TUTORIAL_SUGGESTED_SENTENCE } from "@/lib/tutorial/types";
+import HomeView from "@/components/home/HomeView";
 import VocabularyPage from "@/components/vocabulary/VocabularyPage";
 import {
   pagePaddingX,
-  shellNarrow,
   shellStandard,
   shellViewFrame,
   shellWide,
@@ -300,163 +299,6 @@ function migrateVocabItem(v: Record<string, unknown>): VocabItem {
     ? (v.exampleSentences as string[])
     : [];
   return { id, word, kana, romaji, translations, partOfSpeech, exampleSentences };
-}
-
-// HomeView: 継続意欲を高めるヒーローセクション
-function HomeView(props: {
-  todaysMission: DailyMission;
-  missionCompleted: boolean;
-  streakDays: boolean[];
-  vocab: VocabItem[];
-  uiText: {
-    dailyMission: string;
-    thisWeek: string;
-    askInChat: string;
-    recentWords: string;
-    noRecentWords: string;
-  };
-}) {
-  const { todaysMission, missionCompleted, streakDays, vocab, uiText } = props;
-  const completedCount = streakDays.filter(Boolean).length;
-  const streakPercent = Math.min(1, completedCount / 7);
-
-  const containerVariants = {
-    hidden: { opacity: 0, y: 24 },
-    show: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.4,
-        ease: "easeOut" as const,
-        staggerChildren: 0.08,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" as const } },
-  };
-
-  return (
-    <motion.section
-      className="mb-3 space-y-3 sm:mb-4 sm:space-y-4"
-      variants={containerVariants}
-      initial="hidden"
-      animate="show"
-    >
-      {/* 和柄ストリーク：円形プログレス */}
-      <motion.div
-        variants={itemVariants}
-        className="flex items-center justify-between gap-4 rounded-2xl border border-slate-800/50 bg-slate-950/40 px-4 py-3 backdrop-blur-xl sm:px-5 sm:py-4"
-      >
-        <div className="flex items-center gap-4">
-          <div className="relative h-16 w-16 sm:h-20 sm:w-20">
-            <div
-              className="absolute inset-0 rounded-full"
-              style={{
-                background: `conic-gradient(#22c55e ${streakPercent * 360}deg, rgba(15,23,42,0.9) 0deg)`,
-              }}
-            />
-            <div className="absolute inset-1 rounded-full bg-slate-950/90 backdrop-blur-xl" />
-            <div className="relative flex h-full w-full flex-col items-center justify-center">
-              <span className="font-wa-serif text-xl font-bold text-slate-50 sm:text-2xl">
-                {completedCount}
-              </span>
-              <span className="text-[10px] text-slate-400 sm:text-[11px]">day streak</span>
-            </div>
-          </div>
-          <div>
-            <p className="font-wa-serif text-xs font-medium text-slate-200 sm:text-sm">
-              Pattern streak
-            </p>
-            <p className="text-[10px] text-slate-500 sm:text-[11px]">
-              Complete missions 7 days in a row to unlock a special badge.
-            </p>
-          </div>
-        </div>
-        <div className="hidden text-right sm:block">
-          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500">
-            THIS WEEK
-          </p>
-          <p className="text-xs font-semibold text-slate-200">
-            {completedCount} / 7 days
-          </p>
-        </div>
-      </motion.div>
-
-      {/* Daily Mission フローティングカード */}
-      <motion.div
-        variants={itemVariants}
-        className="relative z-[1] mx-auto w-full max-w-xl rounded-3xl border border-slate-800/50 bg-slate-950/70 px-4 py-4 shadow-[0_22px_80px_rgba(0,0,0,0.9)] backdrop-blur-xl sm:px-6 sm:py-5"
-      >
-        <div className="mb-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Target className="h-4 w-4 text-wa-ruri" />
-            <Sparkles className="h-3.5 w-3.5 text-wa-kinari/90" />
-            <span className="font-wa-serif text-[11px] font-semibold tracking-[0.18em] text-slate-400">{uiText.dailyMission}</span>
-          </div>
-          <span
-            className={`rounded-full px-2 py-0.5 text-[10px] ${
-              missionCompleted
-                ? "bg-emerald-500/15 text-emerald-300"
-                : "bg-slate-900/80 text-slate-400"
-            }`}
-          >
-            {missionCompleted ? "Completed" : "Today"}
-          </span>
-        </div>
-        <p className="font-wa-serif text-[13px] leading-relaxed text-slate-50 sm:text-sm">
-          {todaysMission.title}
-        </p>
-        <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
-          {todaysMission.cultureTip}
-        </p>
-      </motion.div>
-
-      {/* Recent Vocab カルーセル */}
-      <motion.div
-        variants={itemVariants}
-        className="space-y-2 rounded-2xl border border-slate-800/50 bg-slate-950/40 px-3 py-3 backdrop-blur-xl sm:px-4 sm:py-4"
-      >
-        <div className="flex items-center justify-between">
-          <p className="font-wa-serif text-xs font-semibold text-slate-200">
-            {uiText.recentWords}
-          </p>
-          <span className="text-[10px] text-slate-500">
-            <span className="font-bold text-slate-100">{vocab.length}</span> words
-          </span>
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-1 text-[11px] sm:gap-3">
-          {vocab.length === 0 ? (
-            <p className="text-[11px] text-slate-500">
-              {uiText.noRecentWords}
-            </p>
-          ) : (
-            vocab.slice(0, 12).map((v) => (
-              <div
-                key={v.id}
-                className="min-w-[120px] rounded-2xl border border-slate-800/70 bg-slate-950/80 px-3 py-2.5 shadow-sm shadow-black/40"
-              >
-                <p className="text-[13px] font-bold text-slate-50">{v.word}</p>
-                {v.kana && (
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    {v.kana}
-                  </p>
-                )}
-                <p className="mt-0.5 text-[10px] text-slate-500">{v.romaji}</p>
-                {v.translations[0] && (
-                  <p className="mt-1 line-clamp-2 text-[10px] text-slate-300">
-                    {v.translations.slice(0, 2).join(" / ")}
-                  </p>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </motion.div>
-    </motion.section>
-  );
 }
 
 function buildWelcomeMessage(lang: Lang): Message {
@@ -2354,92 +2196,22 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       >
         {/* 初回・Daily Mission: 全画面表示 */}
         {activeView === "home" && (
-          <div
-            className={`${shellViewFrame} ${pagePaddingX} flex items-start justify-center py-4 sm:py-6 lg:py-8 ${shellNarrow}`}
-          >
-            <div className="mx-auto flex w-full max-w-md flex-col items-center gap-3 pb-4 sm:max-w-lg lg:max-w-xl lg:pb-6">
-              <DailyUsefulPhraseCard
-                phrase={dailyUsefulPhrase}
-                isLightTheme={isLightTheme}
-                onPractice={() => startDailyPhrasePractice()}
-              />
-
-              {retentionMissionDay ? (
-                <section className="w-full rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Today&apos;s Mission
-                  </p>
-                  <p className="mt-2 font-wa-serif text-base leading-snug text-slate-50">
-                    {retentionMissionDay.mission.title}
-                  </p>
-                  <p className="mt-1 text-sm leading-relaxed text-slate-300">
-                    {retentionMissionDay.mission.prompt_en}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => startRetentionDailyMissionChat()}
-                    className="mt-3 inline-flex w-full justify-center rounded-xl bg-wa-ruri px-4 py-2.5 text-sm font-medium text-white hover:bg-wa-ruri/90"
-                  >
-                    Start
-                  </button>
-                </section>
-              ) : null}
-
-              {retentionMissionDay ? (
-                <section className="w-full rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Continue Chat
-                  </p>
-                  {recentChatSummary ? (
-                    <button
-                      type="button"
-                      onClick={() => openSession(recentChatSummary.id)}
-                      className="mt-2 block w-full rounded-xl border border-slate-700/80 bg-slate-900/70 px-3 py-2.5 text-left hover:bg-slate-900"
-                    >
-                      <p className="line-clamp-1 text-sm font-medium text-slate-100">{recentChatSummary.title}</p>
-                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-400">
-                        {recentChatSummary.preview}
-                      </p>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        createNewSession();
-                        setActiveView("chat");
-                      }}
-                      className="mt-2 inline-flex w-full justify-center rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30"
-                    >
-                      Start chatting
-                    </button>
-                  )}
-                </section>
-              ) : null}
-
-              <SeasonalProgressCard
-                state={seasonalState}
-                compact
-                centered
-                isLightTheme={isLightTheme}
-                onOpenProgress={() => setActiveView("progress")}
-              />
-
-              {dueReviews.words.length + dueReviews.mistakes.length > 0 ? (
-                <section className="w-full rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Review</p>
-                  <p className="mt-2 text-sm text-slate-200">
-                    You have {dueReviews.words.length + dueReviews.mistakes.length} items to review.
-                  </p>
-                  <Link
-                    href="/vocabulary"
-                    className="mt-3 inline-flex w-full justify-center rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30"
-                  >
-                    Open review
-                  </Link>
-                </section>
-              ) : null}
-            </div>
-          </div>
+          <HomeView
+            dailyUsefulPhrase={dailyUsefulPhrase}
+            retentionMissionDay={retentionMissionDay}
+            recentChatSummary={recentChatSummary}
+            seasonalState={seasonalState}
+            dueReviews={dueReviews}
+            isLightTheme={isLightTheme}
+            onPracticePhrase={() => startDailyPhrasePractice()}
+            onStartMission={() => startRetentionDailyMissionChat()}
+            onOpenRecentChat={(sessionId) => openSession(sessionId)}
+            onStartNewChat={() => {
+              createNewSession();
+              setActiveView("chat");
+            }}
+            onOpenProgress={() => setActiveView("progress")}
+          />
         )}
 
         {/* Progress: seasonal growth journey */}

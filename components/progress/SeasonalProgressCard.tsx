@@ -98,31 +98,45 @@ export default function SeasonalProgressCard({
       <button
         type="button"
         onClick={onOpenProgress}
-        className={`${shell} w-full p-4 transition hover:opacity-95 active:scale-[0.99] ${centered ? "text-center" : "p-3 text-left"}`}
+        className={`${shell} w-full p-4 transition hover:opacity-95 active:scale-[0.99] sm:p-5 ${
+          centered ? "text-center lg:p-5 lg:text-left" : "p-3 text-left"
+        }`}
       >
         <div
           className={
             centered
-              ? "flex flex-col items-center gap-3"
-              : "flex items-center gap-3"
+              ? "flex flex-col items-center gap-3 lg:flex-row lg:items-center lg:gap-5"
+              : "flex items-center gap-3 sm:gap-4"
           }
         >
-          <div className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-xl opacity-95">
+          <div
+            className={`relative flex-shrink-0 overflow-hidden rounded-xl opacity-95 ${
+              centered ? "h-16 w-24 lg:h-[4.5rem] lg:w-28" : "h-14 w-20 sm:h-16 sm:w-24"
+            }`}
+          >
             <SeasonalGrowthVisual
               season={state.season}
               stage={state.stage}
               progressRatio={state.progressRatio}
-              className={centered ? "scale-[0.62] -translate-y-1" : "scale-[0.55] -translate-y-1"}
+              className={
+                centered
+                  ? "scale-[0.62] -translate-y-1 lg:scale-[0.7]"
+                  : "scale-[0.55] -translate-y-1 sm:scale-[0.62]"
+              }
             />
           </div>
-          <div className={centered ? "w-full" : "min-w-0 flex-1"}>
-            <p className={`font-wa-serif text-sm ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>
+          <div className={centered ? "w-full min-w-0 lg:flex-1" : "min-w-0 flex-1"}>
+            <p
+              className={`font-wa-serif text-sm sm:text-base ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}
+            >
               {state.homePreviewLine}
             </p>
-            <p className={`mt-0.5 text-[11px] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>
+            <p className={`mt-0.5 text-[11px] sm:text-xs ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>
               {state.encouragementLine}
             </p>
-            <div className={`mt-2 flex items-center gap-2 ${centered ? "justify-center" : ""}`}>
+            <div
+              className={`mt-2 flex items-center gap-2 ${centered ? "justify-center lg:justify-start" : ""}`}
+            >
               <StreakWarmth streakCount={state.streakCount} compact isLightTheme={isLightTheme} />
             </div>
           </div>
