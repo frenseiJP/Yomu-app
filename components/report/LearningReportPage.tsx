@@ -64,7 +64,7 @@ export default function LearningReportPage() {
   const card = "rounded-2xl border border-slate-800/80 bg-slate-950/80 p-4 sm:p-5";
 
   return (
-    <div className="mx-auto min-h-[100dvh] max-w-2xl px-4 py-6 pb-24 sm:px-6 sm:py-8">
+    <div className="mx-auto min-h-[100dvh] w-full max-w-2xl overflow-x-hidden px-4 py-6 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-8 lg:max-w-3xl lg:px-8">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3 print:hidden">
         <Link
           href="/"

@@ -104,7 +104,7 @@ export default function TopicGuidedLearning({
   const sub = isLightTheme ? "text-neutral-600" : "text-slate-300";
 
   return (
-    <div className="mx-auto flex h-full max-w-lg flex-1 flex-col gap-4 overflow-y-auto px-3 py-4 sm:gap-5 sm:px-5 sm:py-6">
+    <div className="mx-auto flex h-full w-full max-w-lg flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto px-4 py-4 sm:gap-5 sm:px-6 sm:py-6 lg:max-w-2xl lg:px-8 lg:py-8">
       <header className="space-y-1">
         <p className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${muted}`}>Today&apos;s Topic</p>
         <h1 className={`font-wa-serif text-lg font-semibold leading-snug sm:text-xl ${body}`}>

@@ -17,7 +17,7 @@ function SpringArt({ stage, className, glowOpacity }: { stage: SeasonStage; clas
         style={{ opacity: glowOpacity }}
         aria-hidden
       />
-      <svg viewBox="0 0 220 180" className="relative z-[1] h-44 w-full max-w-[280px] sm:h-52" aria-hidden>
+      <svg viewBox="0 0 220 180" className="relative z-[1] h-44 w-full max-w-[280px] sm:h-52 md:h-56 lg:max-w-[340px] lg:h-64" aria-hidden>
         <defs>
           <linearGradient id="sg-spring-petal" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#fda4af" />
@@ -80,7 +80,7 @@ function AutumnArt({
         style={{ backgroundColor: fill, opacity: glowOpacity * 0.6 }}
         aria-hidden
       />
-      <svg viewBox="0 0 220 180" className="relative z-[1] h-44 w-full max-w-[280px] sm:h-52" aria-hidden>
+      <svg viewBox="0 0 220 180" className="relative z-[1] h-44 w-full max-w-[280px] sm:h-52 md:h-56 lg:max-w-[340px] lg:h-64" aria-hidden>
         <path
           d="M35 168 Q 80 130 115 100 Q 150 70 188 62"
           fill="none"
@@ -103,7 +103,7 @@ function SummerArt({ stage, className, glowOpacity }: { stage: SeasonStage; clas
   return (
     <div className={`relative flex items-end justify-center ${className}`}>
       <div className="pointer-events-none absolute inset-0 rounded-3xl bg-fuchsia-400/20 blur-3xl" style={{ opacity: glowOpacity }} aria-hidden />
-      <svg viewBox="0 0 220 180" className="relative z-[1] h-44 w-full max-w-[280px] sm:h-52" aria-hidden>
+      <svg viewBox="0 0 220 180" className="relative z-[1] h-44 w-full max-w-[280px] sm:h-52 md:h-56 lg:max-w-[340px] lg:h-64" aria-hidden>
         <rect x="0" y="0" width="220" height="180" fill="rgba(15,23,42,0.65)" />
         <circle cx="112" cy="92" r={shell ? 8 : 4} fill="#fef08a" opacity={0.9} />
         {shell ? <circle cx="112" cy="92" r="18" fill="none" stroke="rgba(250,204,21,0.55)" strokeWidth="1.5" /> : null}
@@ -142,7 +142,7 @@ function WinterArt({ stage, className, glowOpacity }: { stage: SeasonStage; clas
   return (
     <div className={`relative flex items-end justify-center ${className}`}>
       <div className="pointer-events-none absolute inset-0 rounded-3xl bg-sky-400/15 blur-3xl" style={{ opacity: glowOpacity }} aria-hidden />
-      <svg viewBox="0 0 220 180" className="relative z-[1] h-44 w-full max-w-[280px] sm:h-52" aria-hidden>
+      <svg viewBox="0 0 220 180" className="relative z-[1] h-44 w-full max-w-[280px] sm:h-52 md:h-56 lg:max-w-[340px] lg:h-64" aria-hidden>
         <rect x="0" y="0" width="220" height="180" fill="rgba(15,23,42,0.5)" />
         {Array.from({ length: stage >= 2 ? 14 : 8 }, (_, i) => (
           <circle

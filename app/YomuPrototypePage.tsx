@@ -722,8 +722,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const affiliateBarVisible = isAffiliateBarVisibleForPath(pathname);
   /** 下部タブをアフィリエイトバーより上に置く＋本文の余白 */
   const mainBottomPadding = affiliateBarVisible
-    ? "calc(72px + 60px + env(safe-area-inset-bottom, 0px))"
-    : "72px";
+    ? "calc(5.5rem + 60px + env(safe-area-inset-bottom, 0px))"
+    : "calc(5.5rem + env(safe-area-inset-bottom, 0px))";
 
   const [messages, setMessages] = useState<Message[]>(() => [
     buildWelcomeMessage(getLangClient()),
@@ -2389,95 +2389,101 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       >
         {/* 初回・Daily Mission: 全画面表示 */}
         {activeView === "home" && (
-          <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
-            <div className="space-y-3 pb-4">
-              <DailyUsefulPhraseCard
-                phrase={dailyUsefulPhrase}
-                isLightTheme={isLightTheme}
-                onPractice={() => startDailyPhrasePractice()}
-              />
-            {retentionMissionDay ? (
-              <>
-                <section className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Today&apos;s Mission
-                  </p>
-                  <p className="mt-2 font-wa-serif text-base leading-snug text-slate-50">
-                    {retentionMissionDay.mission.title}
-                  </p>
-                  <p className="mt-1 text-sm leading-relaxed text-slate-300">
-                    {retentionMissionDay.mission.prompt_en}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => startRetentionDailyMissionChat()}
-                    className="mt-3 inline-flex rounded-xl bg-wa-ruri px-4 py-2.5 text-sm font-medium text-white hover:bg-wa-ruri/90"
-                  >
-                    Start
-                  </button>
-                </section>
-
-                <section className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Continue Chat
-                  </p>
-                  {recentChatSummary ? (
-                    <button
-                      type="button"
-                      onClick={() => openSession(recentChatSummary.id)}
-                      className="mt-2 block w-full rounded-xl border border-slate-700/80 bg-slate-900/70 px-3 py-2.5 text-left hover:bg-slate-900"
-                    >
-                      <p className="line-clamp-1 text-sm font-medium text-slate-100">{recentChatSummary.title}</p>
-                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-400">
-                        {recentChatSummary.preview}
-                      </p>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        createNewSession();
-                        setActiveView("chat");
-                      }}
-                      className="mt-2 inline-flex rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30"
-                    >
-                      Start chatting
-                    </button>
-                  )}
-                </section>
-
-                <SeasonalProgressCard
-                  state={seasonalState}
-                  compact
+          <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+            <div className="grid gap-3 pb-4 lg:grid-cols-2 lg:gap-6 lg:pb-6">
+              <div className="min-w-0 space-y-3 lg:col-span-1">
+                <DailyUsefulPhraseCard
+                  phrase={dailyUsefulPhrase}
                   isLightTheme={isLightTheme}
-                  onOpenProgress={() => setActiveView("progress")}
+                  onPractice={() => startDailyPhrasePractice()}
                 />
+                {retentionMissionDay ? (
+                  <>
+                    <section className="w-full rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                        Today&apos;s Mission
+                      </p>
+                      <p className="mt-2 font-wa-serif text-base leading-snug text-slate-50">
+                        {retentionMissionDay.mission.title}
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-300">
+                        {retentionMissionDay.mission.prompt_en}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => startRetentionDailyMissionChat()}
+                        className="mt-3 inline-flex w-full justify-center rounded-xl bg-wa-ruri px-4 py-2.5 text-sm font-medium text-white hover:bg-wa-ruri/90 sm:w-auto"
+                      >
+                        Start
+                      </button>
+                    </section>
 
-                {dueReviews.words.length + dueReviews.mistakes.length > 0 ? (
-                  <section className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                      Review
-                    </p>
-                    <p className="mt-2 text-sm text-slate-200">
-                      You have {dueReviews.words.length + dueReviews.mistakes.length} items to review.
-                    </p>
-                    <Link
-                      href="/vocabulary"
-                      className="mt-3 inline-flex rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30"
-                    >
-                      Open review
-                    </Link>
-                  </section>
+                    <section className="w-full rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                        Continue Chat
+                      </p>
+                      {recentChatSummary ? (
+                        <button
+                          type="button"
+                          onClick={() => openSession(recentChatSummary.id)}
+                          className="mt-2 block w-full rounded-xl border border-slate-700/80 bg-slate-900/70 px-3 py-2.5 text-left hover:bg-slate-900"
+                        >
+                          <p className="line-clamp-1 text-sm font-medium text-slate-100">{recentChatSummary.title}</p>
+                          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-400">
+                            {recentChatSummary.preview}
+                          </p>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            createNewSession();
+                            setActiveView("chat");
+                          }}
+                          className="mt-2 inline-flex w-full justify-center rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30 sm:w-auto"
+                        >
+                          Start chatting
+                        </button>
+                      )}
+                    </section>
+                  </>
                 ) : null}
-              </>
-            ) : null}
+              </div>
+
+              {retentionMissionDay ? (
+                <div className="min-w-0 space-y-3 lg:col-span-1">
+                  <SeasonalProgressCard
+                    state={seasonalState}
+                    compact
+                    isLightTheme={isLightTheme}
+                    onOpenProgress={() => setActiveView("progress")}
+                  />
+
+                  {dueReviews.words.length + dueReviews.mistakes.length > 0 ? (
+                    <section className="w-full rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 shadow-glass">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                        Review
+                      </p>
+                      <p className="mt-2 text-sm text-slate-200">
+                        You have {dueReviews.words.length + dueReviews.mistakes.length} items to review.
+                      </p>
+                      <Link
+                        href="/vocabulary"
+                        className="mt-3 inline-flex w-full justify-center rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30 sm:w-auto"
+                      >
+                        Open review
+                      </Link>
+                    </section>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
         )}
 
         {/* Progress: seasonal growth journey */}
         {activeView === "progress" && (
-          <div className="mx-auto flex h-full max-w-5xl flex-1 flex-col overflow-y-auto px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
+          <div className="mx-auto flex h-full w-full max-w-5xl flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
             <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h1 className="font-wa-serif text-lg font-semibold text-slate-50 sm:text-xl">
@@ -2517,7 +2523,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               <SeasonalProgressCard state={seasonalState} isLightTheme={isLightTheme} />
             </div>
 
-            <section className="grid gap-3 sm:grid-cols-3">
+            <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Active days
@@ -2610,25 +2616,26 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         )}
 
         {activeView === "more" && (
-          <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col gap-3 overflow-y-auto px-4 py-6">
-            <h1 className="font-wa-serif text-lg font-semibold text-slate-50">More</h1>
+          <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto px-4 py-6 sm:px-6 lg:max-w-4xl lg:px-8 lg:py-8">
+            <h1 className="font-wa-serif text-lg font-semibold text-slate-50 sm:text-xl">More</h1>
+            <div className="grid gap-3 md:grid-cols-2">
             <Link
               href="/vocabulary"
-              className="block rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
+              className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
             >
               <p className="text-sm text-slate-100">Vocabulary</p>
               <p className="mt-0.5 text-xs text-slate-400">Your personal learning library</p>
             </Link>
             <Link
               href="/report"
-              className="block rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
+              className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
             >
               <p className="text-sm text-slate-100">Report</p>
               <p className="mt-0.5 text-xs text-slate-400">学習のまとめ。ベータのご意見送付先への導線もあります。</p>
             </Link>
             <Link
               href="/feedback"
-              className="block rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
+              className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
             >
               <p className="text-sm text-slate-100">ご意見・感想（ベータ）</p>
               <p className="mt-0.5 text-xs text-slate-400">不具合・要望・よかった点を専用ページから</p>
@@ -2653,17 +2660,18 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             <button
               type="button"
               onClick={() => setActiveView("settings")}
-              className="rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left"
+              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left md:col-span-2"
             >
               <p className="text-sm text-slate-100">Settings</p>
               <p className="mt-0.5 text-xs text-slate-400">Language, tone, region and app preferences</p>
             </button>
+            </div>
           </div>
         )}
 
         {/* 設定: 表示やトーンの調整 */}
         {activeView === "settings" && (
-          <div className="mx-auto flex h-full max-w-3xl flex-1 flex-col overflow-y-auto px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
+          <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:max-w-4xl lg:px-8">
             <header className="mb-1">
               <h1 className={`font-wa-serif text-lg font-semibold sm:text-xl ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>
                 {settingsText.title}
@@ -2941,7 +2949,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
         {/* チャット: 入力欄は常に画面下部に固定、ログのみスクロール */}
         {activeView === "chat" && (
-          <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col gap-1 px-1 py-1 sm:gap-1.5 sm:px-2 sm:py-1.5">
+          <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-1 px-3 py-2 sm:gap-1.5 sm:px-4 sm:py-2 lg:max-w-[56rem] lg:px-6">
             {retentionRewardBanner ? (
               <div
                 role="status"
@@ -3087,7 +3095,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             </div>
             ) : null}
 
-            <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overflow-x-hidden px-0.5 pb-[6rem] pt-0.5 text-[14px] leading-relaxed sm:space-y-3 sm:pb-28">
+            <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overflow-x-hidden px-0.5 pb-[7rem] pt-0.5 text-[14px] leading-relaxed sm:space-y-3 sm:pb-28 md:pb-32">
               {messages.map((msg) => {
                 const isAssistant = msg.role === "assistant";
                 const toneForMessage = isAssistant
@@ -3112,7 +3120,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     }}
                   >
                     {isAssistant && (
-                      <div className="flex max-w-[min(100%,40rem)] items-center gap-2">
+                      <div className="flex max-w-[min(100%,36rem)] items-center gap-2 lg:max-w-2xl">
                         <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-wa-ruri to-wa-asagi text-[10px] font-bold text-white">
                           F
                         </div>
@@ -3130,7 +3138,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                       </div>
                     )}
                     {isAssistant ? (
-                      <div className="flex w-full max-w-[min(100%,40rem)] flex-col gap-2">
+                      <div className="flex w-full max-w-[min(100%,36rem)] flex-col gap-2 lg:max-w-2xl">
                         <div
                           className={`rounded-2xl px-3.5 py-3 sm:px-4 sm:py-3.5 ${
                             "rounded-bl-md border border-slate-700/45 bg-slate-800/50 text-slate-100 shadow-sm"
@@ -3296,7 +3304,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     ) : (
                       <div
                         className={
-                          "w-fit max-w-[min(88%,24rem)] rounded-2xl rounded-br-md border border-wa-ruri/35 bg-wa-ruri/20 px-3 py-2.5 text-slate-50 shadow-sm sm:max-w-[min(85%,26rem)]"
+                          "w-fit max-w-[min(92%,22rem)] rounded-2xl rounded-br-md border border-wa-ruri/35 bg-wa-ruri/20 px-3 py-2.5 text-slate-50 shadow-sm sm:max-w-[min(88%,24rem)] lg:max-w-md"
                         }
                       >
                         <p className="break-words">{displayText}</p>
@@ -3623,7 +3631,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         style={{ paddingTop: "10px" }}
         aria-label={uiText.ariaMainMenu}
       >
-        <div className="mx-auto flex max-w-3xl items-end justify-around gap-0.5 px-2 sm:gap-1 sm:px-3">
+        <div className="mx-auto flex w-full max-w-5xl items-end justify-around gap-0.5 px-3 sm:gap-1 sm:px-4 lg:px-6">
           {/* ホーム（Daily Mission） */}
           <motion.button
             type="button"
