@@ -6,7 +6,13 @@ import { usePathname } from "next/navigation";
 export default function Footer() {
   const pathname = usePathname() || "";
   const isChatRoute = pathname === "/chat" || pathname.startsWith("/chat/");
-  if (isChatRoute) return null;
+  const isAppShellRoute =
+    pathname === "/" ||
+    pathname === "/vocabulary" ||
+    pathname === "/progress" ||
+    pathname === "/more" ||
+    pathname === "/topic";
+  if (isChatRoute || isAppShellRoute) return null;
 
   return (
     <footer className="border-t border-pink-400/30 bg-[#020617]">

@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import { createClient } from "@/src/utils/supabase/server";
 import { isMissingTableError } from "@/src/utils/supabase/schema-errors";
 import { Activity, Mail, Sparkles } from "lucide-react";
-import { getLangServer } from "@/src/utils/i18n/serverLang";
 import { t } from "@/src/utils/i18n/t";
 import type { Lang } from "@/src/utils/i18n/types";
 import { regionLabelForLang } from "@/src/utils/i18n/prototypeCopy";
@@ -17,7 +16,8 @@ import GeneratePromptButton from "./GeneratePromptButton";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
-  const lang = getLangServer();
+  /** Settings UI is English-first. */
+  const lang: Lang = "en";
   const {
     data: { user },
   } = await supabase.auth.getUser();

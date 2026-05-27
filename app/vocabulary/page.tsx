@@ -1,5 +1,5 @@
-import VocabularyPage from "@/components/vocabulary/VocabularyPage";
+import YomuPrototypePage from "@/app/YomuPrototypePage";
 
-export default function Page() {
-  return <VocabularyPage />;
+export default function VocabularyRoutePage() {
+  return <YomuPrototypePage initialView="vocabulary" />;
 }

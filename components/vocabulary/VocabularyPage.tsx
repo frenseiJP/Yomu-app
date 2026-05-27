@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { ArrowLeft, MessageCircle, Sparkles } from "lucide-react";
 import VocabularyCategoryFilters from "@/components/vocabulary/VocabularyCategoryFilters";
 import VocabularyDetailPanel from "@/components/vocabulary/VocabularyDetailPanel";
@@ -26,12 +24,23 @@ import {
   readGuidedTutorialSession,
   writeGuidedTutorialSession,
 } from "@/lib/tutorial/session";
+import {
+  pagePaddingX,
+  shellNarrow,
+  shellViewFrame,
+  shellWide,
+} from "@/lib/layout/pageShell";
 import { dateLocaleForLang, getPrototypeCopy } from "@/src/utils/i18n/prototypeCopy";
 import { getLangClient } from "@/src/utils/i18n/clientLang";
 import type { Lang } from "@/src/utils/i18n/types";
 
-export default function VocabularyPage() {
-  const pathname = usePathname();
+type VocabularyPageProps = {
+  /** Render inside YomuPrototypePage (bottom nav, no modal overlay). */
+  inAppShell?: boolean;
+  onNavigateHome?: () => void;
+};
+
+export default function VocabularyPage({ inAppShell = false, onNavigateHome }: VocabularyPageProps) {
   const userId = useVocabularyUserId();
   const [appLang, setAppLang] = useState<Lang>("en");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -44,7 +53,7 @@ export default function VocabularyPage() {
 
   useEffect(() => {
     setAppLang(getLangClient());
-  }, [pathname]);
+  }, []);
 
   const { uiText } = useMemo(() => getPrototypeCopy(appLang), [appLang]);
   const dateLocale = useMemo(() => dateLocaleForLang(appLang), [appLang]);
@@ -76,7 +85,7 @@ export default function VocabularyPage() {
       step: "progress_intro",
       startedAt: readGuidedTutorialSession()?.startedAt ?? new Date().toISOString(),
     });
-    window.location.assign("/");
+    window.location.assign("/?view=progress");
   }, []);
 
   const skipVocabTutorial = useCallback(() => {
@@ -121,24 +130,29 @@ export default function VocabularyPage() {
       }
     : null;
 
-  return (
-    <div className="mx-auto min-h-[100dvh] w-full max-w-5xl overflow-x-hidden px-4 py-5 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-8 lg:px-8 lg:pb-8">
+  const contentWidth = selected ? shellWide : shellNarrow;
+
+  const inner = (
+    <div className={`mx-auto w-full ${contentWidth} ${pagePaddingX} py-5 sm:py-6 lg:py-8`}>
       <div
         className={
           selected
             ? "lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start lg:gap-6"
-            : "mx-auto w-full lg:max-w-2xl"
+            : "w-full"
         }
       >
         <div className="min-w-0 space-y-4">
           <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-slate-700/80 text-slate-400 transition-colors hover:bg-slate-900 hover:text-slate-200"
-              aria-label={uiText.vocabLibBackAria}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
+            {inAppShell && onNavigateHome ? (
+              <button
+                type="button"
+                onClick={onNavigateHome}
+                className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-slate-700/80 text-slate-400 transition-colors hover:bg-slate-900 hover:text-slate-200"
+                aria-label={uiText.vocabLibBackAria}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+            ) : null}
             <div className="min-w-0 flex-1">
               <VocabularyHeader total={all.length} reviewCount={reviewCount} ui={uiText} />
             </div>
@@ -171,20 +185,20 @@ export default function VocabularyPage() {
                   Japanese library.
                 </p>
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  <Link
+                  <a
                     href="/chat"
                     className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2.5 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30 sm:w-auto"
                   >
                     <MessageCircle className="h-3.5 w-3.5" />
                     Start chatting
-                  </Link>
-                  <Link
+                  </a>
+                  <a
                     href="/topic"
                     className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-3.5 py-2.5 text-xs font-medium text-slate-200 hover:bg-slate-900 sm:w-auto"
                   >
                     <Sparkles className="h-3.5 w-3.5" />
                     Try Topic Practice
-                  </Link>
+                  </a>
                 </div>
               </div>
             ) : items.length === 0 ? (
@@ -206,18 +220,34 @@ export default function VocabularyPage() {
               ))
             )}
           </section>
+
+          {inAppShell && detailPanelProps ? (
+            <div className="lg:hidden">
+              <VocabularyDetailPanel {...detailPanelProps} layout="inline" />
+            </div>
+          ) : null}
         </div>
 
-        {selected ? (
+        {selected && detailPanelProps ? (
           <aside className="hidden min-w-0 lg:block">
-            {detailPanelProps ? (
-              <VocabularyDetailPanel {...detailPanelProps} layout="inline" />
-            ) : null}
+            <VocabularyDetailPanel {...detailPanelProps} layout="inline" />
           </aside>
         ) : null}
       </div>
+    </div>
+  );
 
-      {detailPanelProps ? (
+  return (
+    <>
+      {inAppShell ? (
+        <div className={`${shellViewFrame} py-4 sm:py-6`}>{inner}</div>
+      ) : (
+        <div className="mx-auto min-h-[100dvh] w-full overflow-x-hidden pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
+          {inner}
+        </div>
+      )}
+
+      {!inAppShell && detailPanelProps ? (
         <div className="lg:hidden">
           <VocabularyDetailPanel {...detailPanelProps} layout="modal" />
         </div>
@@ -237,6 +267,6 @@ export default function VocabularyPage() {
           onCta={goToProgressTutorial}
         />
       ) : null}
-    </div>
+    </>
   );
 }

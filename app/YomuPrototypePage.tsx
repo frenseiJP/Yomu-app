@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Image as ImageIcon,
@@ -147,10 +147,18 @@ import {
 } from "@/lib/tutorial/storage";
 import type { GuidedTutorialStep } from "@/lib/tutorial/types";
 import { TUTORIAL_SUGGESTED_SENTENCE } from "@/lib/tutorial/types";
+import VocabularyPage from "@/components/vocabulary/VocabularyPage";
+import {
+  pagePaddingX,
+  shellNarrow,
+  shellStandard,
+  shellViewFrame,
+  shellWide,
+} from "@/lib/layout/pageShell";
 
 type Role = "user" | "assistant";
 type Politeness = "casual" | "neutral" | "business";
-type TabView = "home" | "progress" | "chat" | "topic" | "settings" | "more";
+type TabView = "home" | "progress" | "chat" | "topic" | "vocabulary" | "settings" | "more";
 type DisplayLangRaw = "ja" | "en" | "ko" | "zh";
 
 const JLPT_LEVELS = ["N5", "N4", "N3", "N2", "N1"] as const;
@@ -718,6 +726,7 @@ type YomuPrototypePageProps = {
 
 function YomuPrototypePageInner({ initialView = "home", embedded = false }: YomuPrototypePageProps = {}) {
   const pathname = usePathname() || "";
+  const router = useRouter();
   const searchParams = useSearchParams();
   const sessionFromUrl = searchParams.get("session");
   const affiliateBarVisible = isAffiliateBarVisibleForPath(pathname);
@@ -821,9 +830,11 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const politenessRef = useRef<Politeness>("casual");
-  const { settingsText, uiText } = useMemo(
-    () => getPrototypeCopy(appLang as Lang),
-    [appLang],
+  const { uiText } = useMemo(() => getPrototypeCopy(appLang as Lang), [appLang]);
+  /** Settings UI is English-first regardless of display language. */
+  const { settingsText: settingsUiText, uiText: settingsUiTextLabels } = useMemo(
+    () => getPrototypeCopy("en"),
+    [],
   );
 
   const refreshHabitData = useCallback((userId: string) => {
@@ -1378,12 +1389,12 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
       if (dbUnavailable) {
         alert(
-          "このブラウザには保存しました（クッキー）。クラウドへ同期するには、Supabase の SQL Editor で supabase/migrations/20260401120000_create_user_profiles.sql を実行して user_profiles テーブルを作成してください。"
+          "Saved in this browser (cookie). To sync to the cloud, run supabase/migrations/20260401120000_create_user_profiles.sql in the Supabase SQL Editor to create the user_profiles table."
         );
         return;
       }
 
-      alert(uiText.alertSettingsSaved);
+      alert(settingsUiTextLabels.alertSettingsSaved);
     } catch (err) {
       console.error("handleSaveProfileSettings unexpected:", err);
       alert(
@@ -1430,7 +1441,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           setCookie("yomu_lang", nextLang);
           notifyLangChanged(nextLang);
           alert(
-            "表示言語をこのブラウザ用にリセットしました。クラウド同期には user_profiles テーブルが必要です（supabase/migrations の SQL を実行）。"
+            "Display language was reset for this browser. Cloud sync requires the user_profiles table (run the SQL in supabase/migrations)."
           );
           return;
         }
@@ -1451,7 +1462,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             setCookie("yomu_lang", nextLang);
             notifyLangChanged(nextLang);
             alert(
-              "表示言語をこのブラウザ用にリセットしました。クラウド同期には user_profiles テーブルが必要です。"
+              "Display language was reset for this browser. Cloud sync requires the user_profiles table."
             );
             return;
           }
@@ -1482,7 +1493,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             setCookie("yomu_lang", nextLang);
             notifyLangChanged(nextLang);
             alert(
-              "表示言語をこのブラウザ用にリセットしました。クラウド同期には user_profiles テーブルが必要です。"
+              "Display language was reset for this browser. Cloud sync requires the user_profiles table."
             );
             return;
           }
@@ -1497,7 +1508,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       setAppLang(nextLang);
       notifyLangChanged(nextLang);
 
-      alert(uiText.alertDisplayResetOk);
+      alert(settingsUiTextLabels.alertDisplayResetOk);
     } catch (err) {
       console.error("handleResetToFirstLanguage unexpected:", err);
       alert(`Reset failed.\n\n${formatProfileSaveError(err)}`);
@@ -2338,17 +2349,19 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     >
       {/* メインエリア: ビューに応じて mission / record / chat を表示 */}
       <main
-        className="relative z-0 min-h-0 flex-1 overflow-x-hidden flex flex-col overflow-hidden"
+        className="relative z-0 flex min-h-0 w-full flex-1 flex-col items-center overflow-x-hidden overflow-hidden"
         style={{ paddingBottom: mainBottomPadding }}
       >
         {/* 初回・Daily Mission: 全画面表示 */}
         {activeView === "home" && (
-          <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+          <div
+            className={`${shellViewFrame} ${pagePaddingX} py-4 sm:py-6 lg:py-8 ${retentionMissionDay ? shellWide : shellNarrow}`}
+          >
             <div
               className={
                 retentionMissionDay
                   ? "grid w-full gap-3 pb-4 lg:grid-cols-2 lg:gap-6 lg:pb-6"
-                  : "mx-auto w-full max-w-xl space-y-3 pb-4 lg:pb-6"
+                  : "w-full space-y-3 pb-4 lg:pb-6"
               }
             >
               <div className={retentionMissionDay ? "min-w-0 space-y-3 lg:col-span-1" : "min-w-0 space-y-3"}>
@@ -2443,7 +2456,9 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
         {/* Progress: seasonal growth journey */}
         {activeView === "progress" && (
-          <div className="mx-auto flex h-full w-full max-w-5xl flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:px-8">
+          <div
+            className={`${shellViewFrame} ${pagePaddingX} py-6 sm:gap-6 sm:py-8 lg:py-8 ${shellWide}`}
+          >
             <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h1 className="font-wa-serif text-lg font-semibold text-slate-50 sm:text-xl">
@@ -2575,8 +2590,20 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           />
         )}
 
+        {activeView === "vocabulary" && (
+          <VocabularyPage
+            inAppShell
+            onNavigateHome={() => {
+              setActiveView("home");
+              if (pathname !== "/") router.push("/");
+            }}
+          />
+        )}
+
         {activeView === "more" && (
-          <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto px-4 py-6 sm:px-6 lg:max-w-4xl lg:px-8 lg:py-8">
+          <div
+            className={`${shellViewFrame} ${pagePaddingX} flex flex-col gap-3 py-6 lg:py-8 ${shellStandard}`}
+          >
             <h1 className="font-wa-serif text-lg font-semibold text-slate-50 sm:text-xl">More</h1>
             <div className="grid gap-3 md:grid-cols-2">
             <Link
@@ -2591,14 +2618,14 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
             >
               <p className="text-sm text-slate-100">Report</p>
-              <p className="mt-0.5 text-xs text-slate-400">学習のまとめ。ベータのご意見送付先への導線もあります。</p>
+              <p className="mt-0.5 text-xs text-slate-400">Learning summary and beta feedback links.</p>
             </Link>
             <Link
               href="/feedback"
               className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
             >
-              <p className="text-sm text-slate-100">ご意見・感想（ベータ）</p>
-              <p className="mt-0.5 text-xs text-slate-400">不具合・要望・よかった点を専用ページから</p>
+              <p className="text-sm text-slate-100">Feedback (beta)</p>
+              <p className="mt-0.5 text-xs text-slate-400">Report bugs, requests, or what you liked.</p>
             </Link>
             <button
               type="button"
@@ -2610,12 +2637,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               }}
               className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-wa-ruri/40"
             >
-              <p className="text-sm text-slate-100">
-                {appLang === "ja" ? "Frensei の使い方" : "How to use Frensei"}
-              </p>
-              <p className="mt-0.5 text-xs text-slate-400">
-                {appLang === "ja" ? "60秒のクイックガイド" : "60-second quick guide"}
-              </p>
+              <p className="text-sm text-slate-100">How to use Frensei</p>
+              <p className="mt-0.5 text-xs text-slate-400">60-second quick guide</p>
             </button>
             <button
               type="button"
@@ -2631,46 +2654,48 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
         {/* 設定: 表示やトーンの調整 */}
         {activeView === "settings" && (
-          <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:max-w-4xl lg:px-8">
+          <div
+            className={`${shellViewFrame} ${pagePaddingX} flex flex-col gap-6 py-6 sm:py-8 ${shellStandard}`}
+          >
             <header className="mb-1">
               <h1 className={`font-wa-serif text-lg font-semibold sm:text-xl ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>
-                {settingsText.title}
+                {settingsUiText.title}
               </h1>
               <p className={`mt-1 text-[11px] sm:text-xs ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
-                {settingsText.subtitle}
+                {settingsUiText.subtitle}
               </p>
             </header>
 
             {/* 表示 / 言語 / 地域設定 */}
             <section className={`space-y-2 rounded-2xl p-3 backdrop-blur-xl sm:p-4 ${isLightTheme ? "border border-neutral-200 bg-white shadow-sm" : "border border-slate-800/70 bg-slate-950/80 shadow-glass"}`}>
               <p className={`px-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>
-                {settingsText.section}
+                {settingsUiText.section}
               </p>
 
               <div className={`space-y-3 rounded-2xl p-1.5 ${isLightTheme ? "bg-neutral-50" : "bg-slate-900/40"}`}>
                 <div className={`rounded-xl px-3 py-2.5 ${isLightTheme ? "border border-neutral-200 bg-white" : "bg-slate-900/50"}`}>
-                  <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{settingsText.appearance}</p>
-                  <p className={`mt-0.5 text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>{settingsText.appearanceDesc}</p>
+                  <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{settingsUiText.appearance}</p>
+                  <p className={`mt-0.5 text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>{settingsUiText.appearanceDesc}</p>
                   <div className="mt-2 flex gap-2">
                     <button
                       type="button"
                       onClick={() => setUiTheme("dark")}
                       className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${uiTheme === "dark" ? "bg-neutral-900 text-white" : isLightTheme ? "border border-neutral-300 bg-white text-neutral-700" : "bg-slate-800/70 text-slate-300"}`}
                     >
-                      {settingsText.themeDark}
+                      {settingsUiText.themeDark}
                     </button>
                     <button
                       type="button"
                       onClick={() => setUiTheme("light")}
                       className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${uiTheme === "light" ? "bg-neutral-900 text-white" : isLightTheme ? "border border-neutral-300 bg-white text-neutral-700" : "bg-slate-800/70 text-slate-300"}`}
                     >
-                      {settingsText.themeLight}
+                      {settingsUiText.themeLight}
                     </button>
                   </div>
                 </div>
                 {profileSettingsLoading ? (
                   <p className={`px-3 py-4 text-[12px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
-                    {uiText.loadingProfileSettings}
+                    {settingsUiTextLabels.loadingProfileSettings}
                   </p>
                 ) : (
                   <>
@@ -2690,12 +2715,12 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                         <Languages className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{settingsText.basicLanguage}</p>
-                        <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>{settingsText.basicLanguageDesc}</p>
+                        <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{settingsUiText.basicLanguage}</p>
+                        <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>{settingsUiText.basicLanguageDesc}</p>
                       </div>
                       <span className={`flex max-w-[45%] flex-shrink-0 items-center gap-1 text-xs ${isLightTheme ? "text-neutral-700" : "text-slate-200"}`}>
                         <span className="truncate">
-                          {labelForDisplayLang(draftDisplayLanguage, uiText)}
+                          {labelForDisplayLang(draftDisplayLanguage, settingsUiTextLabels)}
                         </span>
                         <ChevronRight className={`h-4 w-4 flex-shrink-0 ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`} aria-hidden />
                       </span>
@@ -2720,12 +2745,12 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                         <Globe className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{settingsText.region}</p>
-                        <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>{settingsText.regionDesc}</p>
+                        <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{settingsUiText.region}</p>
+                        <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>{settingsUiText.regionDesc}</p>
                       </div>
                       <span className={`flex max-w-[45%] flex-shrink-0 items-center gap-1 text-xs ${isLightTheme ? "text-neutral-700" : "text-slate-200"}`}>
                         <span className="truncate">
-                          {regionLabelForLang(draftRegion, appLang as Lang)}
+                          {regionLabelForLang(draftRegion, "en")}
                         </span>
                         <ChevronRight className={`h-4 w-4 flex-shrink-0 ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`} aria-hidden />
                       </span>
@@ -2737,7 +2762,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                       className="btn-wa-hover-ruri inline-flex w-full items-center justify-center rounded-2xl bg-pink-500/90 px-4 py-3 text-[12px] font-medium text-white shadow-[0_18px_60px_rgba(236,72,153,0.25)] transition hover:bg-pink-400"
                       disabled={profileSettingsLoading}
                     >
-                      {settingsText.save}
+                      {settingsUiText.save}
                     </button>
 
                   </>
@@ -2748,7 +2773,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             {/* 学習設定 */}
             <section className={`space-y-2 rounded-2xl p-3 backdrop-blur-xl sm:p-4 ${isLightTheme ? "border border-neutral-200 bg-white shadow-sm" : "border border-slate-800/70 bg-slate-950/80 shadow-glass"}`}>
               <p className={`px-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>
-                {uiText.learningSectionTitle}
+                {settingsUiTextLabels.learningSectionTitle}
               </p>
               <div className={`space-y-1 rounded-2xl p-1.5 ${isLightTheme ? "bg-[#f8f7f4]" : "bg-slate-900/40"}`}>
                 {/* ふりがな表示 */}
@@ -2757,9 +2782,9 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     <BookOpen className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{uiText.furigana}</p>
+                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{settingsUiTextLabels.furigana}</p>
                     <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
-                      {uiText.furiganaSettingDesc}
+                      {settingsUiTextLabels.furiganaSettingDesc}
                     </p>
                   </div>
                   <button
@@ -2768,7 +2793,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     className={`flex h-6 w-11 items-center rounded-full border px-0.5 transition ${
                       furiganaOn ? "border-wa-ruri bg-wa-ruri/40" : "border-slate-600 bg-slate-900"
                     }`}
-                    aria-label={uiText.toggleFuriganaAria}
+                    aria-label={settingsUiTextLabels.toggleFuriganaAria}
                   >
                     <span
                       className={`block h-4 w-4 rounded-full bg-white shadow-sm transition ${
@@ -2785,10 +2810,10 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>
-                      {uiText.showTranslationsTitle}
+                      {settingsUiTextLabels.showTranslationsTitle}
                     </p>
                     <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
-                      {uiText.showTranslationsDesc}
+                      {settingsUiTextLabels.showTranslationsDesc}
                     </p>
                   </div>
                   <button
@@ -2799,7 +2824,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                         ? "border-wa-ruri bg-wa-ruri/40"
                         : "border-slate-600 bg-slate-900"
                     }`}
-                    aria-label={uiText.toggleTranslationsAria}
+                    aria-label={settingsUiTextLabels.toggleTranslationsAria}
                   >
                     <span
                       className={`block h-4 w-4 rounded-full bg-white shadow-sm transition ${
@@ -2814,7 +2839,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             {/* 音声設定 */}
             <section className={`space-y-2 rounded-2xl p-3 backdrop-blur-xl sm:p-4 ${isLightTheme ? "border border-neutral-200 bg-white shadow-sm" : "border border-slate-800/70 bg-slate-950/80 shadow-glass"}`}>
               <p className={`px-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>
-                {uiText.voiceSectionTitle}
+                {settingsUiTextLabels.voiceSectionTitle}
               </p>
               <div className={`rounded-2xl p-1.5 ${isLightTheme ? "bg-[#f8f7f4]" : "bg-slate-900/40"}`}>
                 <div className={`flex items-center gap-3 rounded-xl px-3 py-3 ${isLightTheme ? "border border-neutral-200 bg-white" : "bg-slate-900/50"}`}>
@@ -2822,12 +2847,12 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     <Volume2 className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{uiText.speechRateTitle}</p>
+                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{settingsUiTextLabels.speechRateTitle}</p>
                     <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
-                      {uiText.speechRateDesc}
+                      {settingsUiTextLabels.speechRateDesc}
                     </p>
                     <div className="mt-2 flex items-center gap-2">
-                      <span className={`text-[10px] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>{uiText.slower}</span>
+                      <span className={`text-[10px] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>{settingsUiTextLabels.slower}</span>
                       <input
                         type="range"
                         min={0.6}
@@ -2837,7 +2862,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                         onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
                         className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-slate-800 accent-wa-ruri"
                       />
-                      <span className={`text-[10px] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>{uiText.faster}</span>
+                      <span className={`text-[10px] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>{settingsUiTextLabels.faster}</span>
                     </div>
                   </div>
                 </div>
@@ -2847,7 +2872,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             {/* アプリについて */}
             <section className={`space-y-2 rounded-2xl p-3 backdrop-blur-xl sm:p-4 ${isLightTheme ? "border border-neutral-200 bg-white shadow-sm" : "border border-slate-800/70 bg-slate-950/80 shadow-glass"}`}>
               <p className={`px-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>
-                {uiText.aboutSectionTitle}
+                {settingsUiTextLabels.aboutSectionTitle}
               </p>
               <div className={`divide-y rounded-2xl ${isLightTheme ? "divide-neutral-200 bg-[#f8f7f4]" : "divide-slate-800/80 bg-slate-900/40"}`}>
                 <a
@@ -2860,9 +2885,9 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     <Mail className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{uiText.contactTitle}</p>
+                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{settingsUiTextLabels.contactTitle}</p>
                     <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
-                      {uiText.contactDesc}
+                      {settingsUiTextLabels.contactDesc}
                     </p>
                   </div>
                 </a>
@@ -2878,9 +2903,9 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     <FileText className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{uiText.termsTitle}</p>
+                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{settingsUiTextLabels.termsTitle}</p>
                     <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
-                      {uiText.termsDesc}
+                      {settingsUiTextLabels.termsDesc}
                     </p>
                   </div>
                 </a>
@@ -2896,9 +2921,9 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     <Shield className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{uiText.privacyTitle}</p>
+                    <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>{settingsUiTextLabels.privacyTitle}</p>
                     <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
-                      {uiText.privacyDesc}
+                      {settingsUiTextLabels.privacyDesc}
                     </p>
                   </div>
                 </a>
@@ -2910,7 +2935,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         {/* チャット: 入力欄は常に画面下部に固定、ログのみスクロール */}
         {activeView === "chat" && (
           <div
-            className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-1 px-3 py-2 sm:gap-1.5 sm:px-4 sm:py-2 lg:max-w-[56rem] lg:px-6"
+            className={`${shellViewFrame} flex min-h-0 max-w-3xl flex-1 flex-col gap-1 px-3 py-2 sm:gap-1.5 sm:px-4 sm:py-2 lg:max-w-[56rem] lg:px-6`}
             style={
               keyboardInset > 0
                 ? { maxHeight: `calc(100dvh - ${keyboardInset}px - 5.5rem)` }
@@ -3530,8 +3555,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 className="font-wa-serif text-base font-semibold text-slate-50"
               >
                 {choiceSheet === "language"
-                  ? settingsText.chooseLanguageTitle
-                  : settingsText.chooseRegionTitle}
+                  ? settingsUiText.chooseLanguageTitle
+                  : settingsUiText.chooseRegionTitle}
               </h2>
               <button
                 type="button"
@@ -3717,17 +3742,29 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             <span className="pointer-events-none">Progress</span>
           </motion.button>
 
-          {/* Vocabulary → 専用ページ */}
-          <Link
-            href="/vocabulary"
+          {/* Vocabulary */}
+          <motion.button
+            type="button"
+            onClick={() => {
+              setActiveView("vocabulary");
+              if (pathname !== "/vocabulary") router.push("/vocabulary");
+            }}
+            onPointerDown={() => {
+              setActiveView("vocabulary");
+              if (pathname !== "/vocabulary") router.push("/vocabulary");
+            }}
             aria-label={uiText.vocabLibPageTitle}
-            className="flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-slate-500 hover:text-slate-300 sm:min-h-[52px] sm:text-[11px]"
+            className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
+              activeView === "vocabulary" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
+            }`}
+            animate={activeView === "vocabulary" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
+            transition={{ type: "spring", stiffness: 350, damping: 20 }}
           >
             <Library className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
             <span className="pointer-events-none max-w-[4.5rem] truncate text-center sm:max-w-[5.5rem]">
               {uiText.myVocabularyHeading}
             </span>
-          </Link>
+          </motion.button>
 
           {/* More */}
           <motion.button
