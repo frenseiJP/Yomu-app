@@ -94,6 +94,7 @@ import {
   startNewChatSession,
 } from "@/lib/chat/service";
 import { useChatInputIme } from "@/lib/chat/useChatInputIme";
+import { useVisualViewportInset } from "@/lib/chat/useVisualViewportInset";
 import SessionDrawer from "@/components/chat/SessionDrawer";
 import TopicGuidedLearning from "@/components/topic/TopicGuidedLearning";
 import TopicSelector from "@/components/topic/TopicSelector";
@@ -778,7 +779,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const [contextLoadingId, setContextLoadingId] = useState<number | null>(null);
   const [followUpFeedback, setFollowUpFeedback] = useState<null | "nice" | "ok">(null);
   const [betaFeedbackVisible, setBetaFeedbackVisible] = useState(false);
-  const [betaFeedbackShownInSession, setBetaFeedbackShownInSession] = useState(false);
+  const lastBetaFeedbackAtCountRef = useRef(0);
+  const keyboardInset = useVisualViewportInset();
   const [tutorialWelcomeOpen, setTutorialWelcomeOpen] = useState(false);
   const [tutorialManualOpen, setTutorialManualOpen] = useState(false);
   const [guidedStep, setGuidedStep] = useState<GuidedTutorialStep | null>(null);
@@ -792,7 +794,6 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const [topicSelectorMode, setTopicSelectorMode] = useState<"entry" | "topic_list" | "hidden">("entry");
   const [activeTopicPrompt, setActiveTopicPrompt] = useState<TopicPrompt | null>(null);
   const [habitUserId, setHabitUserId] = useState("guest");
-  const [reportFabPos, setReportFabPos] = useState<{ x: number; y: number } | null>(null);
   const [retentionMissionDay, setRetentionMissionDay] = useState<RetentionDailyMissionDay | null>(null);
   const [retentionRewardBanner, setRetentionRewardBanner] = useState<string | null>(null);
   const [retentionMissionChatOpen, setRetentionMissionChatOpen] = useState(false);
@@ -818,12 +819,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     totalTopicPractices: 0,
   });
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const politenessRef = useRef<Politeness>("casual");
-  const reportFabRef = useRef<HTMLButtonElement | null>(null);
-  const reportFabDraggingRef = useRef(false);
-  const reportFabMovedRef = useRef(false);
-  const reportFabPressTimerRef = useRef<number | null>(null);
-  const reportFabPointerOffsetRef = useRef({ x: 0, y: 0 });
   const { settingsText, uiText } = useMemo(
     () => getPrototypeCopy(appLang as Lang),
     [appLang],
@@ -906,18 +903,6 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     [messages],
   );
   const isLightTheme = uiTheme === "light";
-
-  const clampReportFabPos = useCallback((x: number, y: number) => {
-    if (typeof window === "undefined") return { x, y };
-    const size = 52;
-    const margin = 8;
-    const maxX = Math.max(margin, window.innerWidth - size - margin);
-    const maxY = Math.max(margin, window.innerHeight - size - margin);
-    return {
-      x: Math.min(maxX, Math.max(margin, x)),
-      y: Math.min(maxY, Math.max(margin, y)),
-    };
-  }, []);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -1149,25 +1134,6 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   }, [uiTheme]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const initX = 12;
-    const initY = window.innerHeight - 170;
-    setReportFabPos(clampReportFabPos(initX, initY));
-  }, [clampReportFabPos]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const onResize = () => {
-      setReportFabPos((prev) => {
-        if (!prev) return prev;
-        return clampReportFabPos(prev.x, prev.y);
-      });
-    };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [clampReportFabPos]);
-
-  useEffect(() => {
     if (activeView !== "chat") return;
     migrateFtueIfLegacyUser(habitUserId);
     const p = readFtuePersist();
@@ -1176,26 +1142,22 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
   useEffect(() => {
     setBetaFeedbackVisible(false);
-    setBetaFeedbackShownInSession(false);
+    lastBetaFeedbackAtCountRef.current = 0;
   }, [currentSessionId]);
 
   useEffect(() => {
     if (activeView !== "chat") return;
-    if (betaFeedbackShownInSession || betaFeedbackVisible) return;
+    if (betaFeedbackVisible) return;
     if (chatUserMessageCount < 3) return;
-    if (!shouldShowBetaFeedbackPrompt(habitUserId, { shownInSession: betaFeedbackShownInSession })) {
+    if (chatUserMessageCount % 3 !== 0) return;
+    if (lastBetaFeedbackAtCountRef.current === chatUserMessageCount) return;
+    if (!shouldShowBetaFeedbackPrompt(habitUserId, { userMessageCount: chatUserMessageCount })) {
       return;
     }
+    lastBetaFeedbackAtCountRef.current = chatUserMessageCount;
     setBetaFeedbackVisible(true);
-    setBetaFeedbackShownInSession(true);
     markBetaFeedbackPromptShown(habitUserId);
-  }, [
-    activeView,
-    betaFeedbackShownInSession,
-    betaFeedbackVisible,
-    chatUserMessageCount,
-    habitUserId,
-  ]);
+  }, [activeView, betaFeedbackVisible, chatUserMessageCount, habitUserId]);
 
   useEffect(() => {
     if (activeView !== "chat") return;
@@ -1219,14 +1181,6 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [choiceSheet]);
-
-  useEffect(() => {
-    return () => {
-      if (reportFabPressTimerRef.current) {
-        window.clearTimeout(reportFabPressTimerRef.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     const syncLangFromCookie = () => {
@@ -2949,7 +2903,14 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
         {/* チャット: 入力欄は常に画面下部に固定、ログのみスクロール */}
         {activeView === "chat" && (
-          <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-1 px-3 py-2 sm:gap-1.5 sm:px-4 sm:py-2 lg:max-w-[56rem] lg:px-6">
+          <div
+            className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-1 px-3 py-2 sm:gap-1.5 sm:px-4 sm:py-2 lg:max-w-[56rem] lg:px-6"
+            style={
+              keyboardInset > 0
+                ? { maxHeight: `calc(100dvh - ${keyboardInset}px - 5.5rem)` }
+                : undefined
+            }
+          >
             {retentionRewardBanner ? (
               <div
                 role="status"
@@ -3095,7 +3056,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             </div>
             ) : null}
 
-            <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overflow-x-hidden px-0.5 pb-[7rem] pt-0.5 text-[14px] leading-relaxed sm:space-y-3 sm:pb-28 md:pb-32">
+            <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overflow-x-hidden px-0.5 pb-2 pt-0.5 text-[14px] leading-relaxed sm:space-y-3">
               {messages.map((msg) => {
                 const isAssistant = msg.role === "assistant";
                 const toneForMessage = isAssistant
@@ -3328,13 +3289,21 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               <div ref={bottomRef} />
             </div>
 
-            <div className="relative flex flex-shrink-0 flex-col pb-safe pt-2">
+            <div
+              className="flex flex-shrink-0 flex-col gap-2 pt-2"
+              style={
+                keyboardInset > 0
+                  ? { paddingBottom: Math.max(0, keyboardInset - 56) }
+                  : undefined
+              }
+            >
               <BetaFeedbackPrompt
                 visible={activeView === "chat" && betaFeedbackVisible}
                 userId={habitUserId}
                 source="chat"
                 sessionId={currentSessionId}
                 appVersion={process.env.NEXT_PUBLIC_APP_VERSION}
+                isJa={appLang === "ja"}
                 onSubmitted={() => setBetaFeedbackVisible(false)}
                 onSkipped={() => setBetaFeedbackVisible(false)}
               />
@@ -3380,7 +3349,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   }}
                 />
               ) : null}
-              <div className="absolute inset-x-1.5 bottom-1.5 z-10 flex items-end gap-2 rounded-2xl border border-slate-700/55 bg-slate-950/95 px-2.5 py-2 shadow-lg backdrop-blur-md sm:inset-x-2 sm:bottom-2 sm:gap-2.5 sm:px-3 sm:py-2.5">
+              <div className="flex items-end gap-2 rounded-2xl border border-slate-700/55 bg-slate-950/95 px-2.5 py-2 shadow-lg backdrop-blur-md sm:gap-2.5 sm:px-3 sm:py-2.5">
                 <button
                   type="button"
                   className="btn-wa-hover btn-wa-hover-ruri flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-slate-700/50 bg-slate-900/60 text-slate-300 hover:border-wa-ruri hover:text-slate-50 sm:h-10 sm:w-10"
@@ -3393,12 +3362,19 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 </button>
                 <div className="flex-1">
                   <textarea
+                    ref={chatInputRef}
                     rows={1}
                     value={input}
                     disabled={ftueShowPicker}
                     onChange={(e) => setInput(e.target.value)}
                     onCompositionStart={onCompositionStart}
                     onCompositionEnd={onCompositionEnd}
+                    onFocus={() => {
+                      window.setTimeout(() => {
+                        chatInputRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                        bottomRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+                      }, 280);
+                    }}
                     onKeyDown={(e) => {
                       handleEnterKeyDown(e, () => {
                         if (input.trim() && !ftueShowPicker) handleSend(input);
@@ -3752,68 +3728,6 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           </motion.button>
         </div>
       </nav>
-
-      {/* Report quick button: tap to open, long-press to move */}
-      {!embedded && reportFabPos ? (
-        <button
-          ref={reportFabRef}
-          type="button"
-          aria-label="Open report"
-          title="Report（長押しで移動）"
-          onPointerDown={(e) => {
-            if (!reportFabRef.current) return;
-            reportFabMovedRef.current = false;
-            reportFabDraggingRef.current = false;
-            const rect = reportFabRef.current.getBoundingClientRect();
-            reportFabPointerOffsetRef.current = {
-              x: e.clientX - rect.left,
-              y: e.clientY - rect.top,
-            };
-            if (reportFabPressTimerRef.current) {
-              window.clearTimeout(reportFabPressTimerRef.current);
-            }
-            reportFabPressTimerRef.current = window.setTimeout(() => {
-              reportFabDraggingRef.current = true;
-            }, 320);
-          }}
-          onPointerMove={(e) => {
-            if (!reportFabDraggingRef.current) return;
-            const next = clampReportFabPos(
-              e.clientX - reportFabPointerOffsetRef.current.x,
-              e.clientY - reportFabPointerOffsetRef.current.y,
-            );
-            reportFabMovedRef.current = true;
-            setReportFabPos(next);
-          }}
-          onPointerUp={() => {
-            if (reportFabPressTimerRef.current) {
-              window.clearTimeout(reportFabPressTimerRef.current);
-              reportFabPressTimerRef.current = null;
-            }
-            if (reportFabDraggingRef.current) {
-              reportFabDraggingRef.current = false;
-              return;
-            }
-            if (!reportFabMovedRef.current) {
-              window.location.href = "/report";
-            }
-          }}
-          onPointerCancel={() => {
-            if (reportFabPressTimerRef.current) {
-              window.clearTimeout(reportFabPressTimerRef.current);
-              reportFabPressTimerRef.current = null;
-            }
-            reportFabDraggingRef.current = false;
-          }}
-          className="fixed z-[980] flex h-[52px] w-[52px] touch-none items-center justify-center rounded-full bg-gradient-to-br from-wa-ruri to-wa-asagi text-white shadow-[0_10px_28px_rgba(42,92,170,0.45)] ring-2 ring-wa-asagi/70 active:scale-95"
-          style={{
-            left: reportFabPos.x,
-            top: reportFabPos.y,
-          }}
-        >
-          <FileText className="h-5 w-5" />
-        </button>
-      ) : null}
 
       {/* 単語タップ時：「単語帳に追加する」メニュー */}
       {vocabMenu && (

@@ -7,8 +7,11 @@ import {
 import { logBetaEvent } from "@/lib/analytics/client";
 import type { BetaFeedback, BetaFeedbackSource } from "@/lib/feedback/types";
 
-const SHOW_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-const MAX_SUBMISSIONS = 3;
+const SHOW_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+const MAX_SUBMISSIONS = 12;
+
+/** Show feedback prompt every N user messages in chat (3, 6, 9, …). */
+export const BETA_FEEDBACK_USER_MESSAGE_INTERVAL = 3;
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -27,9 +30,13 @@ function generateFeedbackId(): string {
 
 export function shouldShowBetaFeedbackPrompt(
   userId: string,
-  opts: { shownInSession: boolean; nowMs?: number },
+  opts: { userMessageCount: number; nowMs?: number },
 ): boolean {
-  if (!userId || opts.shownInSession) return false;
+  if (!userId) return false;
+  const count = opts.userMessageCount;
+  if (count < BETA_FEEDBACK_USER_MESSAGE_INTERVAL) return false;
+  if (count % BETA_FEEDBACK_USER_MESSAGE_INTERVAL !== 0) return false;
+
   const state = getBetaFeedbackPromptState(userId);
   if (state.submittedCount >= MAX_SUBMISSIONS) return false;
   return !isWithinCooldown(state.lastShownAt, opts.nowMs ?? Date.now());
