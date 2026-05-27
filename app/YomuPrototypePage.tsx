@@ -3307,6 +3307,39 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 onSubmitted={() => setBetaFeedbackVisible(false)}
                 onSkipped={() => setBetaFeedbackVisible(false)}
               />
+              {guidedStep &&
+              (guidedStep === "chat_intro" ||
+                guidedStep === "correction_seen" ||
+                guidedStep === "save_prompt") ? (
+                (() => {
+                  const hint = getTutorialHintCopy(guidedStep, appLang === "ja");
+                  if (!hint) return null;
+                  return (
+                    <TutorialHintCard
+                      key={guidedStep}
+                      stepKey={guidedStep}
+                      variant="inline"
+                      title={hint.title}
+                      body={hint.body}
+                      cta={hint.cta}
+                      keyboardInset={keyboardInset}
+                      startCollapsed={guidedStep === "save_prompt"}
+                      autoCollapseAfterMs={
+                        guidedStep === "chat_intro" ? 3500 : guidedStep === "correction_seen" ? 2200 : 0
+                      }
+                      skipLabel={appLang === "ja" ? "スキップ" : "Skip"}
+                      onSkip={() => skipGuidedTutorial(guidedStep)}
+                      onCta={
+                        guidedStep === "chat_intro"
+                          ? () => setInput(TUTORIAL_SUGGESTED_SENTENCE)
+                          : guidedStep === "correction_seen"
+                            ? () => advanceGuidedStep("save_prompt")
+                            : undefined
+                      }
+                    />
+                  );
+                })()
+              ) : null}
               {ftueShowPicker ? <FtuePracticePicker onPick={beginFtue} /> : null}
               {topicSelectorMode !== "hidden" && !ftueShowPicker ? (
                 <TopicSelector
@@ -3421,46 +3454,20 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         onSkip={() => skipGuidedTutorial("welcome")}
       />
 
-      {guidedStep &&
-      activeView === "chat" &&
-      (guidedStep === "chat_intro" ||
-        guidedStep === "chat_sent" ||
-        guidedStep === "correction_seen" ||
-        guidedStep === "save_prompt") ? (
-        (() => {
-          const hint = getTutorialHintCopy(guidedStep, appLang === "ja");
-          if (!hint) return null;
-          return (
-            <TutorialHintCard
-              title={hint.title}
-              body={hint.body}
-              cta={hint.cta}
-              placement="top-right"
-              skipLabel={appLang === "ja" ? "スキップ" : "Skip"}
-              onSkip={() => skipGuidedTutorial(guidedStep)}
-              onCta={
-                guidedStep === "chat_intro"
-                  ? () => setInput(TUTORIAL_SUGGESTED_SENTENCE)
-                  : guidedStep === "correction_seen"
-                    ? () => advanceGuidedStep("save_prompt")
-                    : undefined
-              }
-            />
-          );
-        })()
-      ) : null}
-
       {guidedStep && activeView === "progress" && guidedStep === "progress_intro" ? (
         (() => {
           const hint = getTutorialHintCopy("progress_intro", appLang === "ja");
           if (!hint) return null;
           return (
             <TutorialHintCard
+              stepKey="progress_intro"
               title={hint.title}
               body={hint.body}
               cta={hint.cta}
               skipLabel={appLang === "ja" ? "スキップ" : "Skip"}
               placement="bottom"
+              keyboardInset={keyboardInset}
+              autoCollapseAfterMs={4000}
               onSkip={() => skipGuidedTutorial("progress_intro")}
               onCta={() => {
                 advanceGuidedStep("complete");
@@ -3476,11 +3483,15 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           const finish = getFinishCopy(appLang === "ja");
           return (
             <TutorialHintCard
+              stepKey="complete"
               title={finish.title}
               body={finish.body}
               cta={finish.cta}
               skipLabel={appLang === "ja" ? "スキップ" : "Skip"}
               placement="bottom"
+              keyboardInset={keyboardInset}
+              startCollapsed
+              autoCollapseAfterMs={0}
               onSkip={completeGuidedTutorial}
               onCta={() => {
                 completeGuidedTutorial();

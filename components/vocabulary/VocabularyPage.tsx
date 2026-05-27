@@ -221,10 +221,13 @@ export default function VocabularyPage() {
 
       {vocabTutorialHint ? (
         <TutorialHintCard
+          stepKey="vocabulary_intro"
           title={vocabTutorialHint.title}
           body={vocabTutorialHint.body}
           cta={vocabTutorialHint.cta}
-          placement="top-right"
+          placement="bottom"
+          startCollapsed
+          autoCollapseAfterMs={3500}
           skipLabel={isJa ? "スキップ" : "Skip"}
           onSkip={skipVocabTutorial}
           onCta={goToProgressTutorial}
