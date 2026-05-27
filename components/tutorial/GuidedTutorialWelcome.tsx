@@ -19,7 +19,7 @@ export default function GuidedTutorialWelcome({
   const copy = getWelcomeCopy(isJa);
 
   return (
-    <div className="fixed inset-0 z-[280] flex flex-col justify-end sm:items-center sm:justify-center sm:p-4">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
       <button
         type="button"
         className="absolute inset-0 bg-black/65 backdrop-blur-sm"
@@ -29,7 +29,8 @@ export default function GuidedTutorialWelcome({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative z-10 mx-auto w-full max-w-md rounded-t-2xl border border-slate-800/80 bg-gradient-to-b from-slate-950 to-slate-950/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.55)] sm:rounded-2xl sm:p-6"
+        className="relative z-10 mx-auto w-full max-w-md max-h-[min(90dvh,32rem)] overflow-y-auto rounded-2xl border border-slate-800/80 bg-gradient-to-b from-slate-950 to-slate-950/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.55)] sm:p-6"
+        onClick={(e) => e.stopPropagation()}
       >
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-wa-ruri/90">
           {isJa ? "はじめかた" : "Quick guide"}
