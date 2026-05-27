@@ -2344,8 +2344,14 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         {/* 初回・Daily Mission: 全画面表示 */}
         {activeView === "home" && (
           <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-            <div className="grid gap-3 pb-4 lg:grid-cols-2 lg:gap-6 lg:pb-6">
-              <div className="min-w-0 space-y-3 lg:col-span-1">
+            <div
+              className={
+                retentionMissionDay
+                  ? "grid w-full gap-3 pb-4 lg:grid-cols-2 lg:gap-6 lg:pb-6"
+                  : "mx-auto w-full max-w-xl space-y-3 pb-4 lg:pb-6"
+              }
+            >
+              <div className={retentionMissionDay ? "min-w-0 space-y-3 lg:col-span-1" : "min-w-0 space-y-3"}>
                 <DailyUsefulPhraseCard
                   phrase={dailyUsefulPhrase}
                   isLightTheme={isLightTheme}

@@ -5,4 +5,5 @@ export const pageBottomNavPad = "pb-[calc(5.5rem+env(safe-area-inset-bottom,0px)
 export const contentMaxHome = "mx-auto w-full max-w-5xl";
 export const contentMaxChat = "mx-auto w-full max-w-3xl lg:max-w-[56rem]";
 export const contentMaxStandard = "mx-auto w-full max-w-3xl lg:max-w-4xl";
-export const contentMaxWide = "mx-auto w-full max-w-5xl lg:max-w-6xl";
+export const contentMaxWide = "mx-auto w-full max-w-5xl";
+export const contentMaxVocabulary = "mx-auto w-full max-w-5xl lg:max-w-2xl";

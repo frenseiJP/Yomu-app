@@ -122,8 +122,14 @@ export default function VocabularyPage() {
     : null;
 
   return (
-    <div className="mx-auto min-h-[100dvh] w-full max-w-6xl overflow-x-hidden px-4 py-5 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-8 lg:px-8 lg:pb-8">
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start lg:gap-6">
+    <div className="mx-auto min-h-[100dvh] w-full max-w-5xl overflow-x-hidden px-4 py-5 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-8 lg:px-8 lg:pb-8">
+      <div
+        className={
+          selected
+            ? "lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start lg:gap-6"
+            : "mx-auto w-full lg:max-w-2xl"
+        }
+      >
         <div className="min-w-0 space-y-4">
           <div className="flex items-center gap-3">
             <Link
@@ -202,15 +208,13 @@ export default function VocabularyPage() {
           </section>
         </div>
 
-        <aside className="hidden min-w-0 lg:block">
-          {detailPanelProps ? (
-            <VocabularyDetailPanel {...detailPanelProps} layout="inline" />
-          ) : (
-            <div className="sticky top-6 rounded-2xl border border-dashed border-slate-800/80 bg-slate-950/40 p-6 text-center text-sm text-slate-500">
-              Select a word or phrase to see details and review options.
-            </div>
-          )}
-        </aside>
+        {selected ? (
+          <aside className="hidden min-w-0 lg:block">
+            {detailPanelProps ? (
+              <VocabularyDetailPanel {...detailPanelProps} layout="inline" />
+            ) : null}
+          </aside>
+        ) : null}
       </div>
 
       {detailPanelProps ? (
