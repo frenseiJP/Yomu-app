@@ -14,7 +14,10 @@ How would you say this in Japanese?
 
 (You can imagine you're texting a friend before you arrive.)`;
 
-const FREE_OPEN = `Say anything in Japanese — I'll help you sound natural. 👇`;
+const FREE_OPEN = `Ask in English or write in Japanese 👇
+
+- English questions: I'll answer directly.
+- Japanese sentences: I'll help you sound more natural.`;
 
 export function getFtueOpening(mode: Exclude<FtuePracticeMode, "free">): string {
   return mode === "daily" ? DAILY_OPEN : NATURAL_OPEN;

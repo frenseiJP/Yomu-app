@@ -15,5 +15,3 @@ export type GuidedTutorialSession = {
   savedVocabularyId?: string;
   startedAt: string;
 };
-
-export const TUTORIAL_SUGGESTED_SENTENCE = "すみません、遅れました";

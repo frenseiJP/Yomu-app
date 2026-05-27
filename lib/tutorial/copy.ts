@@ -15,16 +15,15 @@ export function getTutorialHintCopy(
   const en: Record<Exclude<GuidedTutorialStep, "welcome" | "complete">, TutorialHintCopy> = {
     chat_intro: {
       title: "Try one sentence",
-      body: "Write a Japanese sentence in Chat. Tap below to use the example.",
-      cta: "Use this sentence",
+      body: "Write Japanese to get a native-like rewrite, or ask in English for a direct answer.",
     },
     chat_sent: {
       title: "Sending…",
       body: "Frensei is preparing your natural correction.",
     },
     correction_seen: {
-      title: "Natural correction",
-      body: "See Better, Why, and Other ways — this is how Frensei coaches you.",
+      title: "Review the reply",
+      body: "Japanese input gets native-style improvements. English questions get direct answers.",
       cta: "Next",
     },
     save_prompt: {
@@ -46,16 +45,15 @@ export function getTutorialHintCopy(
   const ja: Record<Exclude<GuidedTutorialStep, "welcome" | "complete">, TutorialHintCopy> = {
     chat_intro: {
       title: "一文だけ試す",
-      body: "Chat に日本語を一文書いてみましょう。下のボタンで例文を入れられます。",
-      cta: "この文を使う",
+      body: "日本語で書くと自然な言い換えを提案。英語で質問するとそのまま答えます。",
     },
     chat_sent: {
       title: "送信中…",
       body: "Frensei が自然な言い換えを準備しています。",
     },
     correction_seen: {
-      title: "自然な言い換え",
-      body: "Better・Why・Other ways を確認 — これが Frensei のコーチングです。",
+      title: "返信を確認",
+      body: "日本語入力はネイティブ寄りに改善。英語の質問にはそのまま回答します。",
       cta: "次へ",
     },
     save_prompt: {

@@ -145,7 +145,6 @@ import {
   wasTutorialShownThisSession,
 } from "@/lib/tutorial/storage";
 import type { GuidedTutorialStep } from "@/lib/tutorial/types";
-import { TUTORIAL_SUGGESTED_SENTENCE } from "@/lib/tutorial/types";
 import HomeView from "@/components/home/HomeView";
 import VocabularyPage from "@/components/vocabulary/VocabularyPage";
 import {
@@ -871,10 +870,10 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     setCurrentSessionId(s.id);
     setChatSessions(getSessions(habitUserId));
     setFtueCoachActive(true);
-    setFtuePracticeKind("natural");
+    setFtuePracticeKind("free");
     ftueFreePathRef.current = false;
     ftueCoachingAttemptRef.current = 0;
-    const opening = getFtueOpening("natural");
+    const opening = getFtueFreeOpening();
     const nowIso = new Date().toISOString();
     addAssistantMessage(habitUserId, s.id, opening);
     setMessages([
@@ -887,7 +886,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         ftueAnchored: true,
       },
     ]);
-    setInput(TUTORIAL_SUGGESTED_SENTENCE);
+    setInput("");
     setActiveView("chat");
     setSessionDrawerOpen(false);
     writeGuidedTutorialSession({
@@ -925,9 +924,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
   useEffect(() => {
     if (!guidedStep || guidedStep !== "chat_intro") return;
-    const sent = messages.some(
-      (m) => m.role === "user" && m.baseText.trim().includes("遅れ"),
-    );
+    const sent = messages.some((m) => m.role === "user" && m.baseText.trim().length > 0);
     if (sent) advanceGuidedStep("chat_sent");
   }, [messages, guidedStep, advanceGuidedStep]);
 
@@ -3122,7 +3119,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                       onSkip={() => skipGuidedTutorial(guidedStep)}
                       onCta={
                         guidedStep === "chat_intro"
-                          ? () => setInput(TUTORIAL_SUGGESTED_SENTENCE)
+                          ? undefined
                           : guidedStep === "correction_seen"
                             ? () => advanceGuidedStep("save_prompt")
                             : undefined
