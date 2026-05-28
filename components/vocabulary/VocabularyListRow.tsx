@@ -3,6 +3,7 @@
 import VocabularyTypeBadge from "@/components/vocabulary/VocabularyTypeBadge";
 import type { VocabularyItem } from "@/lib/vocabulary/types";
 import type { PrototypeUiText } from "@/src/utils/i18n/prototypeCopy";
+import { mistakeCategoryLabel } from "@/lib/vocabulary/mistakeCategory";
 
 type Props = {
   item: VocabularyItem;
@@ -21,6 +22,7 @@ export default function VocabularyListRow({ item, ui, onOpen }: Props) {
           : "Manual";
   const reviewLabel =
     item.reviewStatus === "new" ? "New" : item.reviewStatus === "learning" ? "Learning" : "Reviewed";
+  const mistakeLabel = mistakeCategoryLabel(item.mistakeCategory);
   const preview =
     item.exampleSentence?.trim() ||
     item.correctedSentence?.trim() ||
@@ -49,6 +51,11 @@ export default function VocabularyListRow({ item, ui, onOpen }: Props) {
         <span className="rounded-md border border-slate-800/90 bg-slate-900/80 px-1.5 py-0.5 text-[10px] text-slate-400">
           {reviewLabel}
         </span>
+        {mistakeLabel ? (
+          <span className="rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-200">
+            {mistakeLabel}
+          </span>
+        ) : null}
       </div>
       {item.tags.length > 0 ? (
         <div className="mt-2 flex flex-wrap gap-1">

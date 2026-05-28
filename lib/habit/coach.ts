@@ -11,7 +11,7 @@ const PROGRESS_KIND = "progress_v1";
 const COACH_IDENTITY = `Sensei mode: warm professional teacher. Celebrate small wins. If the learner struggled recently, acknowledge gently and offer one concrete next step.`;
 
 /** Client: gather context for the next chat completion */
-export function buildCoachContext(userId: string): CoachContextPayload {
+export function buildCoachContext(userId: string, sessionGoal?: string): CoachContextPayload {
   const mistakes = recordsStorage.mistakeLogs.getAllByUser(userId);
   const recent = mistakes.slice(0, 3).map((m) => ({
     original: m.originalText,
@@ -44,6 +44,7 @@ export function buildCoachContext(userId: string): CoachContextPayload {
     lastMissionSummary,
     lastSummary,
     coachToneNote: COACH_IDENTITY,
+    sessionGoal: sessionGoal?.trim() || undefined,
   };
 }
 
@@ -59,6 +60,9 @@ export function formatCoachContextForSystem(ctx: CoachContextPayload | null | un
   ];
   if (ctx.lastSummary) {
     lines.push(`Last session encouragement (if any): ${ctx.lastSummary}`);
+  }
+  if (ctx.sessionGoal) {
+    lines.push(`Session goal selected by learner: ${ctx.sessionGoal}`);
   }
   if (ctx.recentMistakes.length) {
     lines.push("Recent areas to gently reinforce:");

@@ -158,6 +158,14 @@ type Role = "user" | "assistant";
 type Politeness = "casual" | "neutral" | "business";
 type TabView = "home" | "progress" | "chat" | "topic" | "vocabulary" | "settings" | "more";
 type DisplayLangRaw = "ja" | "en" | "ko" | "zh";
+type SessionGoalId = "natural" | "particles" | "polite" | "concise";
+
+const SESSION_GOAL_OPTIONS: { id: SessionGoalId; label: string; coachHint: string }[] = [
+  { id: "natural", label: "Natural", coachHint: "Prioritize natural phrasing and collocations." },
+  { id: "particles", label: "Particles", coachHint: "Prioritize particle usage and case marking corrections." },
+  { id: "polite", label: "Politeness", coachHint: "Prioritize level of politeness and register choices." },
+  { id: "concise", label: "Concise", coachHint: "Prioritize short, practical sentences for daily conversation." },
+];
 
 const JLPT_LEVELS = ["N5", "N4", "N3", "N2", "N1"] as const;
 
@@ -580,6 +588,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     buildWelcomeMessage(getLangClient()),
   ]);
   const [input, setInput] = useState("");
+  const [sessionGoal, setSessionGoal] = useState<SessionGoalId>("natural");
   const { onCompositionStart, onCompositionEnd, handleEnterKeyDown } = useChatInputIme();
   const [isTyping, setIsTyping] = useState(false);
   const [politeness, setPoliteness] = useState<Politeness>("casual");
@@ -1836,7 +1845,10 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           messages: buildClaudeMessages(text),
           tone: toneAtSend,
           language: appLang,
-          coachContext: buildCoachContext(habitUserId),
+          coachContext: buildCoachContext(
+            habitUserId,
+            SESSION_GOAL_OPTIONS.find((g) => g.id === sessionGoal)?.coachHint,
+          ),
         }),
         signal: controller.signal,
       });
@@ -3014,6 +3026,21 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                             )}
                           </div>
                         ) : null}
+                        {msg.senseiPayload?.replyMode === "correction" &&
+                        msg.senseiPayload.correctedSentence?.trim() ? (
+                          <div className="mt-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setInput(msg.senseiPayload!.correctedSentence.trim());
+                                chatInputRef.current?.focus();
+                              }}
+                              className="inline-flex min-h-[38px] items-center rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-100 hover:bg-emerald-500/15"
+                            >
+                              Reuse corrected sentence
+                            </button>
+                          </div>
+                        ) : null}
                         {hasSaves ? (
                           <SaveCandidateList
                             candidates={saveList}
@@ -3170,6 +3197,26 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   }}
                 />
               ) : null}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  Session goal
+                </span>
+                {SESSION_GOAL_OPTIONS.map((goal) => (
+                  <button
+                    key={goal.id}
+                    type="button"
+                    onClick={() => setSessionGoal(goal.id)}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] transition ${
+                      sessionGoal === goal.id
+                        ? "border-wa-ruri/70 bg-wa-ruri/20 text-slate-100"
+                        : "border-slate-700/70 bg-slate-900/60 text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {goal.label}
+                  </button>
+                ))}
+              </div>
+
               <div className="flex items-end gap-2 rounded-2xl border border-slate-700/55 bg-slate-950/95 px-2.5 py-2 shadow-lg backdrop-blur-md sm:gap-2.5 sm:px-3 sm:py-2.5">
                 <button
                   type="button"

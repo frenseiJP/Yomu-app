@@ -3,6 +3,7 @@ import { getRecommendedSaveCandidates } from "@/lib/save-candidates/extract";
 import type { GetRecommendedSaveCandidatesParams, SaveCandidate } from "@/lib/save-candidates/types";
 import { listVocabularyByUser, upsertVocabulary } from "@/lib/vocabulary/storage";
 import type { VocabularyItem } from "@/lib/vocabulary/types";
+import { inferMistakeCategory } from "@/lib/vocabulary/mistakeCategory";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -40,6 +41,11 @@ function toVocabularyItem(candidate: SaveCandidate, userId: string): VocabularyI
       correctedSentence: term,
       meaning,
       mistakeNote: candidate.explanation,
+      mistakeCategory: inferMistakeCategory({
+        userSentence,
+        correctedSentence: term,
+        note: `${candidate.explanation ?? ""}\n${meaning}`,
+      }),
       aiComment: "Saved from recommended correction.",
       sourceType: "chat",
       sourceSessionId: candidate.sourceSessionId,

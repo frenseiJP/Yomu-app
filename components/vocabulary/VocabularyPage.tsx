@@ -8,7 +8,7 @@ import VocabularyHeader from "@/components/vocabulary/VocabularyHeader";
 import VocabularyListRow from "@/components/vocabulary/VocabularyListRow";
 import VocabularySearchBar from "@/components/vocabulary/VocabularySearchBar";
 import VocabularyTagChips from "@/components/vocabulary/VocabularyTagChips";
-import { isVocabularyDueForReview, filterVocabulary } from "@/lib/vocabulary/selectors";
+import { isVocabularyDueForReview, filterVocabulary, sortVocabularyForLearning } from "@/lib/vocabulary/selectors";
 import {
   getVocabularyLibrary,
   isPersistedVocabularyItem,
@@ -59,7 +59,7 @@ export default function VocabularyPage({ inAppShell = false, onNavigateHome }: V
   const dateLocale = useMemo(() => dateLocaleForLang(appLang), [appLang]);
 
   const all = useMemo(() => getVocabularyLibrary(userId), [userId, refreshKey]);
-  const items = useMemo(() => filterVocabulary(all, filter), [all, filter]);
+  const items = useMemo(() => sortVocabularyForLearning(filterVocabulary(all, filter), filter), [all, filter]);
   const tags = useMemo(() => [...new Set(all.flatMap((x) => x.tags))].sort().slice(0, 24), [all]);
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);

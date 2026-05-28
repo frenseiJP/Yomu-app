@@ -1,6 +1,7 @@
 export type VocabularyItemType = "word" | "phrase" | "correction";
 export type VocabularySourceType = "chat" | "topic" | "review" | "manual";
 export type VocabularyReviewStatus = "new" | "learning" | "reviewed";
+import type { MistakeCategory } from "@/lib/vocabulary/mistakeCategory";
 
 export interface VocabularyItem {
   id: string;
@@ -14,6 +15,7 @@ export interface VocabularyItem {
   userSentence?: string;
   correctedSentence?: string;
   mistakeNote?: string;
+  mistakeCategory?: MistakeCategory;
   aiComment?: string;
   topicCategory?: string;
   sourceType: VocabularySourceType;

@@ -84,6 +84,15 @@ export function buildReplySections(p: FtueCoachPayload, studentLine?: string): R
     sections.push({ kind: "bullets", label: "Other ways", items: bullets });
   }
 
+  const shadowing = stripJaWrappers(p.correctedSentence)
+    .split(/[、。！？!?]\s*|\s+/)
+    .map((x) => x.trim())
+    .filter((x) => x.length >= 2)
+    .slice(0, 5);
+  if (shadowing.length >= 2) {
+    sections.push({ kind: "bullets", label: "Shadowing chunks", items: shadowing });
+  }
+
   sections.push({ kind: "cta", text: "Try again 👇" });
   return sections;
 }

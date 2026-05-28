@@ -4,6 +4,7 @@ import { getOrCreateUserId } from "@/lib/chat/service";
 import { addDaysYmd, todayYmd } from "@/lib/habit/date";
 import { deleteVocabulary, listVocabularyByUser, upsertVocabulary } from "@/lib/vocabulary/storage";
 import type { VocabularyItem, VocabularyItemType, VocabularySourceType } from "@/lib/vocabulary/types";
+import { inferMistakeCategory } from "@/lib/vocabulary/mistakeCategory";
 
 function id(): string {
   return `vocab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -45,6 +46,11 @@ export function createVocabularyFromCorrection(params: {
     userSentence: params.userSentence,
     correctedSentence: params.correctedSentence,
     mistakeNote: "Saved from correction",
+    mistakeCategory: inferMistakeCategory({
+      userSentence: params.userSentence,
+      correctedSentence: params.correctedSentence,
+      note: params.meaning,
+    }),
     sourceType: "chat",
     sourceSessionId: params.sourceSessionId,
     sourceMessageId: params.sourceMessageId,
@@ -154,6 +160,11 @@ function topicToPseudoItem(r: TopicPracticeResult, userId: string): VocabularyIt
     exampleSentence: r.correctedAnswer,
     userSentence: r.userAnswer,
     correctedSentence: r.correctedAnswer,
+    mistakeCategory: inferMistakeCategory({
+      userSentence: r.userAnswer,
+      correctedSentence: r.correctedAnswer,
+      note: r.explanation,
+    }),
     aiComment: r.explanation,
     sourceType: "topic",
     tags: ["topic_practice"],

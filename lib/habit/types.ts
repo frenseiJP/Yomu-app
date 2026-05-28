@@ -94,4 +94,5 @@ export interface CoachContextPayload {
   lastMissionSummary: string;
   lastSummary: string;
   coachToneNote: string;
+  sessionGoal?: string;
 }
