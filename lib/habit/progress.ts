@@ -17,6 +17,7 @@ function emptyProgress(): UserProgressV1 {
     learningDays: [],
     dailyJapaneseChars: {},
     correctedReuseCount: 0,
+    weakDrillHistory: [],
   };
 }
 
@@ -139,6 +140,25 @@ export function setLastSessionSummarySnippet(userId: string, text: string): void
 export function recordCorrectedReuse(userId: string): void {
   const p = load(userId);
   p.correctedReuseCount = (p.correctedReuseCount ?? 0) + 1;
+  p.activeDays = uniqPushDay(p.activeDays, todayYmd());
+  save(userId, p);
+}
+
+export function recordWeakDrillResult(
+  userId: string,
+  entry: { category: string; score: number; maxScore: number },
+): void {
+  const p = load(userId);
+  const next = [
+    {
+      at: new Date().toISOString(),
+      category: entry.category,
+      score: entry.score,
+      maxScore: entry.maxScore,
+    },
+    ...(p.weakDrillHistory ?? []),
+  ].slice(0, 12);
+  p.weakDrillHistory = next;
   p.activeDays = uniqPushDay(p.activeDays, todayYmd());
   save(userId, p);
 }

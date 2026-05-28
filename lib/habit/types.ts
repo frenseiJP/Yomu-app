@@ -89,6 +89,13 @@ export interface UserProgressV1 {
   dailyJapaneseChars?: Record<string, number>;
   /** How many times learner reused corrected sentence for retry */
   correctedReuseCount?: number;
+  /** Latest weak-point drill results (newest first) */
+  weakDrillHistory?: {
+    at: string;
+    category: string;
+    score: number;
+    maxScore: number;
+  }[];
 }
 
 /** Serializable payload sent to /api/chat */

@@ -63,6 +63,7 @@ import {
   getUserStats,
   recordChatUsed,
   recordCorrectedReuse,
+  recordWeakDrillResult,
   recordMissionCompleted,
   type DueReviews,
   type UserStats,
@@ -166,7 +167,7 @@ type WeakDrillState = {
   category: MistakeCategory;
   questions: WeakDrillQuestion[];
   index: number;
-  correct: number;
+  points: number;
 };
 type WeakDrillQuestion = {
   prompt: string;
@@ -255,13 +256,20 @@ function evaluateWeakDrillAnswer(
   q: WeakDrillQuestion | undefined,
   userText: string,
   payload?: FtueCoachPayload,
-): { passed: boolean; note: string } {
-  if (!q) return { passed: false, note: "No target provided." };
+): { score: 0 | 1 | 2; note: string } {
+  if (!q) return { score: 0, note: "No target provided." };
   const candidate = `${userText}\n${payload?.correctedSentence ?? ""}`.toLowerCase();
-  const passed = q.expectedAny.some((k) => candidate.includes(k.toLowerCase()));
+  const matched = q.expectedAny.filter((k) => candidate.includes(k.toLowerCase())).length;
+  const ratio = matched / Math.max(1, q.expectedAny.length);
+  const score: 0 | 1 | 2 = ratio >= 0.8 ? 2 : ratio >= 0.4 ? 1 : 0;
   return {
-    passed,
-    note: passed ? "Matched key target." : `Try to include: ${q.expectedAny.slice(0, 2).join(" / ")}`,
+    score,
+    note:
+      score === 2
+        ? "Great: key targets covered."
+        : score === 1
+          ? "Good: partial target match."
+          : `Try to include: ${q.expectedAny.slice(0, 2).join(" / ")}`,
   };
 }
 
@@ -797,7 +805,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
   const startWeakDrill = useCallback((cat: MistakeCategory) => {
     const questions = weakPointDrillQuestions(cat);
-    setWeakDrill({ category: cat, questions, index: 0, correct: 0 });
+    setWeakDrill({ category: cat, questions, index: 0, points: 0 });
     const intro = `Weak-point drill (${mistakeCategoryLabel(cat) ?? "Other"}) 1/3\n${questions[0]?.prompt ?? ""}`;
     setMessages((prev) => [
       ...prev,
@@ -1835,14 +1843,21 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       const judged = evaluateWeakDrillAnswer(currentQ, text, payload);
       const nextIndex = weakDrill.index + 1;
       if (nextIndex >= weakDrill.questions.length) {
-        const totalCorrect = weakDrill.correct + (judged.passed ? 1 : 0);
+        const totalPoints = weakDrill.points + judged.score;
+        const maxPoints = weakDrill.questions.length * 2;
+        const catLabel = mistakeCategoryLabel(weakDrill.category) ?? "Other";
+        recordWeakDrillResult(habitUserId, {
+          category: catLabel,
+          score: totalPoints,
+          maxScore: maxPoints,
+        });
         setWeakDrill(null);
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now() + 91,
             role: "assistant",
-            baseText: `Weak-point drill complete: ${totalCorrect}/${weakDrill.questions.length}\n${judged.note}\nGreat work — keep this category as your session goal for a few turns.`,
+            baseText: `Weak-point drill complete: ${totalPoints}/${maxPoints}\n${judged.note}\nGreat work — keep this category as your session goal for a few turns.`,
             createdAt: new Date().toISOString(),
           },
         ]);
@@ -1852,7 +1867,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       setWeakDrill({
         ...weakDrill,
         index: nextIndex,
-        correct: weakDrill.correct + (judged.passed ? 1 : 0),
+        points: weakDrill.points + judged.score,
       });
       setMessages((prev) => [
         ...prev,
@@ -2381,6 +2396,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     return total;
   }, [progressSnapshot]);
   const correctedReuseCount = progressSnapshot.correctedReuseCount ?? 0;
+  const weakDrillHistory = progressSnapshot.weakDrillHistory ?? [];
   const weeklyMistakeTrend = useMemo(() => {
     const all = getVocabularyLibrary(habitUserId);
     const today = new Date();
@@ -2531,6 +2547,30 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                             style={{ width: `${Math.min(100, count * 18)}%` }}
                           />
                         </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Drill history
+                </p>
+                {weakDrillHistory.length === 0 ? (
+                  <p className="mt-2 text-[12px] text-slate-400">No drill attempts yet.</p>
+                ) : (
+                  <ul className="mt-2 space-y-1.5">
+                    {weakDrillHistory.slice(0, 5).map((h) => (
+                      <li key={h.at} className="rounded-lg bg-slate-900/60 px-2.5 py-2 text-[12px] text-slate-300">
+                        <div className="flex items-center justify-between">
+                          <span>{h.category}</span>
+                          <span className="font-medium text-slate-100">
+                            {h.score}/{h.maxScore}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-[11px] text-slate-500">
+                          {new Date(h.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </p>
                       </li>
                     ))}
                   </ul>
