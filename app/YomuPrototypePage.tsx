@@ -2397,6 +2397,49 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   }, [progressSnapshot]);
   const correctedReuseCount = progressSnapshot.correctedReuseCount ?? 0;
   const weakDrillHistory = progressSnapshot.weakDrillHistory ?? [];
+  const weeklyDrillCategoryTrend = useMemo(() => {
+    const today = new Date();
+    const thisSun = new Date(today);
+    thisSun.setDate(today.getDate() - today.getDay());
+    const prevSun = new Date(thisSun);
+    prevSun.setDate(thisSun.getDate() - 7);
+    const thisFrom = thisSun.toISOString().slice(0, 10);
+    const prevFrom = prevSun.toISOString().slice(0, 10);
+    const prevTo = thisSun.toISOString().slice(0, 10);
+    const thisStats: Record<string, { sum: number; count: number }> = {};
+    const prevStats: Record<string, { sum: number; count: number }> = {};
+
+    for (const h of weakDrillHistory) {
+      const ymd = h.at.slice(0, 10);
+      const ratio = h.maxScore > 0 ? (h.score / h.maxScore) * 100 : 0;
+      if (ymd >= thisFrom) {
+        const s = thisStats[h.category] ?? { sum: 0, count: 0 };
+        s.sum += ratio;
+        s.count += 1;
+        thisStats[h.category] = s;
+      } else if (ymd >= prevFrom && ymd < prevTo) {
+        const s = prevStats[h.category] ?? { sum: 0, count: 0 };
+        s.sum += ratio;
+        s.count += 1;
+        prevStats[h.category] = s;
+      }
+    }
+
+    return Object.entries(thisStats)
+      .map(([category, s]) => {
+        const thisAvg = s.count ? s.sum / s.count : 0;
+        const prev = prevStats[category];
+        const prevAvg = prev?.count ? prev.sum / prev.count : null;
+        return {
+          category,
+          thisAvg,
+          prevAvg,
+          delta: prevAvg == null ? null : thisAvg - prevAvg,
+        };
+      })
+      .sort((a, b) => b.thisAvg - a.thisAvg)
+      .slice(0, 6);
+  }, [weakDrillHistory]);
   const weeklyMistakeTrend = useMemo(() => {
     const all = getVocabularyLibrary(habitUserId);
     const today = new Date();
@@ -2571,6 +2614,38 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                         <p className="mt-0.5 text-[11px] text-slate-500">
                           {new Date(h.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                         </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Weekly drill average trend
+                </p>
+                {weeklyDrillCategoryTrend.length === 0 ? (
+                  <p className="mt-2 text-[12px] text-slate-400">No weekly drill trend yet.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {weeklyDrillCategoryTrend.map((t) => (
+                      <li key={t.category} className="space-y-1">
+                        <div className="flex items-center justify-between text-[12px] text-slate-300">
+                          <span>{t.category}</span>
+                          <span className="font-medium text-slate-100">
+                            {Math.round(t.thisAvg)}%
+                            {t.delta == null
+                              ? " (new)"
+                              : t.delta >= 0
+                                ? ` ▲${Math.round(t.delta)}`
+                                : ` ▼${Math.abs(Math.round(t.delta))}`}
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-slate-800/80">
+                          <div
+                            className="h-1.5 rounded-full bg-sky-400/80"
+                            style={{ width: `${Math.max(4, Math.min(100, t.thisAvg))}%` }}
+                          />
+                        </div>
                       </li>
                     ))}
                   </ul>
