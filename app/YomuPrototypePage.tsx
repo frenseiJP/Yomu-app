@@ -150,7 +150,11 @@ import type { GuidedTutorialStep } from "@/lib/tutorial/types";
 import HomeView from "@/components/home/HomeView";
 import VocabularyPage from "@/components/vocabulary/VocabularyPage";
 import { getVocabularyLibrary } from "@/lib/vocabulary/service";
-import { mistakeCategoryLabel, type MistakeCategory } from "@/lib/vocabulary/mistakeCategory";
+import {
+  inferMistakeCategory,
+  mistakeCategoryLabel,
+  type MistakeCategory,
+} from "@/lib/vocabulary/mistakeCategory";
 import {
   pagePaddingX,
   shellStandard,
@@ -165,10 +169,12 @@ type DisplayLangRaw = "ja" | "en" | "ko" | "zh";
 type SessionGoalId = "natural" | "particles" | "polite" | "concise";
 type WeakDrillState = {
   category: MistakeCategory;
+  level: WeakDrillLevel;
   questions: WeakDrillQuestion[];
   index: number;
   points: number;
 };
+type WeakDrillLevel = "starter" | "core" | "challenge";
 type WeakDrillQuestion = {
   prompt: string;
   expectedAny: string[];
@@ -211,8 +217,8 @@ function weakPointDrillPrompt(cat: MistakeCategory | undefined): string | null {
   return map[cat];
 }
 
-function weakPointDrillQuestions(cat: MistakeCategory): WeakDrillQuestion[] {
-  const map: Record<MistakeCategory, WeakDrillQuestion[]> = {
+function weakPointDrillQuestions(cat: MistakeCategory, level: WeakDrillLevel): WeakDrillQuestion[] {
+  const starter: Record<MistakeCategory, WeakDrillQuestion[]> = {
     particle: [
       { prompt: "Fill particles: 私___日本語___勉強しています。", expectedAny: ["は", "を"] },
       { prompt: "Fix particles: 友だちを映画に行きました。", expectedAny: ["と", "に"] },
@@ -249,7 +255,113 @@ function weakPointDrillQuestions(cat: MistakeCategory): WeakDrillQuestion[] {
       { prompt: "Fix this sentence naturally: 私は昨日駅に行く。", expectedAny: ["昨日駅に行きました"] },
     ],
   };
-  return map[cat];
+  const core: Record<MistakeCategory, WeakDrillQuestion[]> = {
+    particle: [
+      { prompt: "Fill particles: 駅___友だち___会って、映画___行きました。", expectedAny: ["で", "に", "と"] },
+      { prompt: "Fix: 私は日本語が毎日勉強します。", expectedAny: ["日本語を", "毎日"] },
+      { prompt: "Choose correct: 日本___春___桜___きれいです。", expectedAny: ["は", "は", "が"] },
+    ],
+    politeness: [
+      { prompt: "Business polite rewrite: 明日ムリ。", expectedAny: ["難しい", "できません", "いたしかねます"] },
+      { prompt: "Casual rewrite: こちらをご確認いただけますでしょうか。", expectedAny: ["これ見て", "確認して"] },
+      { prompt: "Polite request: ちょっとこれやって。", expectedAny: ["お願い", "いただけますか", "してください"] },
+    ],
+    tense: [
+      { prompt: "Present habitual: 昨日は6時に起きました。", expectedAny: ["起きます"] },
+      { prompt: "Past natural: 明日、会議に行きます。", expectedAny: ["行きました"] },
+      { prompt: "Fix tense: 先週東京へ行きます。", expectedAny: ["行きました"] },
+    ],
+    word_choice: [
+      { prompt: "More natural: 日本語を強くなりたい。", expectedAny: ["上達", "うまくなりたい"] },
+      { prompt: "Natural alternative: すごくおいしいです。", expectedAny: ["めっちゃ", "とても"] },
+      { prompt: "Concise natural: 私は今から帰宅をしようと思っています。", expectedAny: ["今から帰ります"] },
+    ],
+    word_order: [
+      { prompt: "Fix order: 私は昨日友だちとに会いました。", expectedAny: ["友だちに", "昨日友だちに"] },
+      { prompt: "Fix order: たぶん私は明日忙しいです。", expectedAny: ["私はたぶん", "たぶん明日"] },
+      { prompt: "Reorder: 日本語をもっと話したい私は。", expectedAny: ["私はもっと日本語を話したい"] },
+    ],
+    register: [
+      { prompt: "Work register: これマジ助かる。", expectedAny: ["助かります", "ありがとうございます"] },
+      { prompt: "Casual register: 大変恐れ入りますが、ご対応お願いいたします。", expectedAny: ["お願い", "対応して"] },
+      { prompt: "Polite decline: それはちょっと無理。", expectedAny: ["難しい", "できません"] },
+    ],
+    other: starter.other,
+  };
+  const challenge: Record<MistakeCategory, WeakDrillQuestion[]> = {
+    particle: [
+      { prompt: "Rewrite naturally with particles: 会議終わった後同僚駅行った。", expectedAny: ["の後", "と", "へ"] },
+      { prompt: "Fix particles: 日本語の文法を私がまだ苦手です。", expectedAny: ["は", "が"] },
+      { prompt: "Contrast with は/が: 今日は雨___、明日は晴れ___。", expectedAny: ["で", "です", "は", "が"] },
+    ],
+    politeness: [
+      { prompt: "Very polite rewrite: これ、明日までに見といて。", expectedAny: ["ご確認", "いただけます", "お願い"] },
+      { prompt: "Casual rewrite: お手数ですが、ご対応のほどよろしくお願いいたします。", expectedAny: ["対応お願い", "よろしく"] },
+      { prompt: "Choose fitting register for boss: 了解です。", expectedAny: ["承知しました"] },
+    ],
+    tense: [
+      { prompt: "Fix timeline tense: 来週大阪へ行きました。", expectedAny: ["行きます"] },
+      { prompt: "Past completion nuance: 宿題をします。", expectedAny: ["しました", "終わりました"] },
+      { prompt: "Present progressive: 今、本を読みました。", expectedAny: ["読んでいます"] },
+    ],
+    word_choice: [
+      { prompt: "Natural nuance: それはとてもむずかしくありません。", expectedAny: ["そんなに難しくない", "そこまで難しくない"] },
+      { prompt: "Context fit: いただきます is said when?", expectedAny: ["食べる前", "食事の前"] },
+      { prompt: "Compact natural rewrite: 私はその意見に賛成であると考えています。", expectedAny: ["その意見に賛成です"] },
+    ],
+    word_order: [
+      { prompt: "Fix order: 来月たぶん私は京都に行くと思います。", expectedAny: ["私はたぶん来月京都"] },
+      { prompt: "Fix order: 日本語を上手にもっと話せるようになりたい。", expectedAny: ["もっと上手に日本語を話せる"] },
+      { prompt: "Reorder naturally: 先生に昨日質問をたくさんしました私は。", expectedAny: ["私は昨日先生にたくさん質問"] },
+    ],
+    register: [
+      { prompt: "Switch to customer-support polite: ちょっと待ってください。", expectedAny: ["少々お待ち", "お待ちくださいませ"] },
+      { prompt: "Switch to casual friend chat: ただいま対応いたします。", expectedAny: ["今やる", "今対応する"] },
+      { prompt: "Work-safe rewrite: わかりました！", expectedAny: ["承知しました", "かしこまりました"] },
+    ],
+    other: core.other,
+  };
+  if (level === "starter") return starter[cat];
+  if (level === "challenge") return challenge[cat];
+  return core[cat];
+}
+
+function selectWeakDrillLevel(
+  category: MistakeCategory,
+  history: { at: string; category: string; score: number; maxScore: number }[],
+): WeakDrillLevel {
+  const label = mistakeCategoryLabel(category) ?? "Other";
+  const recent = history.filter((h) => h.category === label).slice(0, 5);
+  if (recent.length === 0) return "starter";
+  const avg = recent.reduce((s, h) => s + (h.maxScore > 0 ? h.score / h.maxScore : 0), 0) / recent.length;
+  if (avg >= 0.82) return "challenge";
+  if (avg >= 0.52) return "core";
+  return "starter";
+}
+
+function buildReviewLinkedQuestion(
+  category: MistakeCategory,
+  due: DueReviews,
+): WeakDrillQuestion | null {
+  const hit = due.mistakes.find(
+    (m) =>
+      inferMistakeCategory({
+        userSentence: m.originalText,
+        correctedSentence: m.correctedText,
+      }) === category,
+  );
+  if (hit) {
+    return {
+      prompt: `Review-linked: Rewrite this naturally\n${hit.originalText}`,
+      expectedAny: [hit.correctedText.slice(0, 6), hit.correctedText.slice(-6)],
+    };
+  }
+  const word = due.words[0]?.word;
+  if (!word) return null;
+  return {
+    prompt: `Review-linked recall: Make one short sentence using "${word}".`,
+    expectedAny: [word],
+  };
 }
 
 function evaluateWeakDrillAnswer(
@@ -804,9 +916,13 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   }, [habitUserId, stats.totalMistakes]);
 
   const startWeakDrill = useCallback((cat: MistakeCategory) => {
-    const questions = weakPointDrillQuestions(cat);
-    setWeakDrill({ category: cat, questions, index: 0, points: 0 });
-    const intro = `Weak-point drill (${mistakeCategoryLabel(cat) ?? "Other"}) 1/3\n${questions[0]?.prompt ?? ""}`;
+    const snap = getProgressSnapshot(habitUserId);
+    const level = selectWeakDrillLevel(cat, snap.weakDrillHistory ?? []);
+    const base = weakPointDrillQuestions(cat, level);
+    const reviewLinked = buildReviewLinkedQuestion(cat, dueReviews);
+    const questions = (reviewLinked ? [reviewLinked, ...base] : base).slice(0, 3);
+    setWeakDrill({ category: cat, level, questions, index: 0, points: 0 });
+    const intro = `Weak-point drill (${mistakeCategoryLabel(cat) ?? "Other"} / ${level}) 1/3\n${questions[0]?.prompt ?? ""}`;
     setMessages((prev) => [
       ...prev,
       {
@@ -820,7 +936,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     setActiveView("chat");
     setTopicSelectorMode("hidden");
     chatInputRef.current?.focus();
-  }, []);
+  }, [habitUserId, dueReviews]);
 
   const refreshHabitData = useCallback((userId: string) => {
     const rDay = getOrCreateRetentionDailyMission(userId, jlptLevel);
@@ -3596,7 +3712,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 ) : null}
                 {weakDrill ? (
                   <span className="rounded-full border border-sky-500/35 bg-sky-500/10 px-2.5 py-1 text-[11px] text-sky-100">
-                    Drill {weakDrill.index + 1}/{weakDrill.questions.length}
+                    Drill {weakDrill.index + 1}/{weakDrill.questions.length} ({weakDrill.level})
                   </span>
                 ) : null}
               </div>
