@@ -148,6 +148,8 @@ import {
 import type { GuidedTutorialStep } from "@/lib/tutorial/types";
 import HomeView from "@/components/home/HomeView";
 import VocabularyPage from "@/components/vocabulary/VocabularyPage";
+import { getVocabularyLibrary } from "@/lib/vocabulary/service";
+import { mistakeCategoryLabel, type MistakeCategory } from "@/lib/vocabulary/mistakeCategory";
 import {
   pagePaddingX,
   shellStandard,
@@ -167,6 +169,36 @@ const SESSION_GOAL_OPTIONS: { id: SessionGoalId; label: string; coachHint: strin
   { id: "polite", label: "Politeness", coachHint: "Prioritize level of politeness and register choices." },
   { id: "concise", label: "Concise", coachHint: "Prioritize short, practical sentences for daily conversation." },
 ];
+
+function buildGoalFeedback(goal: SessionGoalId, payload?: FtueCoachPayload): string | undefined {
+  if (!payload || payload.replyMode !== "correction") return undefined;
+  if (goal === "natural") return "Goal check: phrasing became more natural.";
+  if (goal === "particles")
+    return /は|が|を|に|で/.test(payload.correctedSentence)
+      ? "Goal check: particle usage is getting clearer."
+      : "Goal check: keep focusing on particles in your next line.";
+  if (goal === "polite")
+    return /です|ます|でした|ください/.test(payload.correctedSentence)
+      ? "Goal check: politeness level matches better."
+      : "Goal check: add polite endings for this goal.";
+  return payload.correctedSentence.length <= 32
+    ? "Goal check: concise sentence achieved."
+    : "Goal check: try one shorter version next.";
+}
+
+function weakPointDrillPrompt(cat: MistakeCategory | undefined): string | null {
+  if (!cat || cat === "other") return null;
+  const map: Record<Exclude<MistakeCategory, "other">, string> = {
+    particle: "Mini drill: Give me 3 short Japanese examples using は / が / を correctly, with quick explanations.",
+    politeness:
+      "Mini drill: Rewrite these in polite Japanese and explain the politeness change in one line each.",
+    tense: "Mini drill: Give present and past Japanese versions of 3 daily sentences.",
+    word_choice: "Mini drill: Give 3 more natural alternatives for common textbook Japanese phrases.",
+    word_order: "Mini drill: Fix word order in 3 Japanese sentences and explain why briefly.",
+    register: "Mini drill: Rewrite 3 sentences in casual and polite register.",
+  };
+  return map[cat];
+}
 
 const JLPT_LEVELS = ["N5", "N4", "N3", "N2", "N1"] as const;
 
@@ -212,6 +244,7 @@ type Message = {
   retentionMissionOpener?: boolean;
   /** 構造化 Sensei 返信（モバイル向けセクション表示用） */
   senseiPayload?: FtueCoachPayload;
+  goalFeedback?: string;
   createdAt: string;
   chatContext?: ChatTurnContext;
   topicLabel?: string;
@@ -687,6 +720,14 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     () => getPrototypeCopy("en"),
     [],
   );
+  const weakPointDrill = useMemo(() => {
+    const all = getVocabularyLibrary(habitUserId);
+    const latestCorrection = all.find((x) => x.type === "correction" && x.mistakeCategory);
+    return {
+      category: latestCorrection?.mistakeCategory,
+      prompt: weakPointDrillPrompt(latestCorrection?.mistakeCategory),
+    };
+  }, [habitUserId, stats.totalMistakes]);
 
   const refreshHabitData = useCallback((userId: string) => {
     const rDay = getOrCreateRetentionDailyMission(userId, jlptLevel);
@@ -1749,6 +1790,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   replyTone: toneAtSend,
                   ftueAnchored: true,
                   senseiPayload: showMicro ? undefined : payload,
+                  goalFeedback: showMicro ? undefined : buildGoalFeedback(sessionGoal, payload),
                 }
               : m,
           ),
@@ -1778,6 +1820,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   replyTone: toneAtSend,
                   ftueAnchored: true,
                   senseiPayload: showMicro ? undefined : payload,
+                  goalFeedback: showMicro ? undefined : buildGoalFeedback(sessionGoal, payload),
                 }
               : m,
           ),
@@ -1869,7 +1912,13 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId
-            ? { ...m, baseText: body, replyTone: toneAtSend, senseiPayload: payload }
+            ? {
+                ...m,
+                baseText: body,
+                replyTone: toneAtSend,
+                senseiPayload: payload,
+                goalFeedback: buildGoalFeedback(sessionGoal, payload),
+              }
             : m,
         ),
       );
@@ -3057,6 +3106,11 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                             )}
                           </div>
                         ) : null}
+                        {msg.goalFeedback ? (
+                          <p className="mt-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-2.5 py-1.5 text-[11px] text-sky-100">
+                            {msg.goalFeedback}
+                          </p>
+                        ) : null}
                         {msg.senseiPayload?.replyMode === "correction" &&
                         msg.senseiPayload.correctedSentence?.trim() ? (
                           <div className="mt-2">
@@ -3247,6 +3301,23 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     {goal.label}
                   </button>
                 ))}
+                {weakPointDrill.prompt ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInput(weakPointDrill.prompt!);
+                      chatInputRef.current?.focus();
+                    }}
+                    className="ml-auto rounded-full border border-amber-500/35 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-100 hover:bg-amber-500/15"
+                    title={
+                      weakPointDrill.category
+                        ? `Weak point: ${mistakeCategoryLabel(weakPointDrill.category) ?? "Other"}`
+                        : "Weak-point drill"
+                    }
+                  >
+                    Start weak-point drill
+                  </button>
+                ) : null}
               </div>
 
               <div className="flex items-end gap-2 rounded-2xl border border-slate-700/55 bg-slate-950/95 px-2.5 py-2 shadow-lg backdrop-blur-md sm:gap-2.5 sm:px-3 sm:py-2.5">
