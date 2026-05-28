@@ -164,9 +164,13 @@ type DisplayLangRaw = "ja" | "en" | "ko" | "zh";
 type SessionGoalId = "natural" | "particles" | "polite" | "concise";
 type WeakDrillState = {
   category: MistakeCategory;
-  questions: string[];
+  questions: WeakDrillQuestion[];
   index: number;
   correct: number;
+};
+type WeakDrillQuestion = {
+  prompt: string;
+  expectedAny: string[];
 };
 
 const SESSION_GOAL_OPTIONS: { id: SessionGoalId; label: string; coachHint: string }[] = [
@@ -206,45 +210,59 @@ function weakPointDrillPrompt(cat: MistakeCategory | undefined): string | null {
   return map[cat];
 }
 
-function weakPointDrillQuestions(cat: MistakeCategory): string[] {
-  const map: Record<MistakeCategory, string[]> = {
+function weakPointDrillQuestions(cat: MistakeCategory): WeakDrillQuestion[] {
+  const map: Record<MistakeCategory, WeakDrillQuestion[]> = {
     particle: [
-      "Fill particles: 私___日本語___勉強しています。",
-      "Fix particles: 友だちを映画に行きました。",
-      "Choose は/が: どちら___いいですか。",
+      { prompt: "Fill particles: 私___日本語___勉強しています。", expectedAny: ["は", "を"] },
+      { prompt: "Fix particles: 友だちを映画に行きました。", expectedAny: ["と", "に"] },
+      { prompt: "Choose は/が: どちら___いいですか。", expectedAny: ["が"] },
     ],
     politeness: [
-      "Rewrite politely: ちょっと待って。",
-      "Rewrite casually: 少々お待ちください。",
-      "Choose better in work chat: 了解 / 承知しました",
+      { prompt: "Rewrite politely: ちょっと待って。", expectedAny: ["ください", "ください。", "お待ち"] },
+      { prompt: "Rewrite casually: 少々お待ちください。", expectedAny: ["待って", "ちょっと"] },
+      { prompt: "Choose better in work chat: 了解 / 承知しました", expectedAny: ["承知"] },
     ],
     tense: [
-      "Past tense: 毎朝コーヒーを飲みます。",
-      "Present tense: 昨日は図書館で勉強しました。",
-      "Fix tense: 明日、友だちと映画を見ました。",
+      { prompt: "Past tense: 毎朝コーヒーを飲みます。", expectedAny: ["飲みました"] },
+      { prompt: "Present tense: 昨日は図書館で勉強しました。", expectedAny: ["勉強します"] },
+      { prompt: "Fix tense: 明日、友だちと映画を見ました。", expectedAny: ["見ます"] },
     ],
     word_choice: [
-      "Make this sound natural: 日本語を上手になりたいです。",
-      "Give a natural alternative: とてもお腹がすいています。",
-      "Make this concise and natural: 私は今日は疲れていますから、帰ります。",
+      { prompt: "Make this sound natural: 日本語を上手になりたいです。", expectedAny: ["上手になりたい", "上達"] },
+      { prompt: "Give a natural alternative: とてもお腹がすいています。", expectedAny: ["お腹ぺこぺこ", "めっちゃお腹"] },
+      { prompt: "Make this concise and natural: 私は今日は疲れていますから、帰ります。", expectedAny: ["疲れたので帰ります", "今日は疲れたので"] },
     ],
     word_order: [
-      "Fix order: 私はよくにコンビニ行きます。",
-      "Fix order: 明日多分雨が降るでしょう。",
-      "Reorder naturally: 日本語を毎日私は勉強します。",
+      { prompt: "Fix order: 私はよくにコンビニ行きます。", expectedAny: ["よくコンビニ", "コンビニによく"] },
+      { prompt: "Fix order: 明日多分雨が降るでしょう。", expectedAny: ["明日は多分", "たぶん明日"] },
+      { prompt: "Reorder naturally: 日本語を毎日私は勉強します。", expectedAny: ["私は毎日日本語", "毎日日本語を勉強"] },
     ],
     register: [
-      "Polite register: それムリです。",
-      "Casual register: ただいま向かっております。",
-      "Work register: ありがとう！助かった！",
+      { prompt: "Polite register: それムリです。", expectedAny: ["難しいです", "できかねます"] },
+      { prompt: "Casual register: ただいま向かっております。", expectedAny: ["今向かってる", "今向かってます"] },
+      { prompt: "Work register: ありがとう！助かった！", expectedAny: ["ありがとうございます", "助かりました"] },
     ],
     other: [
-      "Make this more natural Japanese: 今日は天気いいです。",
-      "Rewrite this politely: これ、見て。",
-      "Fix this sentence naturally: 私は昨日駅に行く。",
+      { prompt: "Make this more natural Japanese: 今日は天気いいです。", expectedAny: ["今日は天気がいい"] },
+      { prompt: "Rewrite this politely: これ、見て。", expectedAny: ["これを見てください", "ご覧ください"] },
+      { prompt: "Fix this sentence naturally: 私は昨日駅に行く。", expectedAny: ["昨日駅に行きました"] },
     ],
   };
   return map[cat];
+}
+
+function evaluateWeakDrillAnswer(
+  q: WeakDrillQuestion | undefined,
+  userText: string,
+  payload?: FtueCoachPayload,
+): { passed: boolean; note: string } {
+  if (!q) return { passed: false, note: "No target provided." };
+  const candidate = `${userText}\n${payload?.correctedSentence ?? ""}`.toLowerCase();
+  const passed = q.expectedAny.some((k) => candidate.includes(k.toLowerCase()));
+  return {
+    passed,
+    note: passed ? "Matched key target." : `Try to include: ${q.expectedAny.slice(0, 2).join(" / ")}`,
+  };
 }
 
 const JLPT_LEVELS = ["N5", "N4", "N3", "N2", "N1"] as const;
@@ -780,7 +798,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const startWeakDrill = useCallback((cat: MistakeCategory) => {
     const questions = weakPointDrillQuestions(cat);
     setWeakDrill({ category: cat, questions, index: 0, correct: 0 });
-    const intro = `Weak-point drill (${mistakeCategoryLabel(cat) ?? "Other"}) 1/3\n${questions[0]}`;
+    const intro = `Weak-point drill (${mistakeCategoryLabel(cat) ?? "Other"}) 1/3\n${questions[0]?.prompt ?? ""}`;
     setMessages((prev) => [
       ...prev,
       {
@@ -1813,17 +1831,18 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     let accumulated = "";
     const advanceWeakDrill = (payload?: FtueCoachPayload) => {
       if (!weakDrill) return;
-      const passed = payload?.replyMode === "correction" || payload?.replyMode === "reading";
+      const currentQ = weakDrill.questions[weakDrill.index];
+      const judged = evaluateWeakDrillAnswer(currentQ, text, payload);
       const nextIndex = weakDrill.index + 1;
       if (nextIndex >= weakDrill.questions.length) {
-        const totalCorrect = weakDrill.correct + (passed ? 1 : 0);
+        const totalCorrect = weakDrill.correct + (judged.passed ? 1 : 0);
         setWeakDrill(null);
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now() + 91,
             role: "assistant",
-            baseText: `Weak-point drill complete: ${totalCorrect}/${weakDrill.questions.length}\nGreat work — keep this category as your session goal for a few turns.`,
+            baseText: `Weak-point drill complete: ${totalCorrect}/${weakDrill.questions.length}\n${judged.note}\nGreat work — keep this category as your session goal for a few turns.`,
             createdAt: new Date().toISOString(),
           },
         ]);
@@ -1833,14 +1852,14 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       setWeakDrill({
         ...weakDrill,
         index: nextIndex,
-        correct: weakDrill.correct + (passed ? 1 : 0),
+        correct: weakDrill.correct + (judged.passed ? 1 : 0),
       });
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 92,
           role: "assistant",
-          baseText: `Weak-point drill ${nextIndex + 1}/${weakDrill.questions.length}\n${q}`,
+          baseText: `Weak-point drill ${nextIndex + 1}/${weakDrill.questions.length}\n${judged.note}\n${q.prompt}`,
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -2362,6 +2381,20 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     return total;
   }, [progressSnapshot]);
   const correctedReuseCount = progressSnapshot.correctedReuseCount ?? 0;
+  const weeklyMistakeTrend = useMemo(() => {
+    const all = getVocabularyLibrary(habitUserId);
+    const today = new Date();
+    const sun = new Date(today);
+    sun.setDate(today.getDate() - today.getDay());
+    const from = sun.toISOString().slice(0, 10);
+    const counts: Record<string, number> = {};
+    for (const item of all) {
+      if (item.type !== "correction" || !item.mistakeCategory || item.createdAt.slice(0, 10) < from) continue;
+      const label = mistakeCategoryLabel(item.mistakeCategory) ?? "Other";
+      counts[label] = (counts[label] ?? 0) + 1;
+    }
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  }, [habitUserId, stats.totalMistakes]);
 
   return (
     <div
@@ -2478,6 +2511,31 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             </section>
 
             <section className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Weak-point trend
+                </p>
+                {weeklyMistakeTrend.length === 0 ? (
+                  <p className="mt-2 text-[12px] text-slate-400">No correction trends yet this week.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {weeklyMistakeTrend.map(([label, count]) => (
+                      <li key={label} className="space-y-1">
+                        <div className="flex items-center justify-between text-[12px] text-slate-300">
+                          <span>{label}</span>
+                          <span>{count}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-slate-800/80">
+                          <div
+                            className="h-1.5 rounded-full bg-amber-400/80"
+                            style={{ width: `${Math.min(100, count * 18)}%` }}
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Topic Practice
