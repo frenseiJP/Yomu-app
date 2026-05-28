@@ -162,6 +162,12 @@ type Politeness = "casual" | "neutral" | "business";
 type TabView = "home" | "progress" | "chat" | "topic" | "vocabulary" | "settings" | "more";
 type DisplayLangRaw = "ja" | "en" | "ko" | "zh";
 type SessionGoalId = "natural" | "particles" | "polite" | "concise";
+type WeakDrillState = {
+  category: MistakeCategory;
+  questions: string[];
+  index: number;
+  correct: number;
+};
 
 const SESSION_GOAL_OPTIONS: { id: SessionGoalId; label: string; coachHint: string }[] = [
   { id: "natural", label: "Natural", coachHint: "Prioritize natural phrasing and collocations." },
@@ -196,6 +202,47 @@ function weakPointDrillPrompt(cat: MistakeCategory | undefined): string | null {
     word_choice: "Mini drill: Give 3 more natural alternatives for common textbook Japanese phrases.",
     word_order: "Mini drill: Fix word order in 3 Japanese sentences and explain why briefly.",
     register: "Mini drill: Rewrite 3 sentences in casual and polite register.",
+  };
+  return map[cat];
+}
+
+function weakPointDrillQuestions(cat: MistakeCategory): string[] {
+  const map: Record<MistakeCategory, string[]> = {
+    particle: [
+      "Fill particles: 私___日本語___勉強しています。",
+      "Fix particles: 友だちを映画に行きました。",
+      "Choose は/が: どちら___いいですか。",
+    ],
+    politeness: [
+      "Rewrite politely: ちょっと待って。",
+      "Rewrite casually: 少々お待ちください。",
+      "Choose better in work chat: 了解 / 承知しました",
+    ],
+    tense: [
+      "Past tense: 毎朝コーヒーを飲みます。",
+      "Present tense: 昨日は図書館で勉強しました。",
+      "Fix tense: 明日、友だちと映画を見ました。",
+    ],
+    word_choice: [
+      "Make this sound natural: 日本語を上手になりたいです。",
+      "Give a natural alternative: とてもお腹がすいています。",
+      "Make this concise and natural: 私は今日は疲れていますから、帰ります。",
+    ],
+    word_order: [
+      "Fix order: 私はよくにコンビニ行きます。",
+      "Fix order: 明日多分雨が降るでしょう。",
+      "Reorder naturally: 日本語を毎日私は勉強します。",
+    ],
+    register: [
+      "Polite register: それムリです。",
+      "Casual register: ただいま向かっております。",
+      "Work register: ありがとう！助かった！",
+    ],
+    other: [
+      "Make this more natural Japanese: 今日は天気いいです。",
+      "Rewrite this politely: これ、見て。",
+      "Fix this sentence naturally: 私は昨日駅に行く。",
+    ],
   };
   return map[cat];
 }
@@ -671,6 +718,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const [vocabAdding, setVocabAdding] = useState(false);
   const [contextLoadingId, setContextLoadingId] = useState<number | null>(null);
   const [followUpFeedback, setFollowUpFeedback] = useState<null | "nice" | "ok">(null);
+  const [weakDrill, setWeakDrill] = useState<WeakDrillState | null>(null);
   const [betaFeedbackVisible, setBetaFeedbackVisible] = useState(false);
   const lastBetaFeedbackAtCountRef = useRef(0);
   const keyboardInset = useVisualViewportInset();
@@ -728,6 +776,25 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       prompt: weakPointDrillPrompt(latestCorrection?.mistakeCategory),
     };
   }, [habitUserId, stats.totalMistakes]);
+
+  const startWeakDrill = useCallback((cat: MistakeCategory) => {
+    const questions = weakPointDrillQuestions(cat);
+    setWeakDrill({ category: cat, questions, index: 0, correct: 0 });
+    const intro = `Weak-point drill (${mistakeCategoryLabel(cat) ?? "Other"}) 1/3\n${questions[0]}`;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now() + 77,
+        role: "assistant",
+        baseText: intro,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    setInput("");
+    setActiveView("chat");
+    setTopicSelectorMode("hidden");
+    chatInputRef.current?.focus();
+  }, []);
 
   const refreshHabitData = useCallback((userId: string) => {
     const rDay = getOrCreateRetentionDailyMission(userId, jlptLevel);
@@ -1744,6 +1811,40 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
     const fetchErrText = getPrototypeCopy(appLang as Lang).uiText.chatFetchError;
     let accumulated = "";
+    const advanceWeakDrill = (payload?: FtueCoachPayload) => {
+      if (!weakDrill) return;
+      const passed = payload?.replyMode === "correction" || payload?.replyMode === "reading";
+      const nextIndex = weakDrill.index + 1;
+      if (nextIndex >= weakDrill.questions.length) {
+        const totalCorrect = weakDrill.correct + (passed ? 1 : 0);
+        setWeakDrill(null);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + 91,
+            role: "assistant",
+            baseText: `Weak-point drill complete: ${totalCorrect}/${weakDrill.questions.length}\nGreat work — keep this category as your session goal for a few turns.`,
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+        return;
+      }
+      const q = weakDrill.questions[nextIndex];
+      setWeakDrill({
+        ...weakDrill,
+        index: nextIndex,
+        correct: weakDrill.correct + (passed ? 1 : 0),
+      });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 92,
+          role: "assistant",
+          baseText: `Weak-point drill ${nextIndex + 1}/${weakDrill.questions.length}\n${q}`,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+    };
 
     const coachingFtue = ftueCoachActive && ftuePracticeKind !== "free";
     if (coachingFtue) {
@@ -1795,6 +1896,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               : m,
           ),
         );
+        advanceWeakDrill(payload);
         void enrichChatContext(assistantId, body, text, {
           correctedSentence: payload.correctedSentence,
         });
@@ -1825,6 +1927,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               : m,
           ),
         );
+        advanceWeakDrill(payload);
         void enrichChatContext(assistantId, body, text, {
           correctedSentence: payload.correctedSentence,
         });
@@ -1922,6 +2025,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             : m,
         ),
       );
+      advanceWeakDrill(payload);
       void enrichChatContext(assistantId, body, text, {
         correctedSentence:
           payload.replyMode === "correction" ? payload.correctedSentence : undefined,
@@ -3305,8 +3409,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   <button
                     type="button"
                     onClick={() => {
-                      setInput(weakPointDrill.prompt!);
-                      chatInputRef.current?.focus();
+                      if (weakPointDrill.category) startWeakDrill(weakPointDrill.category);
                     }}
                     className="ml-auto rounded-full border border-amber-500/35 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-100 hover:bg-amber-500/15"
                     title={
@@ -3317,6 +3420,11 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   >
                     Start weak-point drill
                   </button>
+                ) : null}
+                {weakDrill ? (
+                  <span className="rounded-full border border-sky-500/35 bg-sky-500/10 px-2.5 py-1 text-[11px] text-sky-100">
+                    Drill {weakDrill.index + 1}/{weakDrill.questions.length}
+                  </span>
                 ) : null}
               </div>
 
