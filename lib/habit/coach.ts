@@ -2,6 +2,7 @@ import { recordsStorage } from "@/src/features/records/storage";
 import type { CoachContextPayload } from "@/lib/habit/types";
 import { getOrCreateRetentionDailyMission } from "@/lib/mission/retentionDaily";
 import { readMissionGrowth } from "@/lib/progress/missionGrowth";
+import { getCoachFocusSummary } from "@/lib/coach/categoryMastery";
 import { getUserStats } from "@/lib/habit/progress";
 import { readHabitJson } from "@/lib/habit/storage";
 import type { UserProgressV1 } from "@/lib/habit/types";
@@ -38,6 +39,8 @@ export function buildCoachContext(userId: string, sessionGoal?: string): CoachCo
     prog.lastSessionSummarySnippet ??
     "";
 
+  const focus = getCoachFocusSummary(userId);
+
   return {
     recentMistakes: recent,
     streak: stats.streak,
@@ -45,6 +48,9 @@ export function buildCoachContext(userId: string, sessionGoal?: string): CoachCo
     lastSummary,
     coachToneNote: COACH_IDENTITY,
     sessionGoal: sessionGoal?.trim() || undefined,
+    focusCategory: focus.label,
+    focusCategoryHint: focus.hint,
+    focusCategoryScore: focus.score,
   };
 }
 
@@ -63,6 +69,17 @@ export function formatCoachContextForSystem(ctx: CoachContextPayload | null | un
   }
   if (ctx.sessionGoal) {
     lines.push(`Session goal selected by learner: ${ctx.sessionGoal}`);
+  }
+  if (ctx.focusCategory) {
+    lines.push(
+      `Skill-path focus (from learner's real corrections, not a textbook): ${ctx.focusCategory}${typeof ctx.focusCategoryScore === "number" ? ` (~${ctx.focusCategoryScore}% practice progress)` : ""}.`,
+    );
+    if (ctx.focusCategoryHint) {
+      lines.push(`Focus hint for Sensei: ${ctx.focusCategoryHint}`);
+    }
+    lines.push(
+      "When correcting Japanese, gently prioritize this area in one short Why note—do not lecture or list grammar rules.",
+    );
   }
   if (ctx.recentMistakes.length) {
     lines.push("Recent areas to gently reinforce:");

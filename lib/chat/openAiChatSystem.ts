@@ -28,12 +28,26 @@ export function parseCoachContextPayload(raw: unknown): CoachContextPayload | nu
       }))
       .filter((m) => m.original.length > 0);
   }
+  const sessionGoal = typeof o.sessionGoal === "string" ? o.sessionGoal.slice(0, 80) : undefined;
+  const focusCategory =
+    typeof o.focusCategory === "string" ? o.focusCategory.slice(0, 60) : undefined;
+  const focusCategoryHint =
+    typeof o.focusCategoryHint === "string" ? o.focusCategoryHint.slice(0, 200) : undefined;
+  const focusCategoryScore =
+    typeof o.focusCategoryScore === "number" && Number.isFinite(o.focusCategoryScore)
+      ? Math.max(0, Math.min(100, o.focusCategoryScore))
+      : undefined;
+
   return {
     recentMistakes,
     streak,
     lastMissionSummary,
     lastSummary,
     coachToneNote,
+    sessionGoal,
+    focusCategory,
+    focusCategoryHint,
+    focusCategoryScore,
   };
 }
 

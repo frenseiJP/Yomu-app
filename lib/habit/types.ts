@@ -75,27 +75,41 @@ export interface ReviewStore {
   mistakes: MistakeReviewEntry[];
 }
 
+export type MistakeCategoryKey =
+  | "particle"
+  | "politeness"
+  | "tense"
+  | "word_choice"
+  | "word_order"
+  | "register"
+  | "other";
+
+export interface CategoryMasteryState {
+  /** 0–100 mastery score per category */
+  score: number;
+  attempts: number;
+  lastAt?: string;
+}
+
 export interface UserProgressV1 {
-  /** Any active day (chat, mission done, review done) */
   activeDays: string[];
   totalChatMessages: number;
   missionsCompletedCount: number;
   reviewsCompletedCount: number;
   mistakesFixedCount: number;
-  /** Distinct days user sent at least one chat message */
   learningDays: string[];
   lastSessionSummarySnippet?: string;
-  /** Daily count of Japanese-script characters typed by the learner */
   dailyJapaneseChars?: Record<string, number>;
-  /** How many times learner reused corrected sentence for retry */
   correctedReuseCount?: number;
-  /** Latest weak-point drill results (newest first) */
   weakDrillHistory?: {
     at: string;
     category: string;
     score: number;
     maxScore: number;
   }[];
+  categoryMastery?: Partial<Record<MistakeCategoryKey, CategoryMasteryState>>;
+  weeklyCategoryGoalPercent?: number;
+  weeklyCategoryGoalWeek?: string;
 }
 
 /** Serializable payload sent to /api/chat */
@@ -106,4 +120,8 @@ export interface CoachContextPayload {
   lastSummary: string;
   coachToneNote: string;
   sessionGoal?: string;
+  /** e.g. "Particles" — gentle skill-path focus for Sensei */
+  focusCategory?: string;
+  focusCategoryHint?: string;
+  focusCategoryScore?: number;
 }

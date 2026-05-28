@@ -15,7 +15,8 @@ import {
   markVocabularyItemReviewed,
   removeVocabularyItem,
 } from "@/lib/vocabulary/service";
-import type { VocabularyFilterState, VocabularyItem } from "@/lib/vocabulary/types";
+import ReviewClozePanel from "@/components/coach/ReviewClozePanel";
+import type { VocabularyFilterState, VocabularyItem, VocabularyListCategory } from "@/lib/vocabulary/types";
 import { useVocabularyUserId } from "@/lib/vocabulary/useVocabularyUserId";
 import TutorialHintCard from "@/components/tutorial/TutorialHintCard";
 import { getTutorialHintCopy } from "@/lib/tutorial/copy";
@@ -38,18 +39,30 @@ type VocabularyPageProps = {
   /** Render inside YomuPrototypePage (bottom nav, no modal overlay). */
   inAppShell?: boolean;
   onNavigateHome?: () => void;
+  /** Open directly on Review tab (e.g. from Home). */
+  initialCategory?: VocabularyListCategory;
 };
 
-export default function VocabularyPage({ inAppShell = false, onNavigateHome }: VocabularyPageProps) {
+export default function VocabularyPage({
+  inAppShell = false,
+  onNavigateHome,
+  initialCategory,
+}: VocabularyPageProps) {
   const userId = useVocabularyUserId();
   const [appLang, setAppLang] = useState<Lang>("en");
   const [refreshKey, setRefreshKey] = useState(0);
   const [selected, setSelected] = useState<VocabularyItem | null>(null);
   const [filter, setFilter] = useState<VocabularyFilterState>({
     query: "",
-    category: "all",
+    category: initialCategory ?? "all",
     tag: "",
   });
+
+  useEffect(() => {
+    if (initialCategory) {
+      setFilter((p) => ({ ...p, category: initialCategory }));
+    }
+  }, [initialCategory]);
 
   useEffect(() => {
     setAppLang(getLangClient());
@@ -175,6 +188,15 @@ export default function VocabularyPage({ inAppShell = false, onNavigateHome }: V
             selected={filter.tag}
             onSelect={(tag) => setFilter((p) => ({ ...p, tag }))}
           />
+
+          {filter.category === "review" ? (
+            <ReviewClozePanel
+              userId={userId}
+              items={all}
+              todayYmd={today}
+              onReviewed={bump}
+            />
+          ) : null}
 
           <section className="space-y-2 pb-4">
             {all.length === 0 ? (

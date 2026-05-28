@@ -34,6 +34,13 @@ type Props = {
   onOpenRecentChat: (sessionId: string) => void;
   onStartNewChat: () => void;
   onOpenProgress: () => void;
+  coachFocus?: {
+    label: string;
+    hint: string;
+    score: number;
+  } | null;
+  onPracticeFocus?: () => void;
+  onOpenReview?: () => void;
 };
 
 function homeSectionClass(isLightTheme: boolean) {
@@ -52,6 +59,9 @@ export default function HomeView({
   onOpenRecentChat,
   onStartNewChat,
   onOpenProgress,
+  coachFocus,
+  onPracticeFocus,
+  onOpenReview,
 }: Props) {
   const reviewCount = dueReviews.words.length + dueReviews.mistakes.length;
   const labelClass = isLightTheme ? "text-neutral-500" : "text-slate-500";
@@ -67,6 +77,28 @@ export default function HomeView({
           isLightTheme={isLightTheme}
           onPractice={onPracticePhrase}
         />
+
+        {coachFocus ? (
+          <section className={homeSectionClass(isLightTheme)}>
+            <p className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${labelClass}`}>
+              Today&apos;s focus
+            </p>
+            <p className={`mt-2 font-wa-serif text-base leading-snug ${titleClass}`}>
+              {coachFocus.label}
+              <span className={`ml-2 text-sm font-normal ${mutedClass}`}>{coachFocus.score}%</span>
+            </p>
+            <p className={`mt-1 text-sm leading-relaxed ${bodyClass}`}>{coachFocus.hint}</p>
+            {onPracticeFocus ? (
+              <button
+                type="button"
+                onClick={onPracticeFocus}
+                className="mt-3 inline-flex min-h-[44px] w-full touch-manipulation items-center justify-center rounded-xl border border-sky-500/40 bg-sky-500/15 px-3.5 py-2 text-xs font-medium text-sky-100 hover:bg-sky-500/25 lg:min-h-[40px]"
+              >
+                Practice with Sensei
+              </button>
+            ) : null}
+          </section>
+        ) : null}
 
         {retentionMissionDay ? (
           <div className={homeMissionGrid}>
@@ -135,12 +167,22 @@ export default function HomeView({
             <p className={`mt-2 text-sm ${isLightTheme ? "text-neutral-700" : "text-slate-200"}`}>
               You have {reviewCount} items to review.
             </p>
-            <Link
-              href="/vocabulary"
-              className="mt-3 inline-flex min-h-[44px] w-full touch-manipulation items-center justify-center rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30 lg:min-h-[40px]"
-            >
-              Open review
-            </Link>
+            {onOpenReview ? (
+              <button
+                type="button"
+                onClick={onOpenReview}
+                className="mt-3 inline-flex min-h-[44px] w-full touch-manipulation items-center justify-center rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30 lg:min-h-[40px]"
+              >
+                Open review
+              </button>
+            ) : (
+              <Link
+                href="/vocabulary"
+                className="mt-3 inline-flex min-h-[44px] w-full touch-manipulation items-center justify-center rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30 lg:min-h-[40px]"
+              >
+                Open review
+              </Link>
+            )}
           </section>
         ) : null}
       </div>

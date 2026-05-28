@@ -1,4 +1,4 @@
-import type { UserProgressV1, UserStats } from "@/lib/habit/types";
+import type { CategoryMasteryState, MistakeCategoryKey, UserProgressV1, UserStats } from "@/lib/habit/types";
 import { readHabitJson, writeHabitJson } from "@/lib/habit/storage";
 import { recordsStorage } from "@/src/features/records/storage";
 import { todayYmd, addDaysYmd, toYmd } from "@/lib/habit/date";
@@ -18,6 +18,7 @@ function emptyProgress(): UserProgressV1 {
     dailyJapaneseChars: {},
     correctedReuseCount: 0,
     weakDrillHistory: [],
+    categoryMastery: {},
   };
 }
 
@@ -160,5 +161,21 @@ export function recordWeakDrillResult(
   ].slice(0, 12);
   p.weakDrillHistory = next;
   p.activeDays = uniqPushDay(p.activeDays, todayYmd());
+  save(userId, p);
+}
+
+export function recordCategoryMasteryUpdate(
+  userId: string,
+  key: MistakeCategoryKey,
+  score: number,
+): void {
+  const p = load(userId);
+  const prev = p.categoryMastery?.[key];
+  const nextMastery: CategoryMasteryState = {
+    score: Math.max(0, Math.min(100, score)),
+    attempts: (prev?.attempts ?? 0) + 1,
+    lastAt: new Date().toISOString(),
+  };
+  p.categoryMastery = { ...(p.categoryMastery ?? {}), [key]: nextMastery };
   save(userId, p);
 }

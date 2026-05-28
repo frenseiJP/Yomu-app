@@ -113,6 +113,18 @@ import type { SaveCandidate } from "@/lib/save-candidates/types";
 import { guessCorrectedSentence } from "@/lib/save-candidates/guess-correction";
 import { SaveCandidateList } from "@/components/save-candidates/SaveCandidateList";
 import { recommendCandidatesForMessage, saveCandidateToVocabulary } from "@/lib/save-candidates/service";
+import SkillTreeCard from "@/components/coach/SkillTreeCard";
+import ContentImportPanel from "@/components/coach/ContentImportPanel";
+import SpeakingLoopPanel from "@/components/coach/SpeakingLoopPanel";
+import ClozeDrillInline from "@/components/coach/ClozeDrillInline";
+import {
+  applyMasteryFromCorrection,
+  applyMasteryFromDrill,
+  drillTierForCategory,
+  getCoachFocusSummary,
+  isCategoryUnlocked,
+} from "@/lib/coach/categoryMastery";
+import type { MistakeCategoryKey } from "@/lib/habit/types";
 import FtuePracticePicker from "@/components/chat/FtuePracticePicker";
 import AssistantMessageBody from "@/components/chat/AssistantMessageBody";
 import BetaFeedbackPrompt from "@/components/feedback/BetaFeedbackPrompt";
@@ -867,6 +879,9 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const guidedAssistantMsgIdRef = useRef<number | null>(null);
   const [currentTopic, setCurrentTopic] = useState("");
   const [activeView, setActiveView] = useState<TabView>(initialView);
+  const [vocabInitialCategory, setVocabInitialCategory] = useState<
+    "all" | "word" | "phrase" | "review" | null
+  >(null);
   const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
   const [chatSessions, setChatSessions] = useState<StoredChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -916,8 +931,30 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   }, [habitUserId, stats.totalMistakes]);
 
   const startWeakDrill = useCallback((cat: MistakeCategory) => {
+    const key = cat as MistakeCategoryKey;
+    if (!isCategoryUnlocked(habitUserId, key)) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 76,
+          role: "assistant",
+          baseText:
+            "Your coach path is still on the previous skill — finish a few more corrections or drills there, then this category opens.",
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+      setActiveView("chat");
+      return;
+    }
     const snap = getProgressSnapshot(habitUserId);
-    const level = selectWeakDrillLevel(cat, snap.weakDrillHistory ?? []);
+    const historyLevel = selectWeakDrillLevel(cat, snap.weakDrillHistory ?? []);
+    const tierLevel = drillTierForCategory(habitUserId, key);
+    const level: WeakDrillLevel =
+      historyLevel === "challenge" || tierLevel === "challenge"
+        ? "challenge"
+        : historyLevel === "starter" && tierLevel === "starter"
+          ? "starter"
+          : "core";
     const base = weakPointDrillQuestions(cat, level);
     const reviewLinked = buildReviewLinkedQuestion(cat, dueReviews);
     const questions = (reviewLinked ? [reviewLinked, ...base] : base).slice(0, 3);
@@ -1967,6 +2004,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           score: totalPoints,
           maxScore: maxPoints,
         });
+        applyMasteryFromDrill(habitUserId, catLabel, totalPoints, maxPoints);
         setWeakDrill(null);
         setMessages((prev) => [
           ...prev,
@@ -2497,6 +2535,10 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     [appLang, habitUserId, stats, streakDays],
   );
   const progressSnapshot = getProgressSnapshot(habitUserId);
+  const coachFocus = useMemo(
+    () => getCoachFocusSummary(habitUserId),
+    [habitUserId, progressSnapshot.categoryMastery, progressSnapshot.weakDrillHistory],
+  );
   const thisWeekJapaneseChars = useMemo(() => {
     const daily = progressSnapshot.dailyJapaneseChars ?? {};
     const today = new Date();
@@ -2598,6 +2640,18 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               setActiveView("chat");
             }}
             onOpenProgress={() => setActiveView("progress")}
+            coachFocus={coachFocus}
+            onPracticeFocus={() => {
+              if (coachFocus.key === "other") {
+                setActiveView("chat");
+                return;
+              }
+              startWeakDrill(coachFocus.key as MistakeCategory);
+            }}
+            onOpenReview={() => {
+              setVocabInitialCategory("review");
+              setActiveView("vocabulary");
+            }}
           />
         )}
 
@@ -2644,6 +2698,32 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             >
               <SeasonalProgressCard state={seasonalState} isLightTheme={isLightTheme} />
             </div>
+
+            <SkillTreeCard
+              userId={habitUserId}
+              isLightTheme={isLightTheme}
+              onPracticeCategory={(key) => {
+                if (key === "other") return;
+                startWeakDrill(key as MistakeCategory);
+              }}
+            />
+
+            <ContentImportPanel
+              userId={habitUserId}
+              onStartClozeChat={(prompt) => {
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: Date.now() + 88,
+                    role: "assistant",
+                    baseText: prompt,
+                    createdAt: new Date().toISOString(),
+                  },
+                ]);
+                setActiveView("chat");
+                chatInputRef.current?.focus();
+              }}
+            />
 
             <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
@@ -2835,7 +2915,9 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         {activeView === "vocabulary" && (
           <VocabularyPage
             inAppShell
+            initialCategory={vocabInitialCategory ?? undefined}
             onNavigateHome={() => {
+              setVocabInitialCategory(null);
               setActiveView("home");
               if (pathname !== "/") router.push("/");
             }}
@@ -3506,7 +3588,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                         ) : null}
                         {msg.senseiPayload?.replyMode === "correction" &&
                         msg.senseiPayload.correctedSentence?.trim() ? (
-                          <div className="mt-2">
+                          <div className="mt-2 space-y-2">
                             <button
                               type="button"
                               onClick={() => {
@@ -3518,6 +3600,34 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                             >
                               Reuse corrected sentence
                             </button>
+                            <SpeakingLoopPanel
+                              sentence={msg.senseiPayload.correctedSentence.trim()}
+                              compact
+                            />
+                            <ClozeDrillInline
+                              corrected={msg.senseiPayload.correctedSentence.trim()}
+                              userSentence={
+                                msg.senseiPayload.studentSentence?.trim() ||
+                                messages
+                                  .slice(
+                                    0,
+                                    messages.findIndex((m) => m.id === msg.id),
+                                  )
+                                  .reverse()
+                                  .find((m) => m.role === "user")
+                                  ?.baseText.trim()
+                              }
+                              userId={habitUserId}
+                              categoryHint={
+                                mistakeCategoryLabel(
+                                  inferMistakeCategory({
+                                    userSentence: msg.senseiPayload.studentSentence,
+                                    correctedSentence: msg.senseiPayload.correctedSentence,
+                                    note: msg.senseiPayload.whyEnglish,
+                                  }),
+                                ) ?? "Particle"
+                              }
+                            />
                           </div>
                         ) : null}
                         {hasSaves ? (
@@ -3527,6 +3637,13 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                             saveDataAttr={guidedStep === "save_prompt" ? "1" : undefined}
                             onSave={(cand) => {
                               const result = saveCandidateToVocabulary(cand, habitUserId);
+                              if (cand.type === "correction") {
+                                applyMasteryFromCorrection(habitUserId, {
+                                  userSentence: cand.secondaryText,
+                                  correctedSentence: cand.term,
+                                  note: cand.explanation,
+                                });
+                              }
                               setMessages((prev) =>
                                 prev.map((m2) =>
                                   m2.id === msg.id && m2.chatContext?.saveCandidates
@@ -4050,10 +4167,12 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           <motion.button
             type="button"
             onClick={() => {
+              setVocabInitialCategory(null);
               setActiveView("vocabulary");
               if (pathname !== "/vocabulary") router.push("/vocabulary");
             }}
             onPointerDown={() => {
+              setVocabInitialCategory(null);
               setActiveView("vocabulary");
               if (pathname !== "/vocabulary") router.push("/vocabulary");
             }}
