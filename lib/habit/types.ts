@@ -85,6 +85,10 @@ export interface UserProgressV1 {
   /** Distinct days user sent at least one chat message */
   learningDays: string[];
   lastSessionSummarySnippet?: string;
+  /** Daily count of Japanese-script characters typed by the learner */
+  dailyJapaneseChars?: Record<string, number>;
+  /** How many times learner reused corrected sentence for retry */
+  correctedReuseCount?: number;
 }
 
 /** Serializable payload sent to /api/chat */

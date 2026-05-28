@@ -62,6 +62,7 @@ import {
   getDueReviews,
   getUserStats,
   recordChatUsed,
+  recordCorrectedReuse,
   recordMissionCompleted,
   type DueReviews,
   type UserStats,
@@ -1677,7 +1678,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, userMsg]);
-    recordChatUsed(habitUserId);
+    recordChatUsed(habitUserId, text);
     addUserMessage(habitUserId, sessionId, text);
     setInput("");
     setIsTyping(true);
@@ -2192,6 +2193,22 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       }),
     [appLang, habitUserId, stats, streakDays],
   );
+  const progressSnapshot = getProgressSnapshot(habitUserId);
+  const thisWeekJapaneseChars = useMemo(() => {
+    const daily = progressSnapshot.dailyJapaneseChars ?? {};
+    const today = new Date();
+    const sun = new Date(today);
+    sun.setDate(today.getDate() - today.getDay());
+    let total = 0;
+    for (let i = 0; i < 7; i += 1) {
+      const d = new Date(sun);
+      d.setDate(sun.getDate() + i);
+      const ymd = d.toISOString().slice(0, 10);
+      total += daily[ymd] ?? 0;
+    }
+    return total;
+  }, [progressSnapshot]);
+  const correctedReuseCount = progressSnapshot.correctedReuseCount ?? 0;
 
   return (
     <div
@@ -2267,7 +2284,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               <SeasonalProgressCard state={seasonalState} isLightTheme={isLightTheme} />
             </div>
 
-            <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Active days
@@ -2290,6 +2307,20 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   {dueReviews.words.length + dueReviews.mistakes.length}
                 </p>
                 <p className="mt-1 text-xs text-slate-400">words and corrections</p>
+              </div>
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Japanese output
+                </p>
+                <p className="mt-2 font-wa-serif text-2xl text-slate-100">{thisWeekJapaneseChars}</p>
+                <p className="mt-1 text-xs text-slate-400">chars this week</p>
+              </div>
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Retry with correction
+                </p>
+                <p className="mt-2 font-wa-serif text-2xl text-slate-100">{correctedReuseCount}</p>
+                <p className="mt-1 text-xs text-slate-400">times reused</p>
               </div>
             </section>
 
@@ -3033,6 +3064,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                               type="button"
                               onClick={() => {
                                 setInput(msg.senseiPayload!.correctedSentence.trim());
+                                recordCorrectedReuse(habitUserId);
                                 chatInputRef.current?.focus();
                               }}
                               className="inline-flex min-h-[38px] items-center rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-100 hover:bg-emerald-500/15"

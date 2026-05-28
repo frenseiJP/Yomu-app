@@ -15,6 +15,8 @@ function emptyProgress(): UserProgressV1 {
     reviewsCompletedCount: 0,
     mistakesFixedCount: 0,
     learningDays: [],
+    dailyJapaneseChars: {},
+    correctedReuseCount: 0,
   };
 }
 
@@ -91,12 +93,23 @@ export function getUserStats(userId: string): UserStats {
   };
 }
 
-export function recordChatUsed(userId: string): void {
+function countJapaneseChars(text: string): number {
+  const matches = text.match(/[ぁ-んァ-ン一-龯々ー]/g);
+  return matches ? matches.length : 0;
+}
+
+export function recordChatUsed(userId: string, learnerText = ""): void {
   const p = load(userId);
   const day = todayYmd();
   p.activeDays = uniqPushDay(p.activeDays, day);
   p.learningDays = uniqPushDay(p.learningDays, day);
   p.totalChatMessages += 1;
+  const jpCount = countJapaneseChars(learnerText);
+  if (jpCount > 0) {
+    const nextDaily = { ...(p.dailyJapaneseChars ?? {}) };
+    nextDaily[day] = (nextDaily[day] ?? 0) + jpCount;
+    p.dailyJapaneseChars = nextDaily;
+  }
   save(userId, p);
 }
 
@@ -120,5 +133,12 @@ export function recordReviewDone(userId: string, opts: { success: boolean; isMis
 export function setLastSessionSummarySnippet(userId: string, text: string): void {
   const p = load(userId);
   p.lastSessionSummarySnippet = text.slice(0, 400);
+  save(userId, p);
+}
+
+export function recordCorrectedReuse(userId: string): void {
+  const p = load(userId);
+  p.correctedReuseCount = (p.correctedReuseCount ?? 0) + 1;
+  p.activeDays = uniqPushDay(p.activeDays, todayYmd());
   save(userId, p);
 }
