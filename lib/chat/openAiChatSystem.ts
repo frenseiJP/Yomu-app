@@ -37,6 +37,7 @@ export function parseCoachContextPayload(raw: unknown): CoachContextPayload | nu
     typeof o.focusCategoryScore === "number" && Number.isFinite(o.focusCategoryScore)
       ? Math.max(0, Math.min(100, o.focusCategoryScore))
       : undefined;
+  const jlptLevel = typeof o.jlptLevel === "string" ? o.jlptLevel.slice(0, 8) : undefined;
 
   return {
     recentMistakes,
@@ -48,6 +49,7 @@ export function parseCoachContextPayload(raw: unknown): CoachContextPayload | nu
     focusCategory,
     focusCategoryHint,
     focusCategoryScore,
+    jlptLevel,
   };
 }
 
@@ -176,7 +178,7 @@ export function buildOpenAiChatSystemPrompt(params: {
   const learnerProfile = buildLearnerProfileBlock({
     uiLang,
     streak: coach?.streak,
-    jlptLevel: "N3",
+    jlptLevel: coach?.jlptLevel ?? "N3",
     phase: 3,
   });
 

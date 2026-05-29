@@ -40,6 +40,11 @@ function pickAllowedMetadata(
     api_rate_limited: ["status"],
     api_payload_too_large: ["status", "limitBytes"],
     api_error: ["status", "reason"],
+    coach_correction_received: [],
+    coach_cloze_complete: ["score"],
+    coach_speaking_check: ["score"],
+    coach_content_import: ["saved", "candidates"],
+    coach_weekly_goal_met: ["category"],
   };
   const out: Record<string, JsonLike> = {};
   for (const key of allowlist[eventType]) {

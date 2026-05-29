@@ -115,10 +115,17 @@ import { SaveCandidateList } from "@/components/save-candidates/SaveCandidateLis
 import { recommendCandidatesForMessage, saveCandidateToVocabulary } from "@/lib/save-candidates/service";
 import SkillTreeCard from "@/components/coach/SkillTreeCard";
 import ContentImportPanel from "@/components/coach/ContentImportPanel";
+import CorrectionPracticeBlock from "@/components/coach/CorrectionPracticeBlock";
+import ChatContentImportSheet from "@/components/coach/ChatContentImportSheet";
+import WeeklyCategoryGoalCard from "@/components/coach/WeeklyCategoryGoalCard";
 import SpeakingLoopPanel from "@/components/coach/SpeakingLoopPanel";
-import ClozeDrillInline from "@/components/coach/ClozeDrillInline";
+import { deriveCorrectionPracticeFields } from "@/lib/coach/correctionPractice";
+import { handleCoachCorrectionReceived } from "@/lib/coach/onCorrection";
+import { extractJapaneseQuoted, isSpeakStyleMission } from "@/lib/coach/missionSpeak";
+import { getWeeklyCategoryGoalStatus } from "@/lib/habit/weeklyGoal";
+import { pullProgressFromCloud } from "@/lib/habit/progressCloud";
+import { readStoredJlpt, writeStoredJlpt } from "@/lib/habit/jlptStorage";
 import {
-  applyMasteryFromCorrection,
   applyMasteryFromDrill,
   drillTierForCategory,
   getCoachFocusSummary,
@@ -882,6 +889,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const [vocabInitialCategory, setVocabInitialCategory] = useState<
     "all" | "word" | "phrase" | "review" | null
   >(null);
+  const [speakPracticeLine, setSpeakPracticeLine] = useState<string | null>(null);
   const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
   const [chatSessions, setChatSessions] = useState<StoredChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -1076,12 +1084,15 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         const uid = user?.id ?? localUid;
         if (!mounted) return;
         setHabitUserId(uid);
-        refreshHabitData(uid);
+        setJlptLevel(readStoredJlpt(uid));
+        if (user?.id) void pullProgressFromCloud(uid).then(() => refreshHabitData(uid));
+        else refreshHabitData(uid);
         refreshChatSessions(uid, sessionFromUrl);
       } catch {
         if (!mounted) return;
         const uid = getOrCreateUserId();
         setHabitUserId(uid);
+        setJlptLevel(readStoredJlpt(uid));
         refreshHabitData(uid);
         refreshChatSessions(uid, sessionFromUrl);
       }
@@ -2085,6 +2096,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           ),
         );
         advanceWeakDrill(payload);
+        handleCoachCorrectionReceived(habitUserId, payload, { sessionId });
         void enrichChatContext(assistantId, body, text, {
           correctedSentence: payload.correctedSentence,
         });
@@ -2116,6 +2128,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           ),
         );
         advanceWeakDrill(payload);
+        handleCoachCorrectionReceived(habitUserId, payload, { sessionId });
         void enrichChatContext(assistantId, body, text, {
           correctedSentence: payload.correctedSentence,
         });
@@ -2183,6 +2196,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           coachContext: buildCoachContext(
             habitUserId,
             SESSION_GOAL_OPTIONS.find((g) => g.id === sessionGoal)?.coachHint,
+            jlptLevel,
           ),
         }),
         signal: controller.signal,
@@ -2214,6 +2228,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         ),
       );
       advanceWeakDrill(payload);
+      handleCoachCorrectionReceived(habitUserId, payload, { sessionId });
       void enrichChatContext(assistantId, body, text, {
         correctedSentence:
           payload.replyMode === "correction" ? payload.correctedSentence : undefined,
@@ -2303,14 +2318,24 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     setActiveView("chat");
     setSessionDrawerOpen(false);
     setInput("");
+    const m = retentionMissionDay.mission;
+    if (isSpeakStyleMission(m.instruction, m.tags)) {
+      const jp =
+        extractJapaneseQuoted(m.instruction) ??
+        extractJapaneseQuoted(m.prompt_en) ??
+        getDailyUsefulPhrase().phrase;
+      setSpeakPracticeLine(jp);
+    } else {
+      setSpeakPracticeLine(null);
+    }
     void logBetaEvent({
       eventType: "mission_start",
       userId: uid,
       sessionId: sid,
       route: "/",
       metadata: {
-        missionTitle: retentionMissionDay.mission.title,
-        missionCategory: retentionMissionDay.mission.category,
+        missionTitle: m.title,
+        missionCategory: m.category,
       },
     });
   }, [habitUserId, retentionMissionDay]);
@@ -2349,6 +2374,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     setActiveView("chat");
     setSessionDrawerOpen(false);
     setInput("");
+    setSpeakPracticeLine(phrase.phrase);
   }, [dailyUsefulPhrase, habitUserId]);
 
   const createNewSession = useCallback((prefill?: string) => {
@@ -2539,6 +2565,10 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     () => getCoachFocusSummary(habitUserId),
     [habitUserId, progressSnapshot.categoryMastery, progressSnapshot.weakDrillHistory],
   );
+  const weeklyGoalStatus = useMemo(
+    () => getWeeklyCategoryGoalStatus(habitUserId),
+    [habitUserId, progressSnapshot.categoryMastery, progressSnapshot.weeklyCategoryGoal],
+  );
   const thisWeekJapaneseChars = useMemo(() => {
     const daily = progressSnapshot.dailyJapaneseChars ?? {};
     const today = new Date();
@@ -2673,9 +2703,11 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 <span className="text-slate-500">{uiText.jlptLevelTitle}</span>
                 <select
                   value={jlptLevel}
-                  onChange={(e) =>
-                    setJlptLevel(e.target.value as (typeof JLPT_LEVELS)[number])
-                  }
+                  onChange={(e) => {
+                    const next = e.target.value as (typeof JLPT_LEVELS)[number];
+                    setJlptLevel(next);
+                    writeStoredJlpt(habitUserId, next);
+                  }}
                   className="max-w-[5.5rem] rounded-full border border-slate-700 bg-slate-900/80 px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-wa-ruri"
                   aria-label={uiText.jlptLevelTitle}
                 >
@@ -2707,6 +2739,16 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 startWeakDrill(key as MistakeCategory);
               }}
             />
+
+            {weeklyGoalStatus ? (
+              <WeeklyCategoryGoalCard
+                status={weeklyGoalStatus}
+                onPractice={() => {
+                  if (weeklyGoalStatus.category === "other") return;
+                  startWeakDrill(weeklyGoalStatus.category as MistakeCategory);
+                }}
+              />
+            ) : null}
 
             <ContentImportPanel
               userId={habitUserId}
@@ -3378,9 +3420,11 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   <span className="hidden text-slate-500 sm:inline">JLPT</span>
                   <select
                     value={jlptLevel}
-                    onChange={(e) =>
-                      setJlptLevel(e.target.value as (typeof JLPT_LEVELS)[number])
-                    }
+                    onChange={(e) => {
+                      const next = e.target.value as (typeof JLPT_LEVELS)[number];
+                      setJlptLevel(next);
+                      writeStoredJlpt(habitUserId, next);
+                    }}
                     className="max-w-[4.5rem] rounded-full border border-slate-700 bg-slate-900/80 px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-wa-ruri"
                     aria-label={uiText.jlptLevelTitle}
                   >
@@ -3586,50 +3630,56 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                             {msg.goalFeedback}
                           </p>
                         ) : null}
-                        {msg.senseiPayload?.replyMode === "correction" &&
-                        msg.senseiPayload.correctedSentence?.trim() ? (
-                          <div className="mt-2 space-y-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setInput(msg.senseiPayload!.correctedSentence.trim());
-                                recordCorrectedReuse(habitUserId);
-                                chatInputRef.current?.focus();
-                              }}
-                              className="inline-flex min-h-[38px] items-center rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-100 hover:bg-emerald-500/15"
-                            >
-                              Reuse corrected sentence
-                            </button>
-                            <SpeakingLoopPanel
-                              sentence={msg.senseiPayload.correctedSentence.trim()}
-                              compact
-                            />
-                            <ClozeDrillInline
-                              corrected={msg.senseiPayload.correctedSentence.trim()}
-                              userSentence={
-                                msg.senseiPayload.studentSentence?.trim() ||
-                                messages
-                                  .slice(
-                                    0,
-                                    messages.findIndex((m) => m.id === msg.id),
-                                  )
-                                  .reverse()
-                                  .find((m) => m.role === "user")
-                                  ?.baseText.trim()
-                              }
-                              userId={habitUserId}
-                              categoryHint={
-                                mistakeCategoryLabel(
-                                  inferMistakeCategory({
-                                    userSentence: msg.senseiPayload.studentSentence,
-                                    correctedSentence: msg.senseiPayload.correctedSentence,
-                                    note: msg.senseiPayload.whyEnglish,
-                                  }),
-                                ) ?? "Particle"
-                              }
-                            />
-                          </div>
-                        ) : null}
+                        {(() => {
+                          const priorUser = messages
+                            .slice(0, messages.findIndex((m) => m.id === msg.id))
+                            .reverse()
+                            .find((m) => m.role === "user")
+                            ?.baseText.trim();
+                          const practice = deriveCorrectionPracticeFields({
+                            senseiPayload: msg.senseiPayload,
+                            assistantText: msg.baseText,
+                            priorUserText: priorUser,
+                          });
+                          if (!practice) return null;
+                          return (
+                            <div className="mt-2 space-y-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setInput(practice.corrected);
+                                  recordCorrectedReuse(habitUserId);
+                                  chatInputRef.current?.focus();
+                                }}
+                                className="inline-flex min-h-[38px] items-center rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-100 hover:bg-emerald-500/15"
+                              >
+                                Reuse corrected sentence
+                              </button>
+                              <CorrectionPracticeBlock
+                                fields={practice}
+                                userId={habitUserId}
+                                onSpeakingCheck={(score) => {
+                                  void logBetaEvent({
+                                    eventType: "coach_speaking_check",
+                                    userId: habitUserId,
+                                    sessionId: currentSessionId ?? undefined,
+                                    route: "/chat",
+                                    metadata: { score },
+                                  });
+                                }}
+                                onClozeComplete={(score) => {
+                                  void logBetaEvent({
+                                    eventType: "coach_cloze_complete",
+                                    userId: habitUserId,
+                                    sessionId: currentSessionId ?? undefined,
+                                    route: "/chat",
+                                    metadata: { score },
+                                  });
+                                }}
+                              />
+                            </div>
+                          );
+                        })()}
                         {hasSaves ? (
                           <SaveCandidateList
                             candidates={saveList}
@@ -3637,13 +3687,6 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                             saveDataAttr={guidedStep === "save_prompt" ? "1" : undefined}
                             onSave={(cand) => {
                               const result = saveCandidateToVocabulary(cand, habitUserId);
-                              if (cand.type === "correction") {
-                                applyMasteryFromCorrection(habitUserId, {
-                                  userSentence: cand.secondaryText,
-                                  correctedSentence: cand.term,
-                                  note: cand.explanation,
-                                });
-                              }
                               setMessages((prev) =>
                                 prev.map((m2) =>
                                   m2.id === msg.id && m2.chatContext?.saveCandidates
@@ -3792,6 +3835,22 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     ]);
                   }}
                 />
+              ) : null}
+              <ChatContentImportSheet userId={habitUserId} sessionId={currentSessionId} />
+              {speakPracticeLine ? (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-300/80">
+                    Mission: say it out loud
+                  </p>
+                  <SpeakingLoopPanel sentence={speakPracticeLine} />
+                  <button
+                    type="button"
+                    onClick={() => setSpeakPracticeLine(null)}
+                    className="text-[11px] text-slate-500 hover:text-slate-300"
+                  >
+                    Dismiss
+                  </button>
+                </div>
               ) : null}
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">

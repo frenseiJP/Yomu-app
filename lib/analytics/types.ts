@@ -13,6 +13,11 @@ export const BETA_EVENT_TYPES = [
   "api_rate_limited",
   "api_payload_too_large",
   "api_error",
+  "coach_correction_received",
+  "coach_cloze_complete",
+  "coach_speaking_check",
+  "coach_content_import",
+  "coach_weekly_goal_met",
 ] as const;
 
 export type BetaEventType = (typeof BETA_EVENT_TYPES)[number];

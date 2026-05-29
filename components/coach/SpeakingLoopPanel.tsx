@@ -12,9 +12,10 @@ import {
 type Props = {
   sentence: string;
   compact?: boolean;
+  onCheckComplete?: (score: number) => void;
 };
 
-export default function SpeakingLoopPanel({ sentence, compact }: Props) {
+export default function SpeakingLoopPanel({ sentence, compact, onCheckComplete }: Props) {
   const chunks = shadowChunksFromSentence(sentence);
   const [listening, setListening] = useState(false);
   const [heard, setHeard] = useState("");
@@ -38,7 +39,9 @@ export default function SpeakingLoopPanel({ sentence, compact }: Props) {
     rec.onresult = (ev) => {
       const t = ev.results[0]?.[0]?.transcript ?? "";
       setHeard(t);
-      setScore(scorePronunciationAttempt(sentence, t));
+      const judged = scorePronunciationAttempt(sentence, t);
+      setScore(judged);
+      onCheckComplete?.(judged.score);
     };
     rec.onerror = () => {
       setListening(false);

@@ -9,9 +9,16 @@ type Props = {
   userSentence?: string;
   userId: string;
   categoryHint?: string;
+  onScored?: (score: 0 | 1 | 2) => void;
 };
 
-export default function ClozeDrillInline({ corrected, userSentence, userId, categoryHint }: Props) {
+export default function ClozeDrillInline({
+  corrected,
+  userSentence,
+  userId,
+  categoryHint,
+  onScored,
+}: Props) {
   const drill = useMemo(
     () => buildClozeFromCorrection(corrected, userSentence),
     [corrected, userSentence],
@@ -25,6 +32,7 @@ export default function ClozeDrillInline({ corrected, userSentence, userId, cate
     const s = scoreClozeAnswer(drill, input);
     setDone(s);
     applyMasteryFromDrill(userId, categoryHint ?? "particle", s, 2);
+    onScored?.(s);
   };
 
   return (

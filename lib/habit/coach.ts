@@ -12,7 +12,11 @@ const PROGRESS_KIND = "progress_v1";
 const COACH_IDENTITY = `Sensei mode: warm professional teacher. Celebrate small wins. If the learner struggled recently, acknowledge gently and offer one concrete next step.`;
 
 /** Client: gather context for the next chat completion */
-export function buildCoachContext(userId: string, sessionGoal?: string): CoachContextPayload {
+export function buildCoachContext(
+  userId: string,
+  sessionGoal?: string,
+  jlptLevel?: string,
+): CoachContextPayload {
   const mistakes = recordsStorage.mistakeLogs.getAllByUser(userId);
   const recent = mistakes.slice(0, 3).map((m) => ({
     original: m.originalText,
@@ -51,6 +55,7 @@ export function buildCoachContext(userId: string, sessionGoal?: string): CoachCo
     focusCategory: focus.label,
     focusCategoryHint: focus.hint,
     focusCategoryScore: focus.score,
+    jlptLevel: jlptLevel?.trim() || "N3",
   };
 }
 
@@ -69,6 +74,11 @@ export function formatCoachContextForSystem(ctx: CoachContextPayload | null | un
   }
   if (ctx.sessionGoal) {
     lines.push(`Session goal selected by learner: ${ctx.sessionGoal}`);
+  }
+  if (ctx.jlptLevel) {
+    lines.push(
+      `Learner JLPT target: ${ctx.jlptLevel}. Match example difficulty to this level — simpler for N5–N4, richer nuance for N2–N1.`,
+    );
   }
   if (ctx.focusCategory) {
     lines.push(

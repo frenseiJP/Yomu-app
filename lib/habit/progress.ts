@@ -47,6 +47,9 @@ export function activeDaysToWeekDots(activeDays: string[]): boolean[] {
 
 function save(userId: string, p: UserProgressV1): void {
   writeHabitJson(KIND, userId, p);
+  if (typeof window !== "undefined") {
+    void import("@/lib/habit/progressCloud").then((m) => m.queueProgressCloudSync(userId));
+  }
 }
 
 function uniqPushDay(arr: string[], day: string): string[] {

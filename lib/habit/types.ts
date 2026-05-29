@@ -108,8 +108,12 @@ export interface UserProgressV1 {
     maxScore: number;
   }[];
   categoryMastery?: Partial<Record<MistakeCategoryKey, CategoryMasteryState>>;
-  weeklyCategoryGoalPercent?: number;
-  weeklyCategoryGoalWeek?: string;
+  weeklyCategoryGoal?: {
+    weekKey: string;
+    category: MistakeCategoryKey;
+    startScore: number;
+    targetScore: number;
+  };
 }
 
 /** Serializable payload sent to /api/chat */
@@ -124,4 +128,5 @@ export interface CoachContextPayload {
   focusCategory?: string;
   focusCategoryHint?: string;
   focusCategoryScore?: number;
+  jlptLevel?: string;
 }
