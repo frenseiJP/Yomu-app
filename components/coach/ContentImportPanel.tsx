@@ -32,7 +32,7 @@ export default function ContentImportPanel({ userId, onStartClozeChat }: Props) 
   const cloze = sample ? buildClozeFromCorrection(sample) : null;
 
   return (
-    <section className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+    <section className="rounded-xl border-0 bg-transparent p-0">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
         Learn from your life
       </p>

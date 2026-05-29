@@ -117,6 +117,8 @@ import SkillTreeCard from "@/components/coach/SkillTreeCard";
 import ContentImportPanel from "@/components/coach/ContentImportPanel";
 import CorrectionPracticeBlock from "@/components/coach/CorrectionPracticeBlock";
 import ChatContentImportSheet from "@/components/coach/ChatContentImportSheet";
+import ChatCoachToolsBar from "@/components/chat/ChatCoachToolsBar";
+import CollapsibleSection from "@/components/ui/CollapsibleSection";
 import WeeklyCategoryGoalCard from "@/components/coach/WeeklyCategoryGoalCard";
 import SpeakingLoopPanel from "@/components/coach/SpeakingLoopPanel";
 import { deriveCorrectionPracticeFields } from "@/lib/coach/correctionPractice";
@@ -2695,8 +2697,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 <h1 className="font-wa-serif text-lg font-semibold text-slate-50 sm:text-xl">
                   Progress
                 </h1>
-                <p className="mt-1 text-[11px] text-slate-400 sm:text-xs">
-                  A gentle season for your words — no scores, just growth.
+                <p className="mt-1 text-[12px] text-slate-400 sm:text-sm">
+                  Your tree grows when you chat — details are optional.
                 </p>
               </div>
               <div className="flex flex-shrink-0 items-center gap-2 rounded-full border border-yomu-glassBorder bg-yomu-glass px-2 py-1.5 text-[11px] backdrop-blur-sm sm:py-1">
@@ -2731,15 +2733,6 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               <SeasonalProgressCard state={seasonalState} isLightTheme={isLightTheme} />
             </div>
 
-            <SkillTreeCard
-              userId={habitUserId}
-              isLightTheme={isLightTheme}
-              onPracticeCategory={(key) => {
-                if (key === "other") return;
-                startWeakDrill(key as MistakeCategory);
-              }}
-            />
-
             {weeklyGoalStatus ? (
               <WeeklyCategoryGoalCard
                 status={weeklyGoalStatus}
@@ -2750,39 +2743,22 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               />
             ) : null}
 
-            <ContentImportPanel
-              userId={habitUserId}
-              onStartClozeChat={(prompt) => {
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    id: Date.now() + 88,
-                    role: "assistant",
-                    baseText: prompt,
-                    createdAt: new Date().toISOString(),
-                  },
-                ]);
-                setActiveView("chat");
-                chatInputRef.current?.focus();
-              }}
-            />
-
-            <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+            <section className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-5">
+              <div className="min-w-[9.5rem] flex-shrink-0 snap-start rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 sm:min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Active days
                 </p>
                 <p className="mt-2 font-wa-serif text-2xl text-slate-100">{streakDays.filter(Boolean).length}</p>
                 <p className="mt-1 text-xs text-slate-400">this week</p>
               </div>
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+              <div className="min-w-[9.5rem] flex-shrink-0 snap-start rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 sm:min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Conversations
                 </p>
                 <p className="mt-2 font-wa-serif text-2xl text-slate-100">{stats.totalSessions}</p>
                 <p className="mt-1 text-xs text-slate-400">sessions completed</p>
               </div>
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+              <div className="min-w-[9.5rem] flex-shrink-0 snap-start rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 sm:min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Review due
                 </p>
@@ -2791,14 +2767,14 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 </p>
                 <p className="mt-1 text-xs text-slate-400">words and corrections</p>
               </div>
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+              <div className="min-w-[9.5rem] flex-shrink-0 snap-start rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 sm:min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Japanese output
                 </p>
                 <p className="mt-2 font-wa-serif text-2xl text-slate-100">{thisWeekJapaneseChars}</p>
                 <p className="mt-1 text-xs text-slate-400">chars this week</p>
               </div>
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+              <div className="min-w-[9.5rem] flex-shrink-0 snap-start rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4 sm:min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Retry with correction
                 </p>
@@ -2807,8 +2783,48 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               </div>
             </section>
 
+            <CollapsibleSection
+              title="Skill path & content"
+              subtitle="Optional — grow categories and save from real text"
+              defaultOpen={false}
+              tone="muted"
+            >
+              <div className="space-y-4">
+                <SkillTreeCard
+                  userId={habitUserId}
+                  isLightTheme={isLightTheme}
+                  onPracticeCategory={(key) => {
+                    if (key === "other") return;
+                    startWeakDrill(key as MistakeCategory);
+                  }}
+                />
+                <ContentImportPanel
+                  userId={habitUserId}
+                  onStartClozeChat={(prompt) => {
+                    setMessages((prev) => [
+                      ...prev,
+                      {
+                        id: Date.now() + 88,
+                        role: "assistant",
+                        baseText: prompt,
+                        createdAt: new Date().toISOString(),
+                      },
+                    ]);
+                    setActiveView("chat");
+                    chatInputRef.current?.focus();
+                  }}
+                />
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              title="Detailed trends"
+              subtitle="Drills, corrections, topics"
+              defaultOpen={false}
+              tone="muted"
+            >
             <section className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+              <div className="rounded-2xl border border-slate-800/60 bg-slate-900/40 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Weak-point trend
                 </p>
@@ -2942,6 +2958,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 </div>
               </div>
             </section>
+            </CollapsibleSection>
           </div>
         )}
 
@@ -3455,7 +3472,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             </div>
             ) : null}
 
-            <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overflow-x-hidden px-0.5 pb-2 pt-0.5 text-[14px] leading-relaxed sm:space-y-3">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overflow-x-hidden px-0.5 pb-2 pt-0.5 text-[15px] leading-relaxed sm:space-y-3.5">
               {messages.map((msg) => {
                 const isAssistant = msg.role === "assistant";
                 const toneForMessage = isAssistant
@@ -3836,62 +3853,66 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   }}
                 />
               ) : null}
-              <ChatContentImportSheet userId={habitUserId} sessionId={currentSessionId} />
-              {speakPracticeLine ? (
-                <div className="space-y-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-300/80">
-                    Mission: say it out loud
-                  </p>
-                  <SpeakingLoopPanel sentence={speakPracticeLine} />
-                  <button
-                    type="button"
-                    onClick={() => setSpeakPracticeLine(null)}
-                    className="text-[11px] text-slate-500 hover:text-slate-300"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              ) : null}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  Session goal
-                </span>
-                {SESSION_GOAL_OPTIONS.map((goal) => (
-                  <button
-                    key={goal.id}
-                    type="button"
-                    onClick={() => setSessionGoal(goal.id)}
-                    className={`rounded-full border px-2.5 py-1 text-[11px] transition ${
-                      sessionGoal === goal.id
-                        ? "border-wa-ruri/70 bg-wa-ruri/20 text-slate-100"
-                        : "border-slate-700/70 bg-slate-900/60 text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    {goal.label}
-                  </button>
-                ))}
-                {weakPointDrill.prompt ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (weakPointDrill.category) startWeakDrill(weakPointDrill.category);
-                    }}
-                    className="ml-auto rounded-full border border-amber-500/35 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-100 hover:bg-amber-500/15"
-                    title={
-                      weakPointDrill.category
-                        ? `Weak point: ${mistakeCategoryLabel(weakPointDrill.category) ?? "Other"}`
-                        : "Weak-point drill"
-                    }
-                  >
-                    Start weak-point drill
-                  </button>
-                ) : null}
-                {weakDrill ? (
-                  <span className="rounded-full border border-sky-500/35 bg-sky-500/10 px-2.5 py-1 text-[11px] text-sky-100">
-                    Drill {weakDrill.index + 1}/{weakDrill.questions.length} ({weakDrill.level})
-                  </span>
-                ) : null}
-              </div>
+              <ChatCoachToolsBar
+                defaultOpen={Boolean(speakPracticeLine)}
+                speakPanel={
+                  speakPracticeLine ? (
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-medium text-violet-200/90">Say it out loud</p>
+                      <SpeakingLoopPanel sentence={speakPracticeLine} compact />
+                      <button
+                        type="button"
+                        onClick={() => setSpeakPracticeLine(null)}
+                        className="text-[11px] text-slate-500 hover:text-slate-300"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : null
+                }
+                sessionGoalRow={
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="w-full text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Session goal
+                    </span>
+                    {SESSION_GOAL_OPTIONS.map((goal) => (
+                      <button
+                        key={goal.id}
+                        type="button"
+                        onClick={() => setSessionGoal(goal.id)}
+                        className={`rounded-full border px-2.5 py-1.5 text-[12px] transition ${
+                          sessionGoal === goal.id
+                            ? "border-wa-ruri/70 bg-wa-ruri/20 text-slate-100"
+                            : "border-slate-700/70 bg-slate-900/60 text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        {goal.label}
+                      </button>
+                    ))}
+                  </div>
+                }
+                importSheet={<ChatContentImportSheet userId={habitUserId} sessionId={currentSessionId} />}
+                weakDrillChip={
+                  weakDrill ? (
+                    <span className="inline-flex rounded-full border border-sky-500/35 bg-sky-500/10 px-2.5 py-1 text-[12px] text-sky-100">
+                      Drill {weakDrill.index + 1}/{weakDrill.questions.length} ({weakDrill.level})
+                    </span>
+                  ) : weakPointDrill.prompt ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (weakPointDrill.category) startWeakDrill(weakPointDrill.category);
+                      }}
+                      className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[12px] font-medium text-amber-100 hover:bg-amber-500/15"
+                    >
+                      Weak-point drill
+                      {weakPointDrill.category
+                        ? ` · ${mistakeCategoryLabel(weakPointDrill.category) ?? "Other"}`
+                        : ""}
+                    </button>
+                  ) : null
+                }
+              />
 
               <div className="flex items-end gap-2 rounded-2xl border border-slate-700/55 bg-slate-950/95 px-2.5 py-2 shadow-lg backdrop-blur-md sm:gap-2.5 sm:px-3 sm:py-2.5">
                 <button
@@ -3925,7 +3946,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                       });
                     }}
                     placeholder={uiText.inputPlaceholder}
-                    className="max-h-32 w-full resize-none border-0 bg-transparent text-[13px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="max-h-32 w-full resize-none border-0 bg-transparent text-[15px] leading-snug text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   {imageName && (
                     <p className="mt-1 text-[11px] text-slate-500">

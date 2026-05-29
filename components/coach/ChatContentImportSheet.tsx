@@ -40,17 +40,17 @@ export default function ChatContentImportSheet({ userId, sessionId }: Props) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-800/70 bg-slate-950/60">
+    <div>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-3 py-2 text-left text-[11px] font-medium text-slate-300"
+        className="flex w-full items-center justify-between rounded-lg border border-slate-700/60 bg-slate-900/50 px-3 py-2 text-left text-[12px] font-medium text-slate-300"
       >
-        <span>Paste real Japanese to save</span>
+        <span>Paste Japanese to save</span>
         {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
       </button>
       {open ? (
-        <div className="space-y-2 border-t border-slate-800/60 px-3 pb-3 pt-2">
+        <div className="mt-2 space-y-2">
           <textarea
             value={raw}
             onChange={(e) => setRaw(e.target.value)}

@@ -19,7 +19,7 @@ export default function SkillTreeCard({ userId, onPracticeCategory }: Props) {
   const focus = recommendedFocusCategory(userId);
 
   return (
-    <section className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
+    <section className="rounded-xl border-0 bg-transparent p-0">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
