@@ -45,6 +45,11 @@ function pickAllowedMetadata(
     coach_speaking_check: ["score"],
     coach_content_import: ["saved", "candidates"],
     coach_weekly_goal_met: ["category"],
+    shell_view: ["tab"],
+    home_cta_click: ["cta"],
+    scenario_started: ["topicId", "source"],
+    save_prompt_shown: ["messageId", "candidateCount", "topCandidateType"],
+    save_clicked: ["candidateType", "source", "messageId"],
   };
   const out: Record<string, JsonLike> = {};
   for (const key of allowlist[eventType]) {

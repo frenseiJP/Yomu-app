@@ -1064,6 +1064,48 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const isLightTheme = uiTheme === "light";
   const th = useMemo(() => shellTheme(isLightTheme), [isLightTheme]);
   const todaysScenario = useMemo(() => getTodaysTopicPrompt(), []);
+  const savePromptLoggedRef = useRef<Set<number>>(new Set());
+
+  const trackHomeCta = useCallback(
+    (cta: string) => {
+      void logBetaEvent({
+        eventType: "home_cta_click",
+        userId: habitUserId,
+        route: pathname || "/",
+        metadata: { cta },
+      });
+    },
+    [habitUserId, pathname],
+  );
+
+  const ensureSavePromptLogged = useCallback(
+    (messageId: number, candidates: SaveCandidate[]) => {
+      if (savePromptLoggedRef.current.has(messageId)) return;
+      savePromptLoggedRef.current.add(messageId);
+      void logBetaEvent({
+        eventType: "save_prompt_shown",
+        userId: habitUserId,
+        sessionId: currentSessionId ?? undefined,
+        route: pathname || "/",
+        metadata: {
+          messageId,
+          candidateCount: candidates.length,
+          topCandidateType: candidates[0]?.type ?? "unknown",
+        },
+      });
+    },
+    [habitUserId, currentSessionId, pathname],
+  );
+
+  useEffect(() => {
+    if (habitUserId === "guest") return;
+    void logBetaEvent({
+      eventType: "shell_view",
+      userId: habitUserId,
+      route: pathname || "/",
+      metadata: { tab: activeView },
+    });
+  }, [activeView, habitUserId, pathname]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -2403,7 +2445,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   }, [appLang, habitUserId]);
 
   const startTopicScenario = useCallback(
-    (topic: TopicPrompt) => {
+    (topic: TopicPrompt, source = "unknown") => {
       setRetentionMissionChatOpen(false);
       setFtueCoachActive(false);
       setFtueShowPicker(false);
@@ -2430,15 +2472,22 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           topicLabel: "Scenario practice",
         },
       ]);
+      void logBetaEvent({
+        eventType: "scenario_started",
+        userId: habitUserId,
+        sessionId: sid,
+        route: pathname || "/",
+        metadata: { topicId: topic.id, source },
+      });
       setActiveView("chat");
       setSessionDrawerOpen(false);
     },
-    [habitUserId, currentSessionId],
+    [habitUserId, currentSessionId, pathname],
   );
 
   useEffect(() => {
     if (searchParams.get("scenario") !== "today") return;
-    startTopicScenario(getTodaysTopicPrompt());
+    startTopicScenario(getTodaysTopicPrompt(), "url");
     setActiveView("chat");
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
@@ -2732,7 +2781,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               setActiveView("vocabulary");
             }}
             todaysScenario={todaysScenario}
-            onPracticeScenario={() => startTopicScenario(todaysScenario)}
+            onCtaClick={trackHomeCta}
+            onPracticeScenario={() => startTopicScenario(todaysScenario, "home")}
           />
         )}
 
@@ -2976,7 +3026,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 )}
                 <button
                   type="button"
-                  onClick={() => startTopicScenario(todaysScenario)}
+                  onClick={() => startTopicScenario(todaysScenario, "progress")}
                   className={`mt-3 inline-flex rounded-xl border px-3 py-2 text-xs font-medium hover:opacity-90 ${th.card} ${isLightTheme ? "text-neutral-800" : "text-slate-200"}`}
                 >
                   Practice today&apos;s scenario
@@ -3026,7 +3076,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             }}
             onNavigateTopic={() => {
               setVocabInitialCategory(null);
-              startTopicScenario(todaysScenario);
+              startTopicScenario(todaysScenario, "vocabulary");
             }}
             onNavigateHome={() => {
               setVocabInitialCategory(null);
@@ -3772,12 +3822,36 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                           );
                         })()}
                         {hasSaves ? (
+                          (ensureSavePromptLogged(msg.id, saveList),
+                          (
                           <SaveCandidateList
                             candidates={saveList}
                             highlight={guidedStep === "save_prompt"}
                             saveDataAttr={guidedStep === "save_prompt" ? "1" : undefined}
                             onSave={(cand) => {
+                              void logBetaEvent({
+                                eventType: "save_clicked",
+                                userId: habitUserId,
+                                sessionId: currentSessionId ?? undefined,
+                                route: pathname || "/",
+                                metadata: {
+                                  candidateType: cand.type,
+                                  source: guidedStep === "save_prompt" ? "tutorial" : "chat",
+                                  messageId: msg.id,
+                                },
+                              });
                               const result = saveCandidateToVocabulary(cand, habitUserId);
+                              void logBetaEvent({
+                                eventType: "vocabulary_save",
+                                userId: habitUserId,
+                                sessionId: currentSessionId ?? undefined,
+                                route: pathname || "/",
+                                metadata: {
+                                  source: "save_candidate",
+                                  candidateType: cand.type,
+                                  wordLength: cand.term.length,
+                                },
+                              });
                               setMessages((prev) =>
                                 prev.map((m2) =>
                                   m2.id === msg.id && m2.chatContext?.saveCandidates
@@ -3811,6 +3885,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                               }
                             }}
                           />
+                          ))
                         ) : null}
                       </div>
                     ) : (
@@ -3914,7 +3989,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   showContinueLast={chatSessions.length > 1}
                   onDailyMission={() => setActiveView("home")}
                   onTopicPractice={() => setTopicSelectorMode("topic_list")}
-                  onPracticeTodaysScenario={() => startTopicScenario(todaysScenario)}
+                  onPracticeTodaysScenario={() => startTopicScenario(todaysScenario, "chat_today")}
                   onFreeChat={() => {
                     setTopicSelectorMode("hidden");
                     setActiveTopicPrompt(null);
@@ -3923,7 +3998,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     const next = chatSessions.find((s) => s.id !== currentSessionId) ?? chatSessions[0];
                     if (next) openSession(next.id);
                   }}
-                  onSelectTopic={(topic) => startTopicScenario(topic)}
+                  onSelectTopic={(topic) => startTopicScenario(topic, "chat_picker")}
                 />
               ) : null}
               <ChatCoachToolsBar

@@ -44,6 +44,8 @@ type Props = {
   onOpenReview?: () => void;
   todaysScenario?: TopicPrompt | null;
   onPracticeScenario?: () => void;
+  /** Analytics: fired before the matching action runs. */
+  onCtaClick?: (cta: string) => void;
 };
 
 function homeSectionClass(isLightTheme: boolean) {
@@ -67,6 +69,7 @@ export default function HomeView({
   onOpenReview,
   todaysScenario,
   onPracticeScenario,
+  onCtaClick,
 }: Props) {
   const reviewCount = dueReviews.words.length + dueReviews.mistakes.length;
   const labelClass = isLightTheme ? "text-neutral-500" : "text-slate-500";
@@ -75,8 +78,13 @@ export default function HomeView({
   const mutedClass = isLightTheme ? "text-neutral-500" : "text-slate-400";
 
   const primaryChat = () => {
-    if (recentChatSummary) onOpenRecentChat(recentChatSummary.id);
-    else onStartNewChat();
+    if (recentChatSummary) {
+      onCtaClick?.("continue_chat");
+      onOpenRecentChat(recentChatSummary.id);
+    } else {
+      onCtaClick?.("start_chat");
+      onStartNewChat();
+    }
   };
 
   return (
@@ -112,7 +120,10 @@ export default function HomeView({
         {reviewCount > 0 ? (
           <button
             type="button"
-            onClick={onOpenReview}
+            onClick={() => {
+              onCtaClick?.("open_review");
+              onOpenReview?.();
+            }}
             className={`flex w-full min-h-[48px] touch-manipulation items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
               isLightTheme
                 ? "border-amber-200 bg-amber-50/80 hover:bg-amber-50"
@@ -152,7 +163,10 @@ export default function HomeView({
             </div>
             <button
               type="button"
-              onClick={onPracticeScenario}
+              onClick={() => {
+                onCtaClick?.("scenario");
+                onPracticeScenario();
+              }}
               className="mt-3 inline-flex min-h-[40px] w-full items-center justify-center rounded-lg border border-wa-ruri/40 bg-wa-ruri/15 px-3 text-[12px] font-medium text-sky-700 hover:bg-wa-ruri/25 dark:text-sky-100"
             >
               Practice in Chat
@@ -177,7 +191,10 @@ export default function HomeView({
               </div>
               <button
                 type="button"
-                onClick={onStartMission}
+                onClick={() => {
+                  onCtaClick?.("start_mission");
+                  onStartMission();
+                }}
                 className="mt-3 inline-flex min-h-[40px] w-full items-center justify-center rounded-lg bg-wa-ruri/90 px-3 text-[12px] font-medium text-white hover:bg-wa-ruri"
               >
                 Start mission
@@ -198,7 +215,10 @@ export default function HomeView({
               <p className={`mt-1 text-[12px] leading-relaxed ${bodyClass}`}>{coachFocus.hint}</p>
               <button
                 type="button"
-                onClick={onPracticeFocus}
+                onClick={() => {
+                  onCtaClick?.("practice_focus");
+                  onPracticeFocus();
+                }}
                 className="mt-2 text-[12px] font-medium text-sky-600 hover:text-sky-500 dark:text-sky-300 dark:hover:text-sky-200"
               >
                 Practice with Sensei →
@@ -216,7 +236,10 @@ export default function HomeView({
           compact
           centered
           isLightTheme={isLightTheme}
-          onOpenProgress={onOpenProgress}
+          onOpenProgress={() => {
+            onCtaClick?.("open_progress");
+            onOpenProgress();
+          }}
         />
 
         <CollapsibleSection
@@ -228,7 +251,10 @@ export default function HomeView({
           <DailyUsefulPhraseCard
             phrase={dailyUsefulPhrase}
             isLightTheme={isLightTheme}
-            onPractice={onPracticePhrase}
+            onPractice={() => {
+              onCtaClick?.("practice_phrase");
+              onPracticePhrase();
+            }}
             compact
           />
         </CollapsibleSection>

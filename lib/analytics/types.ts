@@ -18,6 +18,11 @@ export const BETA_EVENT_TYPES = [
   "coach_speaking_check",
   "coach_content_import",
   "coach_weekly_goal_met",
+  "shell_view",
+  "home_cta_click",
+  "scenario_started",
+  "save_prompt_shown",
+  "save_clicked",
 ] as const;
 
 export type BetaEventType = (typeof BETA_EVENT_TYPES)[number];
