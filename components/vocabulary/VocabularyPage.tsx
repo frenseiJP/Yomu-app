@@ -38,6 +38,7 @@ import type { Lang } from "@/src/utils/i18n/types";
 type VocabularyPageProps = {
   /** Render inside YomuPrototypePage (bottom nav, no modal overlay). */
   inAppShell?: boolean;
+  isLightTheme?: boolean;
   onNavigateHome?: () => void;
   onNavigateChat?: () => void;
   onNavigateTopic?: () => void;
@@ -47,11 +48,23 @@ type VocabularyPageProps = {
 
 export default function VocabularyPage({
   inAppShell = false,
+  isLightTheme = false,
   onNavigateHome,
   onNavigateChat,
   onNavigateTopic,
   initialCategory,
 }: VocabularyPageProps) {
+  const emptyPanel = isLightTheme
+    ? "border-neutral-200/90 bg-neutral-50/95"
+    : "border-slate-800/80 bg-slate-950/70";
+  const emptyTitle = isLightTheme ? "text-neutral-900" : "text-slate-100";
+  const emptyBody = isLightTheme ? "text-neutral-600" : "text-slate-400";
+  const emptyBtnPrimary = isLightTheme
+    ? "border-wa-ruri/40 bg-sky-50 text-neutral-900 hover:bg-sky-100"
+    : "border-wa-ruri/50 bg-wa-ruri/20 text-slate-100 hover:bg-wa-ruri/30";
+  const emptyBtnSecondary = isLightTheme
+    ? "border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50"
+    : "border-slate-700 bg-slate-900/70 text-slate-200 hover:bg-slate-900";
   const userId = useVocabularyUserId();
   const [appLang, setAppLang] = useState<Lang>("en");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -220,18 +233,20 @@ export default function VocabularyPage({
 
           <section className="space-y-2 pb-4">
             {all.length === 0 ? (
-              <div className="w-full rounded-2xl border border-slate-800/80 bg-slate-950/70 p-6">
-                <h2 className="text-base font-semibold text-slate-100">Your vocabulary library is empty for now.</h2>
-                <p className="mt-2 text-sm leading-relaxed text-slate-400">
-                  Save useful phrases, corrections, and words from Chat or Topic Practice to build your personal
-                  Japanese library.
+              <div className={`w-full rounded-2xl border p-6 ${emptyPanel}`}>
+                <h2 className={`text-base font-semibold ${emptyTitle}`}>
+                  Your vocabulary library is empty for now.
+                </h2>
+                <p className={`mt-2 text-sm leading-relaxed ${emptyBody}`}>
+                  Save useful phrases, corrections, and words from Chat or scenario practice to build your
+                  personal Japanese library.
                 </p>
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   {inAppShell && onNavigateChat ? (
                     <button
                       type="button"
                       onClick={onNavigateChat}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2.5 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30 sm:w-auto"
+                      className={`inline-flex w-full items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-medium sm:w-auto ${emptyBtnPrimary}`}
                     >
                       <MessageCircle className="h-3.5 w-3.5" />
                       Start chatting
@@ -239,7 +254,7 @@ export default function VocabularyPage({
                   ) : (
                     <a
                       href="/chat"
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2.5 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30 sm:w-auto"
+                      className={`inline-flex w-full items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-medium sm:w-auto ${emptyBtnPrimary}`}
                     >
                       <MessageCircle className="h-3.5 w-3.5" />
                       Start chatting
@@ -249,18 +264,18 @@ export default function VocabularyPage({
                     <button
                       type="button"
                       onClick={onNavigateTopic}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-3.5 py-2.5 text-xs font-medium text-slate-200 hover:bg-slate-900 sm:w-auto"
+                      className={`inline-flex w-full items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-medium sm:w-auto ${emptyBtnSecondary}`}
                     >
                       <Sparkles className="h-3.5 w-3.5" />
-                      Try Topic Practice
+                      Try a scenario
                     </button>
                   ) : (
                     <a
-                      href="/topic"
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-3.5 py-2.5 text-xs font-medium text-slate-200 hover:bg-slate-900 sm:w-auto"
+                      href="/?scenario=today"
+                      className={`inline-flex w-full items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-medium sm:w-auto ${emptyBtnSecondary}`}
                     >
                       <Sparkles className="h-3.5 w-3.5" />
-                      Try Topic Practice
+                      Try a scenario
                     </a>
                   )}
                 </div>

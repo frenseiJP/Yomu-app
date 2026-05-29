@@ -1,6 +1,7 @@
 "use client";
 
-import { MessageCircle, BookOpen, Target } from "lucide-react";
+import { MessageCircle, BookOpen, Target, Compass } from "lucide-react";
+import type { TopicPrompt } from "@/lib/topic/types";
 import DailyUsefulPhraseCard from "@/components/habit/DailyUsefulPhraseCard";
 import SeasonalProgressCard from "@/components/progress/SeasonalProgressCard";
 import CollapsibleSection from "@/components/ui/CollapsibleSection";
@@ -41,6 +42,8 @@ type Props = {
   } | null;
   onPracticeFocus?: () => void;
   onOpenReview?: () => void;
+  todaysScenario?: TopicPrompt | null;
+  onPracticeScenario?: () => void;
 };
 
 function homeSectionClass(isLightTheme: boolean) {
@@ -62,6 +65,8 @@ export default function HomeView({
   coachFocus,
   onPracticeFocus,
   onOpenReview,
+  todaysScenario,
+  onPracticeScenario,
 }: Props) {
   const reviewCount = dueReviews.words.length + dueReviews.mistakes.length;
   const labelClass = isLightTheme ? "text-neutral-500" : "text-slate-500";
@@ -129,6 +134,30 @@ export default function HomeView({
               Open →
             </span>
           </button>
+        ) : null}
+
+        {todaysScenario && onPracticeScenario ? (
+          <section className={homeSectionClass(isLightTheme)}>
+            <div className="flex items-start gap-2">
+              <Compass className={`mt-0.5 h-4 w-4 shrink-0 ${isLightTheme ? "text-wa-ruri" : "text-sky-300"}`} />
+              <div className="min-w-0 flex-1">
+                <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${labelClass}`}>
+                  Today&apos;s scenario
+                </p>
+                <p className={`mt-1 text-sm font-medium ${titleClass}`}>{todaysScenario.title}</p>
+                <p className={`mt-1 line-clamp-2 text-[12px] leading-relaxed ${bodyClass}`}>
+                  {todaysScenario.dailyQuestion ?? todaysScenario.prompt}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onPracticeScenario}
+              className="mt-3 inline-flex min-h-[40px] w-full items-center justify-center rounded-lg border border-wa-ruri/40 bg-wa-ruri/15 px-3 text-[12px] font-medium text-sky-700 hover:bg-wa-ruri/25 dark:text-sky-100"
+            >
+              Practice in Chat
+            </button>
+          </section>
         ) : null}
 
         {/* Today — mission + focus in one card */}

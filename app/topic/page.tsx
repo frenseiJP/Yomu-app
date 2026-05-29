@@ -1,5 +1,6 @@
-import TopicPracticePage from "@/components/topic/TopicPracticePage";
+import { redirect } from "next/navigation";
 
+/** Legacy /topic URL — scenario practice lives in Chat. */
 export default function TopicPage() {
-  return <TopicPracticePage />;
+  redirect("/?scenario=today");
 }

@@ -15,7 +15,6 @@ import {
   Users,
   Settings,
   ClipboardList,
-  Compass,
   Library,
   MoreHorizontal,
   Languages,
@@ -98,7 +97,6 @@ import {
 import { useChatInputIme } from "@/lib/chat/useChatInputIme";
 import { useVisualViewportInset } from "@/lib/chat/useVisualViewportInset";
 import SessionDrawer from "@/components/chat/SessionDrawer";
-import TopicGuidedLearning from "@/components/topic/TopicGuidedLearning";
 import TopicSelector from "@/components/topic/TopicSelector";
 import TopicActions from "@/components/topic/TopicActions";
 import { buildTopicFeedbackMessage, buildTopicGuideMessage } from "@/components/topic/TopicMessageTemplate";
@@ -109,6 +107,8 @@ import {
   saveTopicPracticeResult,
 } from "@/lib/topic/service";
 import type { TopicPrompt, TopicFeedback } from "@/lib/topic/types";
+import { getTodaysTopicPrompt } from "@/lib/topic/todaysTopic";
+import { shellTheme } from "@/lib/ui/shellTheme";
 import type { SaveCandidate } from "@/lib/save-candidates/types";
 import { guessCorrectedSentence } from "@/lib/save-candidates/guess-correction";
 import { SaveCandidateList } from "@/components/save-candidates/SaveCandidateList";
@@ -887,7 +887,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const tutorialAutoTriggeredRef = useRef(false);
   const guidedAssistantMsgIdRef = useRef<number | null>(null);
   const [currentTopic, setCurrentTopic] = useState("");
-  const [activeView, setActiveView] = useState<TabView>(initialView);
+  const [activeView, setActiveView] = useState<TabView>(initialView === "topic" ? "chat" : initialView);
   const [vocabInitialCategory, setVocabInitialCategory] = useState<
     "all" | "word" | "phrase" | "review" | null
   >(null);
@@ -1062,6 +1062,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     [messages],
   );
   const isLightTheme = uiTheme === "light";
+  const th = useMemo(() => shellTheme(isLightTheme), [isLightTheme]);
+  const todaysScenario = useMemo(() => getTodaysTopicPrompt(), []);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -2400,6 +2402,51 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     setActiveView("chat");
   }, [appLang, habitUserId]);
 
+  const startTopicScenario = useCallback(
+    (topic: TopicPrompt) => {
+      setRetentionMissionChatOpen(false);
+      setFtueCoachActive(false);
+      setFtueShowPicker(false);
+      setActiveTopicPrompt(topic);
+      setTopicSelectorMode("hidden");
+      const guide = buildTopicGuideMessage(topic);
+      let sid = currentSessionId;
+      if (!sid) {
+        const created = startNewChatSession(habitUserId, `Scenario: ${topic.title}`);
+        sid = created.id;
+        setCurrentSessionId(created.id);
+        setChatSessions(getSessions(habitUserId));
+        setMessages([]);
+      }
+      addAssistantMessage(habitUserId, sid, guide);
+      setChatSessions(getSessions(habitUserId));
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 77,
+          role: "assistant",
+          baseText: guide,
+          createdAt: new Date().toISOString(),
+          topicLabel: "Scenario practice",
+        },
+      ]);
+      setActiveView("chat");
+      setSessionDrawerOpen(false);
+    },
+    [habitUserId, currentSessionId],
+  );
+
+  useEffect(() => {
+    if (searchParams.get("scenario") !== "today") return;
+    startTopicScenario(getTodaysTopicPrompt());
+    setActiveView("chat");
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("scenario");
+    const next = url.pathname + (url.search || "");
+    window.history.replaceState({}, "", next);
+  }, [searchParams, startTopicScenario]);
+
   const deleteSessionById = useCallback((sessionId: string) => {
     removeSession(habitUserId, sessionId);
     const rows = getSessions(habitUserId);
@@ -2684,6 +2731,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               setVocabInitialCategory("review");
               setActiveView("vocabulary");
             }}
+            todaysScenario={todaysScenario}
+            onPracticeScenario={() => startTopicScenario(todaysScenario)}
           />
         )}
 
@@ -2694,15 +2743,17 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           >
             <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h1 className="font-wa-serif text-lg font-semibold text-slate-50 sm:text-xl">
+                <h1 className={`font-wa-serif text-lg font-semibold sm:text-xl ${th.pageTitle}`}>
                   Progress
                 </h1>
-                <p className="mt-1 text-[12px] text-slate-400 sm:text-sm">
+                <p className={`mt-1 text-[12px] sm:text-sm ${th.pageMuted}`}>
                   Your tree grows when you chat — details are optional.
                 </p>
               </div>
-              <div className="flex flex-shrink-0 items-center gap-2 rounded-full border border-yomu-glassBorder bg-yomu-glass px-2 py-1.5 text-[11px] backdrop-blur-sm sm:py-1">
-                <span className="text-slate-500">{uiText.jlptLevelTitle}</span>
+              <div
+                className={`flex flex-shrink-0 items-center gap-2 rounded-full border px-2 py-1.5 text-[11px] backdrop-blur-sm sm:py-1 ${th.glassPill}`}
+              >
+                <span className={th.pageMuted}>{uiText.jlptLevelTitle}</span>
                 <select
                   value={jlptLevel}
                   onChange={(e) => {
@@ -2710,7 +2761,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     setJlptLevel(next);
                     writeStoredJlpt(habitUserId, next);
                   }}
-                  className="max-w-[5.5rem] rounded-full border border-slate-700 bg-slate-900/80 px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-wa-ruri"
+                  className={`max-w-[5.5rem] rounded-full border px-2 py-1 text-[11px] focus:outline-none focus:ring-1 focus:ring-wa-ruri ${th.select}`}
                   aria-label={uiText.jlptLevelTitle}
                 >
                   {JLPT_LEVELS.map((level) => (
@@ -2923,12 +2974,13 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     ))}
                   </ul>
                 )}
-                <Link
-                  href="/topic"
-                  className="mt-3 inline-flex rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-900"
+                <button
+                  type="button"
+                  onClick={() => startTopicScenario(todaysScenario)}
+                  className={`mt-3 inline-flex rounded-xl border px-3 py-2 text-xs font-medium hover:opacity-90 ${th.card} ${isLightTheme ? "text-neutral-800" : "text-slate-200"}`}
                 >
-                  Practice a topic
-                </Link>
+                  Practice today&apos;s scenario
+                </button>
               </div>
 
               <div className="rounded-2xl border border-slate-800/70 bg-slate-950/80 p-4">
@@ -2962,18 +3014,10 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           </div>
         )}
 
-        {activeView === "topic" && (
-          <TopicGuidedLearning
-            userId={habitUserId}
-            appLang={appLang}
-            isLightTheme={isLightTheme}
-            onPracticeSaved={() => refreshHabitData(habitUserId)}
-          />
-        )}
-
         {activeView === "vocabulary" && (
           <VocabularyPage
             inAppShell
+            isLightTheme={isLightTheme}
             initialCategory={vocabInitialCategory ?? undefined}
             onNavigateChat={() => {
               setVocabInitialCategory(null);
@@ -2982,8 +3026,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             }}
             onNavigateTopic={() => {
               setVocabInitialCategory(null);
-              setActiveView("topic");
-              if (pathname !== "/topic") router.push("/topic");
+              startTopicScenario(todaysScenario);
             }}
             onNavigateHome={() => {
               setVocabInitialCategory(null);
@@ -2997,7 +3040,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           <div
             className={`${shellViewFrame} ${pagePaddingX} flex flex-col gap-3 py-6 lg:py-8 ${shellStandard}`}
           >
-            <h1 className="font-wa-serif text-lg font-semibold text-slate-50 sm:text-xl">More</h1>
+            <h1 className={`font-wa-serif text-lg font-semibold sm:text-xl ${th.pageTitle}`}>More</h1>
             <div className="grid gap-3 md:grid-cols-2">
             <Link
               href="/vocabulary"
@@ -3343,12 +3386,35 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 {retentionRewardBanner}
               </div>
             ) : null}
-            <header className="flex flex-shrink-0 items-center justify-between gap-1.5 border-b border-slate-800/20 pb-1">
+            {activeTopicPrompt ? (
+              <div
+                className={`flex flex-shrink-0 flex-wrap items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] ${
+                  isLightTheme
+                    ? "border-sky-200/80 bg-sky-50/90 text-neutral-800"
+                    : "border-sky-500/30 bg-sky-500/10 text-sky-100"
+                }`}
+              >
+                <span>
+                  Scenario: <span className="font-medium">{activeTopicPrompt.title}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTopicPrompt(null);
+                    if (messages.length === 0) setTopicSelectorMode("entry");
+                  }}
+                  className={isLightTheme ? "text-neutral-500 hover:text-neutral-800" : "text-slate-400 hover:text-slate-200"}
+                >
+                  Exit scenario
+                </button>
+              </div>
+            ) : null}
+            <header className={`flex flex-shrink-0 items-center justify-between gap-1.5 border-b pb-1 ${th.chatHeaderBorder}`}>
               <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-2.5">
                 <button
                   type="button"
                   onClick={() => setSessionDrawerOpen(true)}
-                  className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-slate-700/60 bg-slate-900/50 text-slate-300"
+                  className={`inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border ${th.chatIconBtn}`}
                   aria-label="Open sessions"
                 >
                   <PanelLeft className="h-4 w-4" />
@@ -3356,7 +3422,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-wa-ruri to-wa-asagi text-[11px] font-bold text-white sm:h-9 sm:w-9 sm:text-xs">
                   F
                 </div>
-                <p className="font-wa-serif hidden min-w-0 flex-1 truncate text-[13px] font-semibold text-slate-50 sm:block sm:text-sm">
+                <p className={`font-wa-serif hidden min-w-0 flex-1 truncate text-[13px] font-semibold sm:block sm:text-sm ${th.chatTitle}`}>
                   {chatSessions.find((s) => s.id === currentSessionId)?.title ?? uiText.japaneseChat}
                 </p>
               </div>
@@ -3364,10 +3430,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 <button
                   type="button"
                   onClick={() => setChatSettingsOpen((v) => !v)}
-                  className={`inline-flex h-9 min-h-[44px] items-center gap-1.5 rounded-lg border px-2.5 text-slate-200 transition sm:min-h-0 ${
-                    chatSettingsOpen
-                      ? "border-wa-ruri/60 bg-wa-ruri/15 text-wa-asagi"
-                      : "border-slate-700/80 bg-slate-900/50 hover:border-slate-600"
+                  className={`inline-flex h-9 min-h-[44px] items-center gap-1.5 rounded-lg border px-2.5 transition sm:min-h-0 ${
+                    chatSettingsOpen ? th.chatSettingsBtnActive : th.chatSettingsBtn
                   }`}
                   aria-expanded={chatSettingsOpen}
                   aria-label="Chat settings: furigana, tone, JLPT, region"
@@ -3379,7 +3443,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 <button
                   type="button"
                   onClick={() => createNewSession()}
-                  className="inline-flex h-9 min-h-[44px] w-9 min-w-[44px] items-center justify-center rounded-lg border border-slate-700/80 bg-slate-900/50 text-slate-200 hover:border-slate-600 sm:min-h-9 sm:min-w-9"
+                  className={`inline-flex h-9 min-h-[44px] w-9 min-w-[44px] items-center justify-center rounded-lg border sm:min-h-9 sm:min-w-9 ${th.chatIconBtn}`}
                   aria-label="New chat"
                   title="New chat"
                 >
@@ -3388,7 +3452,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               </div>
             </header>
 
-            <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-800/20 bg-slate-950/20 p-1 backdrop-blur-sm sm:rounded-2xl sm:p-1.5">
+            <section className={`relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border p-1 backdrop-blur-sm sm:rounded-2xl sm:p-1.5 ${th.chatPanel}`}>
             {chatSettingsOpen ? (
             <div className="mb-1 flex flex-shrink-0 flex-col gap-2 rounded-lg border border-slate-700/45 bg-slate-900/35 p-1.5 sm:mb-1.5 sm:rounded-xl sm:p-2">
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -3844,11 +3908,13 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               {ftueShowPicker ? <FtuePracticePicker onPick={beginFtue} /> : null}
               {topicSelectorMode !== "hidden" && !ftueShowPicker ? (
                 <TopicSelector
+                  isLightTheme={isLightTheme}
                   mode={topicSelectorMode === "topic_list" ? "topic_list" : "entry"}
                   topics={TOPIC_PROMPTS}
                   showContinueLast={chatSessions.length > 1}
                   onDailyMission={() => setActiveView("home")}
                   onTopicPractice={() => setTopicSelectorMode("topic_list")}
+                  onPracticeTodaysScenario={() => startTopicScenario(todaysScenario)}
                   onFreeChat={() => {
                     setTopicSelectorMode("hidden");
                     setActiveTopicPrompt(null);
@@ -3857,30 +3923,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     const next = chatSessions.find((s) => s.id !== currentSessionId) ?? chatSessions[0];
                     if (next) openSession(next.id);
                   }}
-                  onSelectTopic={(topic) => {
-                    setActiveTopicPrompt(topic);
-                    setTopicSelectorMode("hidden");
-                    const guide = buildTopicGuideMessage(topic);
-                    let sid = currentSessionId;
-                    if (!sid) {
-                      const created = startNewChatSession(habitUserId, "Topic Practice");
-                      sid = created.id;
-                      setCurrentSessionId(created.id);
-                      setChatSessions(getSessions(habitUserId));
-                    }
-                    addAssistantMessage(habitUserId, sid, guide);
-                    setChatSessions(getSessions(habitUserId));
-                    setMessages((prev) => [
-                      ...prev,
-                      {
-                        id: Date.now() + 77,
-                        role: "assistant",
-                        baseText: guide,
-                        createdAt: new Date().toISOString(),
-                        topicLabel: "Topic Practice",
-                      },
-                    ]);
-                  }}
+                  onSelectTopic={(topic) => startTopicScenario(topic)}
                 />
               ) : null}
               <ChatCoachToolsBar
@@ -4172,7 +4215,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
       {/* 画面下部固定メニューバー（タップで確実に反応するよう pointer-events-auto と onPointerDown を使用） */}
       <nav
-        className={`fixed left-0 right-0 z-[960] isolate border-t border-slate-800/60 bg-slate-950 backdrop-blur-xl pb-safe pointer-events-auto ${
+        className={`fixed left-0 right-0 z-[960] isolate border-t pb-safe pointer-events-auto ${th.nav} ${
           affiliateBarVisible
             ? "bottom-[calc(60px+env(safe-area-inset-bottom,0px))]"
             : "bottom-0"
@@ -4187,31 +4230,13 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             onClick={() => setActiveView("home")}
             onPointerDown={() => setActiveView("home")}
             className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
-              activeView === "home" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
+              activeView === "home" ? th.navActive : th.navInactive
             }`}
             animate={activeView === "home" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
           >
             <Target className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
             <span className="pointer-events-none">{uiText.home}</span>
-          </motion.button>
-
-          {/* Topic */}
-          <motion.button
-            type="button"
-            onClick={() => setActiveView("topic")}
-            onPointerDown={() => setActiveView("topic")}
-            className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
-              activeView === "topic" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
-            }`}
-            animate={activeView === "topic" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
-            transition={{ type: "spring", stiffness: 350, damping: 20 }}
-          >
-            <Compass className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
-            <span className="pointer-events-none leading-tight">Topic</span>
-            <span className="pointer-events-none text-[8px] font-normal text-slate-600 sm:text-[9px]">
-              Scenarios
-            </span>
           </motion.button>
 
           {/* 中央：チャット（強調） */}
@@ -4254,7 +4279,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             </motion.div>
             <span
               className={`pointer-events-none mt-0.5 text-[9px] font-semibold leading-tight sm:mt-1 sm:text-[11px] ${
-                activeView === "chat" ? "text-wa-asagi" : "text-slate-300"
+                activeView === "chat" ? "text-wa-asagi" : th.navChatInactive
               }`}
             >
               {uiText.chat}
@@ -4267,7 +4292,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             onClick={() => setActiveView("progress")}
             onPointerDown={() => setActiveView("progress")}
             className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
-              activeView === "progress" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
+              activeView === "progress" ? th.navActive : th.navInactive
             }`}
             animate={activeView === "progress" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
@@ -4291,7 +4316,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             }}
             aria-label={uiText.vocabLibPageTitle}
             className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
-              activeView === "vocabulary" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
+              activeView === "vocabulary" ? th.navActive : th.navInactive
             }`}
             animate={activeView === "vocabulary" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
@@ -4308,7 +4333,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             onClick={() => setActiveView("more")}
             onPointerDown={() => setActiveView("more")}
             className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
-              activeView === "more" ? "text-wa-ruri" : "text-slate-500 hover:text-slate-300"
+              activeView === "more" ? th.navActive : th.navInactive
             }`}
             animate={activeView === "more" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
             transition={{ type: "spring", stiffness: 350, damping: 20 }}

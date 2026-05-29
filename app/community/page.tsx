@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Legacy URL: social feed removed; Topic-guided learning lives under /topic. */
+/** Legacy URL: social feed removed; scenario practice lives in Chat. */
 export default function CommunityRedirectPage() {
-  redirect("/topic");
+  redirect("/?scenario=today");
 }
