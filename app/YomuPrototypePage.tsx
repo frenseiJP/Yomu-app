@@ -1257,7 +1257,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
   useEffect(() => {
     if (guidedStep !== "correction_seen") return;
-    const t = window.setTimeout(() => advanceGuidedStep("save_prompt"), 2500);
+    const t = window.setTimeout(() => advanceGuidedStep("save_prompt"), 1800);
     return () => window.clearTimeout(t);
   }, [guidedStep, advanceGuidedStep]);
 
@@ -2975,6 +2975,16 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           <VocabularyPage
             inAppShell
             initialCategory={vocabInitialCategory ?? undefined}
+            onNavigateChat={() => {
+              setVocabInitialCategory(null);
+              setActiveView("chat");
+              if (pathname !== "/chat") router.push("/chat");
+            }}
+            onNavigateTopic={() => {
+              setVocabInitialCategory(null);
+              setActiveView("topic");
+              if (pathname !== "/topic") router.push("/topic");
+            }}
             onNavigateHome={() => {
               setVocabInitialCategory(null);
               setActiveView("home");
@@ -3721,13 +3731,19 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                               );
                               if (guidedStep === "save_prompt") {
                                 writeGuidedTutorialSession({
-                                  step: "vocabulary_intro",
+                                  step: "complete",
                                   savedVocabularyId: result.item.id,
                                   chatSessionId: currentSessionId ?? undefined,
                                   assistantMessageId: guidedAssistantMsgIdRef.current ?? undefined,
                                 });
-                                setGuidedStep("vocabulary_intro");
-                                window.location.assign("/vocabulary");
+                                setGuidedStep("complete");
+                                setActiveView("home");
+                                void logBetaEvent({
+                                  eventType: "tutorial_completed",
+                                  userId: habitUserId,
+                                  sessionId: currentSessionId ?? undefined,
+                                  route: "/",
+                                });
                               }
                             }}
                           />
@@ -3750,10 +3766,15 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-wa-ruri to-wa-asagi text-[10px] font-bold text-white">
                     F
                   </div>
-                  <div className="flex items-center gap-1 rounded-2xl border border-yomu-glassBorder bg-yomu-glass px-3 py-1.5">
-                    <span className="dot" />
-                    <span className="dot" />
-                    <span className="dot" />
+                  <div className="flex items-center gap-2 rounded-2xl border border-yomu-glassBorder bg-yomu-glass px-3 py-2">
+                    <div className="flex items-center gap-1">
+                      <span className="dot" />
+                      <span className="dot" />
+                      <span className="dot" />
+                    </div>
+                    <span className="text-[12px] text-slate-400">
+                      {appLang === "ja" ? "Sensei が考えています…" : "Sensei is thinking…"}
+                    </span>
                   </div>
                 </div>
               )}
@@ -3768,6 +3789,15 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   : undefined
               }
             >
+              {isTyping ? (
+                <p
+                  className="text-center text-[11px] font-medium text-sky-300/90"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {appLang === "ja" ? "Sensei が返信を準備中…" : "Sensei is preparing your reply…"}
+                </p>
+              ) : null}
               <BetaFeedbackPrompt
                 visible={activeView === "chat" && betaFeedbackVisible}
                 userId={habitUserId}
@@ -4178,7 +4208,10 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
           >
             <Compass className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
-            <span className="pointer-events-none">Topic</span>
+            <span className="pointer-events-none leading-tight">Topic</span>
+            <span className="pointer-events-none text-[8px] font-normal text-slate-600 sm:text-[9px]">
+              Scenarios
+            </span>
           </motion.button>
 
           {/* 中央：チャット（強調） */}

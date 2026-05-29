@@ -12,12 +12,58 @@ type Props = {
   renderInline: (line: string) => ReactNode;
 };
 
-function SectionLabel({ children }: { children: string }) {
+function SectionLabel({ children, accent }: { children: string; accent?: boolean }) {
   if (!children) return null;
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+    <p
+      className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${
+        accent ? "text-sky-300/90" : "text-slate-500"
+      }`}
+    >
       {children}
     </p>
+  );
+}
+
+function LabelSection({
+  label,
+  body,
+  hideLabel,
+  renderInline,
+}: {
+  label: string;
+  body: string;
+  hideLabel?: boolean;
+  renderInline: (line: string) => ReactNode;
+}) {
+  if (hideLabel || !label) {
+    return (
+      <section>
+        <BodyBlock>{renderInline(body)}</BodyBlock>
+      </section>
+    );
+  }
+  const isWhy = label === "Why" && body.length > 160;
+  if (!isWhy) {
+    return (
+      <section>
+        <SectionLabel accent={label === "Better"}>{label}</SectionLabel>
+        <BodyBlock>{renderInline(body)}</BodyBlock>
+      </section>
+    );
+  }
+  const preview = body.split(/(?<=[.!?。])\s+/).slice(0, 1).join(" ").trim() || body.slice(0, 120);
+  return (
+    <section>
+      <SectionLabel>{hideLabel ? "" : label}</SectionLabel>
+      <BodyBlock>{renderInline(preview)}{body.length > preview.length ? "…" : ""}</BodyBlock>
+      <details className="mt-1 rounded-lg border border-slate-800/50 bg-slate-900/30 px-2 py-1.5">
+        <summary className="cursor-pointer text-[11px] font-medium text-slate-400">Read full explanation</summary>
+        <div className="mt-2">
+          <BodyBlock>{renderInline(body)}</BodyBlock>
+        </div>
+      </details>
+    </section>
   );
 }
 
@@ -42,10 +88,13 @@ function renderSections(sections: ReplySection[], renderInline: (line: string) =
         }
         if (s.kind === "label") {
           return (
-            <section key={i}>
-              <SectionLabel>{s.hideLabel ? "" : s.label}</SectionLabel>
-              <BodyBlock>{renderInline(s.body)}</BodyBlock>
-            </section>
+            <LabelSection
+              key={i}
+              label={s.label}
+              body={s.body}
+              hideLabel={s.hideLabel}
+              renderInline={renderInline}
+            />
           );
         }
         if (s.kind === "bullets") {

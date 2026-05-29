@@ -105,8 +105,18 @@ export default function TopicGuidedLearning({
 
   return (
     <div className="mx-auto flex h-full w-full max-w-lg flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto px-4 py-4 sm:gap-5 sm:px-6 sm:py-6 lg:max-w-2xl lg:px-8 lg:py-8">
-      <header className="space-y-1">
+      <header className="space-y-2">
         <p className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${muted}`}>Today&apos;s Topic</p>
+        <p
+          className={`rounded-xl border px-3 py-2 text-[12px] leading-relaxed ${
+            isLightTheme
+              ? "border-sky-200/80 bg-sky-50/80 text-neutral-700"
+              : "border-sky-500/25 bg-sky-500/8 text-slate-300"
+          }`}
+        >
+          Structured practice for one situation — not open chat. For everyday back-and-forth with Sensei,
+          use <span className="font-medium text-sky-300">Chat</span>.
+        </p>
         <h1 className={`font-wa-serif text-lg font-semibold leading-snug sm:text-xl ${body}`}>
           <span className="text-wa-ruri">&ldquo;</span>
           {heroLine}

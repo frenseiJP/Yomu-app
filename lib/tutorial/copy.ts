@@ -27,8 +27,9 @@ export function getTutorialHintCopy(
       cta: "Next",
     },
     save_prompt: {
-      title: "Save useful phrases",
-      body: "Tap [Save] on a phrase you want to keep in your Vocabulary.",
+      title: "Save this phrase",
+      body: "Tap Save this phrase to keep it in Vocabulary for review later.",
+      cta: "Done",
     },
     vocabulary_intro: {
       title: "Your Vocabulary",
@@ -57,8 +58,9 @@ export function getTutorialHintCopy(
       cta: "次へ",
     },
     save_prompt: {
-      title: "フレーズを保存",
-      body: "残したい表現の [Save] をタップして Vocabulary に追加しましょう。",
+      title: "このフレーズを保存",
+      body: "Save this phrase をタップして、あとで復習できるようにしましょう。",
+      cta: "完了",
     },
     vocabulary_intro: {
       title: "あなたの Vocabulary",
@@ -79,16 +81,16 @@ export function getTutorialHintCopy(
 export function getWelcomeCopy(isJa: boolean): { title: string; body: string; cta: string; skip: string } {
   if (isJa) {
     return {
-      title: "2分で Frensei を試そう",
-      body: "教科書っぽい日本語から、自然な話し方へ。実際の画面を使って体験します。",
-      cta: "チュートリアルを始める",
+      title: "1分で体験",
+      body: "一文書いて添削を受け、フレーズを1つ保存するだけ。すぐ終わります。",
+      cta: "はじめる",
       skip: "スキップ",
     };
   }
   return {
-    title: "Let's try Frensei in 2 minutes",
-    body: "Stop sounding like a textbook. Start sounding natural — with a quick hands-on tour.",
-    cta: "Start tutorial",
+    title: "Try it in 1 minute",
+    body: "Write one sentence, get a correction, save one phrase. That's the core loop.",
+    cta: "Start",
     skip: "Skip",
   };
 }

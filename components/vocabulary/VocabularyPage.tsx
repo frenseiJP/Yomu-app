@@ -39,6 +39,8 @@ type VocabularyPageProps = {
   /** Render inside YomuPrototypePage (bottom nav, no modal overlay). */
   inAppShell?: boolean;
   onNavigateHome?: () => void;
+  onNavigateChat?: () => void;
+  onNavigateTopic?: () => void;
   /** Open directly on Review tab (e.g. from Home). */
   initialCategory?: VocabularyListCategory;
 };
@@ -46,12 +48,15 @@ type VocabularyPageProps = {
 export default function VocabularyPage({
   inAppShell = false,
   onNavigateHome,
+  onNavigateChat,
+  onNavigateTopic,
   initialCategory,
 }: VocabularyPageProps) {
   const userId = useVocabularyUserId();
   const [appLang, setAppLang] = useState<Lang>("en");
   const [refreshKey, setRefreshKey] = useState(0);
   const [selected, setSelected] = useState<VocabularyItem | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [filter, setFilter] = useState<VocabularyFilterState>({
     query: "",
     category: initialCategory ?? "all",
@@ -183,11 +188,26 @@ export default function VocabularyPage({
             ui={uiText}
           />
 
-          <VocabularyTagChips
-            tags={tags}
-            selected={filter.tag}
-            onSelect={(tag) => setFilter((p) => ({ ...p, tag }))}
-          />
+          {tags.length > 0 ? (
+            <div className="rounded-xl border border-slate-800/60 bg-slate-950/45 px-3 py-2">
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((v) => !v)}
+                className="text-xs font-medium text-slate-300"
+              >
+                {filtersOpen ? "Hide tag filters" : "More filters"}
+              </button>
+              {filtersOpen ? (
+                <div className="mt-2">
+                  <VocabularyTagChips
+                    tags={tags}
+                    selected={filter.tag}
+                    onSelect={(tag) => setFilter((p) => ({ ...p, tag }))}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           {filter.category === "review" ? (
             <ReviewClozePanel
@@ -207,20 +227,42 @@ export default function VocabularyPage({
                   Japanese library.
                 </p>
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  <a
-                    href="/chat"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2.5 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30 sm:w-auto"
-                  >
-                    <MessageCircle className="h-3.5 w-3.5" />
-                    Start chatting
-                  </a>
-                  <a
-                    href="/topic"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-3.5 py-2.5 text-xs font-medium text-slate-200 hover:bg-slate-900 sm:w-auto"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Try Topic Practice
-                  </a>
+                  {inAppShell && onNavigateChat ? (
+                    <button
+                      type="button"
+                      onClick={onNavigateChat}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2.5 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30 sm:w-auto"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      Start chatting
+                    </button>
+                  ) : (
+                    <a
+                      href="/chat"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-wa-ruri/50 bg-wa-ruri/20 px-3.5 py-2.5 text-xs font-medium text-slate-100 hover:bg-wa-ruri/30 sm:w-auto"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      Start chatting
+                    </a>
+                  )}
+                  {inAppShell && onNavigateTopic ? (
+                    <button
+                      type="button"
+                      onClick={onNavigateTopic}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-3.5 py-2.5 text-xs font-medium text-slate-200 hover:bg-slate-900 sm:w-auto"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Try Topic Practice
+                    </button>
+                  ) : (
+                    <a
+                      href="/topic"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-3.5 py-2.5 text-xs font-medium text-slate-200 hover:bg-slate-900 sm:w-auto"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Try Topic Practice
+                    </a>
+                  )}
                 </div>
               </div>
             ) : items.length === 0 ? (
