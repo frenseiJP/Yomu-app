@@ -4314,7 +4314,22 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             <span className="pointer-events-none">{uiText.home}</span>
           </motion.button>
 
-          {/* 中央：チャット（強調） */}
+          {/* Progress */}
+          <motion.button
+            type="button"
+            onClick={() => setActiveView("progress")}
+            onPointerDown={() => setActiveView("progress")}
+            className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
+              activeView === "progress" ? th.navActive : th.navInactive
+            }`}
+            animate={activeView === "progress" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
+            transition={{ type: "spring", stiffness: 350, damping: 20 }}
+          >
+            <ClipboardList className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
+            <span className="pointer-events-none">Progress</span>
+          </motion.button>
+
+          {/* 中央：チャット（メイン・強調） */}
           <motion.button
             type="button"
             onClick={() => setActiveView("chat")}
@@ -4359,21 +4374,6 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             >
               {uiText.chat}
             </span>
-          </motion.button>
-
-          {/* Progress */}
-          <motion.button
-            type="button"
-            onClick={() => setActiveView("progress")}
-            onPointerDown={() => setActiveView("progress")}
-            className={`flex min-h-[48px] min-w-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-medium sm:min-h-[52px] sm:text-[11px] ${
-              activeView === "progress" ? th.navActive : th.navInactive
-            }`}
-            animate={activeView === "progress" ? { y: -2, scale: 1.05 } : { y: 0, scale: 1 }}
-            transition={{ type: "spring", stiffness: 350, damping: 20 }}
-          >
-            <ClipboardList className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
-            <span className="pointer-events-none">Progress</span>
           </motion.button>
 
           {/* Vocabulary */}
