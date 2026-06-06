@@ -1,4 +1,9 @@
-const SITEMAP = process.env.SITEMAP_URL ?? "https://frensei.jp/sitemap.xml";
+const SITE =
+  (process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || "https://frensei.jp").replace(
+    /\/$/,
+    "",
+  );
+const SITEMAP = process.env.SITEMAP_URL ?? `${SITE}/sitemap.xml`;
 
 const endpoints = [
   `https://www.google.com/ping?sitemap=${encodeURIComponent(SITEMAP)}`,

@@ -18,6 +18,7 @@ import {
 import ReviewClozePanel from "@/components/coach/ReviewClozePanel";
 import type { VocabularyFilterState, VocabularyItem, VocabularyListCategory } from "@/lib/vocabulary/types";
 import { useVocabularyUserId } from "@/lib/vocabulary/useVocabularyUserId";
+import { createClient } from "@/src/utils/supabase/client";
 import TutorialHintCard from "@/components/tutorial/TutorialHintCard";
 import { getTutorialHintCopy } from "@/lib/tutorial/copy";
 import {
@@ -66,6 +67,7 @@ export default function VocabularyPage({
     ? "border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50"
     : "border-slate-700 bg-slate-900/70 text-slate-200 hover:bg-slate-900";
   const userId = useVocabularyUserId();
+  const [chatBase, setChatBase] = useState<"/chat" | "/app">("/app");
   const [appLang, setAppLang] = useState<Lang>("en");
   const [refreshKey, setRefreshKey] = useState(0);
   const [selected, setSelected] = useState<VocabularyItem | null>(null);
@@ -84,6 +86,18 @@ export default function VocabularyPage({
 
   useEffect(() => {
     setAppLang(getLangClient());
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void createClient()
+      .auth.getUser()
+      .then(({ data }) => {
+        if (!cancelled) setChatBase(data.user ? "/chat" : "/app");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const { uiText } = useMemo(() => getPrototypeCopy(appLang), [appLang]);
@@ -253,7 +267,7 @@ export default function VocabularyPage({
                     </button>
                   ) : (
                     <a
-                      href="/chat"
+                      href={chatBase}
                       className={`inline-flex w-full items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-medium sm:w-auto ${emptyBtnPrimary}`}
                     >
                       <MessageCircle className="h-3.5 w-3.5" />

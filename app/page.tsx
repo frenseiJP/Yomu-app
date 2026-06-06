@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import LandingPage from "@/components/marketing/LandingPage";
+import { getSiteUrl } from "@/lib/siteUrl";
+
+const SITE_URL = getSiteUrl();
 
 export const metadata: Metadata = {
   title: "Frensei — Stop Sounding Like a Textbook. Start Sounding Natural.",
@@ -10,7 +13,7 @@ export const metadata: Metadata = {
     title: "Frensei — AI Japanese Learning Coach",
     description:
       "Chat-first AI coaching for natural Japanese. Try free—no sign-up required.",
-    url: "https://frensei.jp/",
+    url: `${SITE_URL}/`,
   },
 };
 

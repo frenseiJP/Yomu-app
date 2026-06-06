@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { getAllPhraseSlugs } from "@/lib/learn/phrases";
+import { getSiteUrl } from "@/lib/siteUrl";
 
-const BASE = "https://frensei.jp";
+const BASE = getSiteUrl();
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

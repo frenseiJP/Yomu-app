@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import PhraseLearnView from "@/components/marketing/PhraseLearnView";
 import { phraseArticleJsonLd, phraseFaqJsonLd } from "@/lib/learn/jsonLd";
 import { getAllPhraseSlugs, getPhraseBySlug } from "@/lib/learn/phrases";
+import { getSiteUrl } from "@/lib/siteUrl";
+
+const SITE_URL = getSiteUrl();
 
 type Props = { params: { slug: string } };
 
@@ -20,7 +23,7 @@ export function generateMetadata({ params }: Props): Metadata {
     openGraph: {
       title: phrase.seoTitle,
       description: phrase.seoDescription,
-      url: `https://frensei.jp/learn/${phrase.slug}`,
+      url: `${SITE_URL}/learn/${phrase.slug}`,
     },
   };
 }

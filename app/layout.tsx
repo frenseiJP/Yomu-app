@@ -7,6 +7,9 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import Footer from "@/components/Footer";
 import MobileAppBridge from "@/components/MobileAppBridge";
 import PageViewLogger from "@/components/analytics/PageViewLogger";
+import { getSiteUrl } from "@/lib/siteUrl";
+
+const SITE_URL = getSiteUrl();
 
 export const metadata: Metadata = {
   title: "Frensei — AI Japanese Learning Coach",
@@ -22,7 +25,7 @@ export const metadata: Metadata = {
     title: "Frensei",
     statusBarStyle: "black-translucent",
   },
-  metadataBase: new URL("https://frensei.jp"),
+  metadataBase: new URL(SITE_URL),
   alternates: {
     canonical: "/",
   },
@@ -32,14 +35,14 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    url: "https://frensei.jp/",
+    url: `${SITE_URL}/`,
     title: "Frensei — AI Japanese Learning Coach",
     description: "Learn Japanese naturally with Frensei, your AI-powered Japanese coach. Practice real conversations, master culture, and build vocabulary with personalized AI guidance.",
     siteName: "Frensei",
     locale: "en_US",
     images: [
       {
-        url: "https://frensei.jp/icons/icon-512.svg",
+        url: `${SITE_URL}/icons/icon-512.svg`,
         width: 512,
         height: 512,
         alt: "Frensei",

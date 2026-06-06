@@ -1,6 +1,7 @@
 import type { LearnPhrase } from "@/lib/learn/types";
+import { getSiteUrl } from "@/lib/siteUrl";
 
-const BASE = "https://frensei.jp";
+const BASE = getSiteUrl();
 
 export function phraseArticleJsonLd(phrase: LearnPhrase): object {
   return {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "frensei-cache-v1";
+const CACHE_NAME = "frensei-cache-v2";
 const OFFLINE_URLS = ["/app", "/learn", "/try", "/chat", "/progress", "/report", "/vocabulary"];
 
 self.addEventListener("install", (event) => {
@@ -17,21 +17,49 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+function isNavigationRequest(request) {
+  return (
+    request.mode === "navigate" ||
+    (request.headers.get("accept") || "").includes("text/html")
+  );
+}
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
+  if (isNavigationRequest(event.request)) {
+    event.respondWith(
+      fetch(event.request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
           return res;
         })
-        .catch(() => caches.match("/app"));
+        .catch(() =>
+          caches
+            .match(event.request)
+            .then((cached) => cached || caches.match("/app")),
+        ),
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      const network = fetch(event.request)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return res;
+        })
+        .catch(() => cached);
+      return cached || network;
     }),
   );
 });

@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { getAllPhrases } from "@/lib/learn/phrases";
+import { getSiteUrl } from "@/lib/siteUrl";
+
+const SITE_URL = getSiteUrl();
 
 export const metadata: Metadata = {
   title: "Japanese Phrase Guides — Natural Usage & Culture | Frensei",
@@ -19,7 +22,7 @@ export default function LearnIndexPage() {
     itemListElement: phrases.map((p, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: `https://frensei.jp/learn/${p.slug}`,
+      url: `${SITE_URL}/learn/${p.slug}`,
       name: p.topic,
     })),
   };

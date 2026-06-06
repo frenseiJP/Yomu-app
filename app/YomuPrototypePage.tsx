@@ -900,6 +900,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const [topicSelectorMode, setTopicSelectorMode] = useState<"entry" | "topic_list" | "hidden">("entry");
   const [activeTopicPrompt, setActiveTopicPrompt] = useState<TopicPrompt | null>(null);
   const [habitUserId, setHabitUserId] = useState("guest");
+  const [chatHomeRoute, setChatHomeRoute] = useState<"/chat" | "/app">("/app");
   const [retentionMissionDay, setRetentionMissionDay] = useState<RetentionDailyMissionDay | null>(null);
   const [retentionRewardBanner, setRetentionRewardBanner] = useState<string | null>(null);
   const [retentionMissionChatOpen, setRetentionMissionChatOpen] = useState(false);
@@ -1131,6 +1132,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         } = await supabase.auth.getUser();
         const uid = user?.id ?? localUid;
         if (!mounted) return;
+        setChatHomeRoute(user?.id ? "/chat" : "/app");
         setHabitUserId(uid);
         setJlptLevel(readStoredJlpt(uid));
         if (user?.id) void pullProgressFromCloud(uid).then(() => refreshHabitData(uid));
@@ -1165,6 +1167,17 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     markTutorialShownThisSession(habitUserId);
     setTutorialWelcomeOpen(true);
   }, [activeView, habitUserId, isTyping, choiceSheet, tutorialManualOpen]);
+
+  useEffect(() => {
+    if (!tutorialWelcomeOpen) return;
+    if (habitUserId === "guest") return;
+    void logBetaEvent({
+      eventType: "tutorial_shown",
+      userId: habitUserId,
+      route: pathname || "/",
+      metadata: { manual: tutorialManualOpen },
+    });
+  }, [tutorialWelcomeOpen, habitUserId, pathname, tutorialManualOpen]);
 
   const skipGuidedTutorial = useCallback(
     (step?: GuidedTutorialStep) => {
@@ -3138,7 +3151,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             onNavigateChat={() => {
               setVocabInitialCategory(null);
               setActiveView("chat");
-              if (pathname !== "/chat") router.push("/chat");
+              if (pathname === "/app" || pathname === "/chat") return;
+              router.push(chatHomeRoute);
             }}
             onNavigateTopic={() => {
               setVocabInitialCategory(null);
@@ -3158,6 +3172,13 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           >
             <h1 className={`font-wa-serif text-lg font-semibold sm:text-xl ${th.pageTitle}`}>More</h1>
             <div className="grid gap-3 md:grid-cols-2">
+            <Link
+              href="/history"
+              className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
+            >
+              <p className="text-sm text-slate-100">Learning history</p>
+              <p className="mt-0.5 text-xs text-slate-400">Continue past chat sessions</p>
+            </Link>
             <Link
               href="/vocabulary"
               className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
@@ -4088,17 +4109,26 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     {uiText.chatSuggestedFollowUps}
                   </p>
                   <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap">
-                    {followUpsToShow.map((prompt, idx) => (
-                      <button
-                        key={`${prompt}-${idx}`}
-                        type="button"
-                        disabled={isLoading}
-                        onClick={() => handleQuickSend(prompt, idx)}
-                        className="btn-wa-hover rounded-xl border border-pink-500/25 bg-pink-500/8 px-3 py-2 text-left text-[12px] leading-snug text-slate-100 transition hover:border-pink-500/45 hover:bg-pink-500/15 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:min-w-[9rem]"
-                      >
-                        {prompt}
-                      </button>
-                    ))}
+                    {followUpsToShow.map((prompt, idx) => {
+                      const isRecommended =
+                        typeof latestFollowUpContext?.bestFollowUpIndex === "number" &&
+                        idx === latestFollowUpContext.bestFollowUpIndex;
+                      return (
+                        <button
+                          key={`${prompt}-${idx}`}
+                          type="button"
+                          disabled={isLoading}
+                          onClick={() => handleQuickSend(prompt, idx)}
+                          className={`btn-wa-hover rounded-xl border px-3 py-2 text-left text-[12px] leading-snug text-slate-100 transition disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:min-w-[9rem] ${
+                            isRecommended
+                              ? "border-violet-400/45 bg-violet-500/15 ring-1 ring-violet-400/25 hover:border-violet-400/60 hover:bg-violet-500/22"
+                              : "border-pink-500/25 bg-pink-500/8 hover:border-pink-500/45 hover:bg-pink-500/15"
+                          }`}
+                        >
+                          {prompt}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ) : null}
