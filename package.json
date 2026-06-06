@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "feedback:setup": "bash scripts/setup-feedback-sheets.sh"
+    "feedback:setup": "bash scripts/setup-feedback-sheets.sh",
+    "ping:sitemap": "node scripts/ping-sitemap.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",

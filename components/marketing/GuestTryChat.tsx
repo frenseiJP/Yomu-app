@@ -16,6 +16,8 @@ import {
   incrementGuestTurns,
   readGuestTurns,
 } from "@/lib/guest/limits";
+import { inferReplyModeHint } from "@/lib/chat/replyMode";
+import { streamChatCompletion } from "@/lib/chat/streamClient";
 import { buildShareUrl } from "@/lib/share/encode";
 import { logBetaEvent } from "@/lib/analytics/client";
 
@@ -78,7 +80,12 @@ export default function GuestTryChat({
         .filter((l) => l.role === "user" || l.role === "assistant")
         .map((l) => ({ role: l.role, content: l.text }));
 
-      setLines((prev) => [...prev, userLine]);
+      const assistantId = Date.now() + 1;
+      setLines((prev) => [
+        ...prev,
+        userLine,
+        { id: assistantId, role: "assistant", text: "" },
+      ]);
       setInput("");
 
       const turn = incrementGuestTurns();
@@ -90,11 +97,27 @@ export default function GuestTryChat({
       });
 
       try {
+        const guestBody = { messages: history, language: "en" };
+        let streamPreviewActive = inferReplyModeHint(trimmed) !== "correction";
+        if (streamPreviewActive) {
+          void streamChatCompletion({
+            url: "/api/chat",
+            body: { ...guestBody, tone: "neutral" },
+            onChunk: (acc) => {
+              if (!streamPreviewActive) return;
+              setLines((prev) =>
+                prev.map((l) => (l.id === assistantId ? { ...l, text: acc } : l)),
+              );
+            },
+          }).catch(() => {});
+        }
+
         const res = await fetch("/api/chat/guest", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ messages: history, language: "en" }),
+          body: JSON.stringify(guestBody),
         });
+        streamPreviewActive = false;
         const json = (await res.json()) as { ok?: boolean; coach?: unknown; error?: string };
         const payload: FtueCoachPayload =
           json.ok && json.coach && typeof json.coach === "object"
@@ -103,10 +126,11 @@ export default function GuestTryChat({
             : fallbackStructuredCoachPayload(trimmed);
         const body = buildSenseiChatMessage(payload, trimmed);
 
-        setLines((prev) => [
-          ...prev,
-          { id: Date.now() + 1, role: "assistant", text: body, payload },
-        ]);
+        setLines((prev) =>
+          prev.map((l) =>
+            l.id === assistantId ? { ...l, text: body, payload } : l,
+          ),
+        );
 
         if (payload.replyMode === "correction" && payload.correctedSentence) {
           const url = buildShareUrl(
@@ -206,7 +230,9 @@ export default function GuestTryChat({
             )}
           </div>
         ))}
-        {loading ? (
+        {loading &&
+        lines[lines.length - 1]?.role === "assistant" &&
+        !lines[lines.length - 1]?.text.trim() ? (
           <div className="flex items-center gap-2 text-[12px] text-slate-400">
             <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-pink-400" />
             Sensei is thinking…

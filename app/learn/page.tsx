@@ -12,9 +12,24 @@ export const metadata: Metadata = {
 
 export default function LearnIndexPage() {
   const phrases = getAllPhrases();
+  const listLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Japanese phrase guides",
+    itemListElement: phrases.map((p, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `https://frensei.jp/learn/${p.slug}`,
+      name: p.topic,
+    })),
+  };
 
   return (
     <div className="min-h-screen bg-[#020617] px-4 py-10 sm:px-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(listLd) }}
+      />
       <div className="mx-auto w-full max-w-3xl">
         <Link href="/" className="mb-8 inline-flex items-center gap-2 text-slate-400 hover:text-slate-200">
           <BookOpen className="h-4 w-4" />

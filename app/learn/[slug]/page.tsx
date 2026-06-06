@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import PhraseLearnView from "@/components/marketing/PhraseLearnView";
+import { phraseArticleJsonLd, phraseFaqJsonLd } from "@/lib/learn/jsonLd";
 import { getAllPhraseSlugs, getPhraseBySlug } from "@/lib/learn/phrases";
 
 type Props = { params: { slug: string } };
@@ -27,5 +28,19 @@ export function generateMetadata({ params }: Props): Metadata {
 export default function PhraseLearnPage({ params }: Props) {
   const phrase = getPhraseBySlug(params.slug);
   if (!phrase) notFound();
-  return <PhraseLearnView phrase={phrase} />;
+  const articleLd = phraseArticleJsonLd(phrase);
+  const faqLd = phraseFaqJsonLd(phrase);
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
+      />
+      <PhraseLearnView phrase={phrase} />
+    </>
+  );
 }

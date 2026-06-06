@@ -94,6 +94,8 @@ import {
   startNewChatSession,
   updateMessageMeta,
 } from "@/lib/chat/service";
+import { inferReplyModeHint } from "@/lib/chat/replyMode";
+import { streamChatCompletion } from "@/lib/chat/streamClient";
 import { useChatInputIme } from "@/lib/chat/useChatInputIme";
 import { useVisualViewportInset } from "@/lib/chat/useVisualViewportInset";
 import SessionDrawer from "@/components/chat/SessionDrawer";
@@ -1828,6 +1830,15 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     return null;
   }, [messages]);
 
+  const showTypingIndicator = useMemo(() => {
+    if (!isTyping) return false;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.role === "assistant") return !m.baseText.trim();
+    }
+    return true;
+  }, [isTyping, messages]);
+
   const starterFollowUps = useMemo(
     () =>
       [
@@ -2272,21 +2283,47 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       return;
     }
     try {
+      const coachContext = buildCoachContext(
+        habitUserId,
+        SESSION_GOAL_OPTIONS.find((g) => g.id === sessionGoal)?.coachHint,
+        jlptLevel,
+      );
+      const chatRequestBody = {
+        messages: buildClaudeMessages(text),
+        tone: toneAtSend,
+        language: appLang,
+        coachContext,
+      };
+
+      let streamPreviewActive = inferReplyModeHint(text) !== "correction";
+      if (streamPreviewActive) {
+        void streamChatCompletion({
+          url: "/api/chat",
+          body: chatRequestBody,
+          signal: controller.signal,
+          onChunk: (acc) => {
+            if (!streamPreviewActive) return;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? { ...m, baseText: acc, senseiPayload: undefined }
+                  : m,
+              ),
+            );
+          },
+        }).catch(() => {
+          /* structured reply replaces preview */
+        });
+      }
+
       const res = await fetch("/api/chat/structured", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          messages: buildClaudeMessages(text),
-          tone: toneAtSend,
-          language: appLang,
-          coachContext: buildCoachContext(
-            habitUserId,
-            SESSION_GOAL_OPTIONS.find((g) => g.id === sessionGoal)?.coachHint,
-            jlptLevel,
-          ),
-        }),
+        body: JSON.stringify(chatRequestBody),
         signal: controller.signal,
       });
+
+      streamPreviewActive = false;
 
       const json = (await res.json()) as {
         ok?: boolean;
@@ -3925,7 +3962,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   </div>
                 );
               })}
-              {isTyping && (
+              {showTypingIndicator && (
                 <div className="msg-enter flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-wa-ruri to-wa-asagi text-[10px] font-bold text-white">
                     F
@@ -3953,7 +3990,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   : undefined
               }
             >
-              {isTyping ? (
+              {showTypingIndicator ? (
                 <p
                   className="text-center text-[11px] font-medium text-sky-300/90"
                   role="status"
