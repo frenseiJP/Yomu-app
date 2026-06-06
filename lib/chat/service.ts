@@ -1,10 +1,12 @@
 import type { ChatMessage, ChatSession } from "@/lib/chat/types";
+import type { ChatMessageMeta } from "@/lib/chat/types";
 import {
   appendMessage,
   createSession,
   deleteSession,
   getSessionMessages,
   listSessions,
+  patchMessageMeta,
 } from "@/lib/chat/storage";
 
 const USER_ID_KEY = "frensei:user_id";
@@ -44,4 +46,13 @@ export function addAssistantMessage(userId: string, sessionId: string, content: 
 
 export function removeSession(userId: string, sessionId: string): void {
   deleteSession(userId, sessionId);
+}
+
+export function updateMessageMeta(
+  userId: string,
+  sessionId: string,
+  messageId: string,
+  patch: ChatMessageMeta,
+): void {
+  patchMessageMeta(userId, sessionId, messageId, patch);
 }

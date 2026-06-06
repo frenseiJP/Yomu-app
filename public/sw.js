@@ -1,5 +1,5 @@
 const CACHE_NAME = "frensei-cache-v1";
-const OFFLINE_URLS = ["/", "/topic", "/progress", "/report", "/feedback", "/vocabulary"];
+const OFFLINE_URLS = ["/app", "/learn", "/try", "/chat", "/progress", "/report", "/vocabulary"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -31,7 +31,7 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           return res;
         })
-        .catch(() => caches.match("/"));
+        .catch(() => caches.match("/app"));
     }),
   );
 });

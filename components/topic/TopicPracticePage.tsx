@@ -95,7 +95,7 @@ export default function TopicPracticePage() {
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-2xl overflow-x-hidden px-4 py-5 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-8 lg:max-w-3xl lg:px-8">
       <div className="mb-4">
-        <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200">
+        <Link href="/app" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200">
           <ArrowLeft className="h-4 w-4" />
           Home
         </Link>

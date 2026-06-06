@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
+
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+};
 
 function isLineInAppBrowser(ua: string): boolean {
   return /Line\/|LIFF|NAVER\(inapp/i.test(ua);
@@ -10,23 +16,35 @@ function isIos(ua: string): boolean {
   return /iPhone|iPad|iPod/i.test(ua);
 }
 
+function isAppShellPath(pathname: string): boolean {
+  return (
+    pathname === "/app" ||
+    pathname === "/chat" ||
+    pathname.startsWith("/vocabulary") ||
+    pathname.startsWith("/progress") ||
+    pathname.startsWith("/more")
+  );
+}
+
 export default function MobileAppBridge() {
+  const pathname = usePathname() || "";
   const [isLine, setIsLine] = useState(false);
   const [isIosLine, setIsIosLine] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [lineDismissed, setLineDismissed] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installDismissed, setInstallDismissed] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const ua = window.navigator.userAgent || "";
-    const line = isLineInAppBrowser(ua);
-    setIsLine(line);
-    setIsIosLine(line && isIos(ua));
-    setDismissed(window.sessionStorage.getItem("line_notice_dismissed") === "1");
+    setIsLine(isLineInAppBrowser(ua));
+    setIsIosLine(isLineInAppBrowser(ua) && isIos(ua));
+    setLineDismissed(window.sessionStorage.getItem("line_notice_dismissed") === "1");
+    setInstallDismissed(window.sessionStorage.getItem("pwa_install_dismissed") === "1");
 
-    // Suppress browser-native "Add to Home Screen" prompt.
-    // We do not show a custom install button either.
     const onBeforeInstall = (e: Event) => {
       e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
     };
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
 
@@ -41,17 +59,18 @@ export default function MobileAppBridge() {
     };
   }, []);
 
-  const showLineHint = isLine && !dismissed;
-
-  const canShow = showLineHint;
-  const hint = useMemo(() => {
+  const lineHint = useMemo(() => {
     if (isIosLine) {
       return "LINE内ブラウザだと操作しづらいです。右上メニューから Safari で開くと使いやすくなります。";
     }
     return "LINE内ブラウザで開いています。右上メニューから Chrome / Safari で開くと快適です。";
   }, [isIosLine]);
 
-  if (!canShow) return null;
+  const showLineHint = isLine && !lineDismissed;
+  const showInstall =
+    isAppShellPath(pathname) && installPrompt && !installDismissed && !showLineHint;
+
+  if (!showLineHint && !showInstall) return null;
 
   const tryOpenExternal = () => {
     if (typeof window === "undefined") return;
@@ -65,9 +84,24 @@ export default function MobileAppBridge() {
     window.open(current, "_blank", "noopener,noreferrer");
   };
 
+  const runInstall = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    await installPrompt.userChoice;
+    setInstallPrompt(null);
+    setInstallDismissed(true);
+    window.sessionStorage.setItem("pwa_install_dismissed", "1");
+  };
+
   return (
     <div className="fixed inset-x-3 bottom-[max(88px,env(safe-area-inset-bottom,0px)+72px)] z-[1200] rounded-2xl border border-slate-700 bg-slate-900/95 p-3 text-slate-100 shadow-2xl backdrop-blur">
-      {showLineHint ? <p className="text-xs leading-relaxed text-slate-200">{hint}</p> : null}
+      {showLineHint ? (
+        <p className="text-xs leading-relaxed text-slate-200">{lineHint}</p>
+      ) : (
+        <p className="text-xs leading-relaxed text-slate-200">
+          Add Frensei to your home screen for faster access.
+        </p>
+      )}
       <div className="mt-2 flex flex-wrap gap-2">
         {showLineHint ? (
           <button
@@ -78,20 +112,30 @@ export default function MobileAppBridge() {
             外部ブラウザで開く
           </button>
         ) : null}
-        {showLineHint ? (
+        {showInstall ? (
           <button
             type="button"
-            onClick={() => {
-              setDismissed(true);
-              if (typeof window !== "undefined") {
-                window.sessionStorage.setItem("line_notice_dismissed", "1");
-              }
-            }}
-            className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs text-slate-300"
+            onClick={() => void runInstall()}
+            className="rounded-lg bg-pink-500 px-3 py-1.5 text-xs font-semibold text-white"
           >
-            閉じる
+            Install app
           </button>
         ) : null}
+        <button
+          type="button"
+          onClick={() => {
+            if (showLineHint) {
+              setLineDismissed(true);
+              window.sessionStorage.setItem("line_notice_dismissed", "1");
+            } else {
+              setInstallDismissed(true);
+              window.sessionStorage.setItem("pwa_install_dismissed", "1");
+            }
+          }}
+          className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs text-slate-300"
+        >
+          閉じる
+        </button>
       </div>
     </div>
   );

@@ -1,5 +1,10 @@
 import { getStorage, generateRecordId, nowIso } from "@/src/features/records/storage/helpers";
-import type { ChatMessage, ChatSession, ChatSessionStore } from "@/lib/chat/types";
+import type {
+  ChatMessage,
+  ChatMessageMeta,
+  ChatSession,
+  ChatSessionStore,
+} from "@/lib/chat/types";
 
 function key(userId: string): string {
   return `frensei:chat:v1:${userId}`;
@@ -110,6 +115,25 @@ export function appendMessage(
 
   writeStore(userId, store);
   return msg;
+}
+
+export function patchMessageMeta(
+  userId: string,
+  sessionId: string,
+  messageId: string,
+  patch: ChatMessageMeta,
+): void {
+  const store = readStore(userId);
+  const rows = store.messagesBySession[sessionId];
+  if (!rows) return;
+  const idx = rows.findIndex((m) => m.id === messageId);
+  if (idx < 0) return;
+  rows[idx] = {
+    ...rows[idx],
+    meta: { ...rows[idx].meta, ...patch },
+  };
+  store.messagesBySession[sessionId] = rows;
+  writeStore(userId, store);
 }
 
 export function upsertSession(userId: string, session: ChatSession): void {

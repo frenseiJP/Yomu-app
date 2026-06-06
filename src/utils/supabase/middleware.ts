@@ -74,6 +74,14 @@ export async function updateSession(request: NextRequest) {
       return redirectResponse;
     }
 
+    if (user && request.nextUrl.pathname === "/") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/chat";
+      const redirectResponse = NextResponse.redirect(url);
+      copyCookies(response, redirectResponse);
+      return redirectResponse;
+    }
+
     if (
       !user &&
       request.nextUrl.pathname === "/" &&

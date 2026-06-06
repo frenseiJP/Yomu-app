@@ -271,7 +271,7 @@ export default function VocabularyPage({
                     </button>
                   ) : (
                     <a
-                      href="/?scenario=today"
+                      href="/app?scenario=today"
                       className={`inline-flex w-full items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-medium sm:w-auto ${emptyBtnSecondary}`}
                     >
                       <Sparkles className="h-3.5 w-3.5" />

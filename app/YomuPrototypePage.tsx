@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  Image as ImageIcon,
   Volume2,
   Sparkles,
   BookOpen,
@@ -93,6 +92,7 @@ import {
   getSessions,
   removeSession,
   startNewChatSession,
+  updateMessageMeta,
 } from "@/lib/chat/service";
 import { useChatInputIme } from "@/lib/chat/useChatInputIme";
 import { useVisualViewportInset } from "@/lib/chat/useVisualViewportInset";
@@ -150,7 +150,11 @@ import {
 import { migrateFtueIfLegacyUser, readFtuePersist, writeFtuePersist } from "@/lib/ftue/state";
 import { ftueEnglishPromptForMode, getFtueFreeOpening, getFtueOpening } from "@/lib/ftue/openers";
 import type { FtueCoachPayload, FtuePracticeMode } from "@/lib/ftue/types";
-import { markBetaFeedbackPromptShown, shouldShowBetaFeedbackPrompt } from "@/lib/feedback/service";
+import {
+  BETA_FEEDBACK_USER_MESSAGE_INTERVAL,
+  markBetaFeedbackPromptShown,
+  shouldShowBetaFeedbackPrompt,
+} from "@/lib/feedback/service";
 import { logBetaEvent } from "@/lib/analytics/client";
 import GuidedTutorialWelcome from "@/components/tutorial/GuidedTutorialWelcome";
 import TutorialHintCard from "@/components/tutorial/TutorialHintCard";
@@ -436,6 +440,8 @@ type ChatTurnContext = {
 
 type Message = {
   id: number;
+  /** localStorage 上の ChatMessage.id */
+  storedId?: string;
   role: Role;
   baseText: string;
   /** 送信時点のトーン。ストリーム中に UI のトーンを変えても表示が揺れないようにする */
@@ -465,12 +471,26 @@ type Message = {
   };
 };
 
+function metaFromStored(
+  meta: StoredChatMessage["meta"],
+): Pick<Message, "replyTone" | "senseiPayload" | "chatContext" | "goalFeedback"> {
+  if (!meta) return {};
+  return {
+    replyTone: meta.replyTone as Politeness | undefined,
+    senseiPayload: meta.senseiPayload as FtueCoachPayload | undefined,
+    chatContext: meta.chatContext as ChatTurnContext | undefined,
+    goalFeedback: meta.goalFeedback,
+  };
+}
+
 function toViewMessages(rows: StoredChatMessage[]): Message[] {
   return rows.map((m, i) => ({
     id: Date.now() + i,
+    storedId: m.id,
     role: m.role,
     baseText: m.content,
     createdAt: m.createdAt,
+    ...metaFromStored(m.meta),
   }));
 }
 
@@ -853,7 +873,6 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     }
   });
   const [vocabKanaVisible, setVocabKanaVisible] = useState(true);
-  const [imageName, setImageName] = useState<string | null>(null);
   const [vocabMenu, setVocabMenu] = useState<{ phrase: string; reading: string; romaji?: string } | null>(null);
   const [vocabAdding, setVocabAdding] = useState(false);
   const [contextLoadingId, setContextLoadingId] = useState<number | null>(null);
@@ -1333,8 +1352,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   useEffect(() => {
     if (activeView !== "chat") return;
     if (betaFeedbackVisible) return;
-    if (chatUserMessageCount < 3) return;
-    if (chatUserMessageCount % 3 !== 0) return;
+    if (chatUserMessageCount < BETA_FEEDBACK_USER_MESSAGE_INTERVAL) return;
+    if (chatUserMessageCount % BETA_FEEDBACK_USER_MESSAGE_INTERVAL !== 0) return;
     if (lastBetaFeedbackAtCountRef.current === chatUserMessageCount) return;
     if (!shouldShowBetaFeedbackPrompt(habitUserId, { userMessageCount: chatUserMessageCount })) {
       return;
@@ -1903,20 +1922,20 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           habitUserId,
         );
 
+        const chatContext = {
+          highlightPhrases: normalizedHp,
+          followUps: shuffled.items,
+          bestFollowUpIndex: shuffled.bestIdx,
+          saveCandidates,
+        };
         setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId
-              ? {
-                  ...m,
-                  chatContext: {
-                    highlightPhrases: normalizedHp,
-                    followUps: shuffled.items,
-                    bestFollowUpIndex: shuffled.bestIdx,
-                    saveCandidates,
-                  },
-                }
-              : m,
-          ),
+          prev.map((m) => {
+            if (m.id !== assistantId) return m;
+            if (m.storedId && currentSessionId) {
+              updateMessageMeta(habitUserId, currentSessionId, m.storedId, { chatContext });
+            }
+            return { ...m, chatContext };
+          }),
         );
       } catch {
         /* 文脈付与に失敗しても会話本文はそのまま */
@@ -2128,18 +2147,27 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         const body = showMicro
           ? "Nice improvement 👍\nYou sound more natural already.\n\n" + core
           : core;
-        addAssistantMessage(habitUserId, sessionId, body);
+        const storedFtue = addAssistantMessage(habitUserId, sessionId, body);
+        const goalFbFtue = showMicro ? undefined : buildGoalFeedback(sessionGoal, payload);
+        if (!showMicro) {
+          updateMessageMeta(habitUserId, sessionId, storedFtue.id, {
+            replyTone: toneAtSend,
+            senseiPayload: payload,
+            goalFeedback: goalFbFtue,
+          });
+        }
         setChatSessions(getSessions(habitUserId));
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
               ? {
                   ...m,
+                  storedId: storedFtue.id,
                   baseText: body,
                   replyTone: toneAtSend,
                   ftueAnchored: true,
                   senseiPayload: showMicro ? undefined : payload,
-                  goalFeedback: showMicro ? undefined : buildGoalFeedback(sessionGoal, payload),
+                  goalFeedback: goalFbFtue,
                 }
               : m,
           ),
@@ -2160,18 +2188,27 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         const body = showMicro
           ? "Nice improvement 👍\nYou sound more natural already.\n\n" + core
           : core;
-        addAssistantMessage(habitUserId, sessionId, body);
+        const storedFtueFb = addAssistantMessage(habitUserId, sessionId, body);
+        const goalFbFtueFb = showMicro ? undefined : buildGoalFeedback(sessionGoal, payload);
+        if (!showMicro) {
+          updateMessageMeta(habitUserId, sessionId, storedFtueFb.id, {
+            replyTone: toneAtSend,
+            senseiPayload: payload,
+            goalFeedback: goalFbFtueFb,
+          });
+        }
         setChatSessions(getSessions(habitUserId));
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
               ? {
                   ...m,
+                  storedId: storedFtueFb.id,
                   baseText: body,
                   replyTone: toneAtSend,
                   ftueAnchored: true,
                   senseiPayload: showMicro ? undefined : payload,
-                  goalFeedback: showMicro ? undefined : buildGoalFeedback(sessionGoal, payload),
+                  goalFeedback: goalFbFtueFb,
                 }
               : m,
           ),
@@ -2261,17 +2298,24 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           : fallbackStructuredCoachPayload(text);
       const body = buildFtueCoachMessage(payload, text);
       accumulated = body;
-      addAssistantMessage(habitUserId, sessionId, body);
+      const stored = addAssistantMessage(habitUserId, sessionId, body);
+      const goalFb = buildGoalFeedback(sessionGoal, payload);
+      updateMessageMeta(habitUserId, sessionId, stored.id, {
+        replyTone: toneAtSend,
+        senseiPayload: payload,
+        goalFeedback: goalFb,
+      });
       setChatSessions(getSessions(habitUserId));
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId
             ? {
                 ...m,
+                storedId: stored.id,
                 baseText: body,
                 replyTone: toneAtSend,
                 senseiPayload: payload,
-                goalFeedback: buildGoalFeedback(sessionGoal, payload),
+                goalFeedback: goalFb,
               }
             : m,
         ),
@@ -2511,24 +2555,6 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       }
     }
   }, [createNewSession, currentSessionId, habitUserId, openSession]);
-
-  const handleImageSelect = (file: File) => {
-    const { uiText: chatUi } = getPrototypeCopy(appLang as Lang);
-    setImageName(file.name || chatUi.imageFileFallback);
-    const now = new Date().toISOString();
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        role: "assistant",
-        baseText: chatUi.chatImageBody,
-        culturalNote: chatUi.chatImageCulturalNote,
-        tipsNote: chatUi.chatImageTipsNote,
-        showToneMeta: true,
-        createdAt: now,
-      },
-    ]);
-  };
 
   const handleAddVocab = async (word: string, romaji: string) => {
     if (vocab.some((v) => v.word === word)) {
@@ -4101,16 +4127,6 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               />
 
               <div className="flex items-end gap-2 rounded-2xl border border-slate-700/55 bg-slate-950/95 px-2.5 py-2 shadow-lg backdrop-blur-md sm:gap-2.5 sm:px-3 sm:py-2.5">
-                <button
-                  type="button"
-                  className="btn-wa-hover btn-wa-hover-ruri flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-slate-700/50 bg-slate-900/60 text-slate-300 hover:border-wa-ruri hover:text-slate-50 sm:h-10 sm:w-10"
-                  onClick={() =>
-                    handleImageSelect(new File([""], "hanami-photo.jpg"))
-                  }
-                  aria-label={uiText.attachImageAria}
-                >
-                  <ImageIcon className="h-4 w-4" />
-                </button>
                 <div className="flex-1">
                   <textarea
                     ref={chatInputRef}
@@ -4134,11 +4150,6 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     placeholder={uiText.inputPlaceholder}
                     className="max-h-32 w-full resize-none border-0 bg-transparent text-[15px] leading-snug text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
                   />
-                  {imageName && (
-                    <p className="mt-1 text-[11px] text-slate-500">
-                      {uiText.imagePlaceholderLabel} {imageName}
-                    </p>
-                  )}
                 </div>
                 <button
                   type="button"

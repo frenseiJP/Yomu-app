@@ -133,7 +133,7 @@ export default function LearningReportPage() {
             {appLang === "ja" ? "フィードバック専用ページ" : "Full feedback page"}
           </Link>
           <Link
-            href="/"
+            href="/app"
             className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-600 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-900"
           >
             {appLang === "ja" ? "アプリに戻る" : "Back to app"}

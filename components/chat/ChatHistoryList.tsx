@@ -17,14 +17,14 @@ function latestPreview(userId: string, sessionId: string): string {
 export function ChatHistoryList() {
   const userId = useVocabularyUserId();
   const [tick, setTick] = useState(0);
-  const [chatBase, setChatBase] = useState<"/chat" | "/">("/");
+  const [chatBase, setChatBase] = useState<"/chat" | "/app">("/app");
 
   useEffect(() => {
     let cancelled = false;
     void createClient()
       .auth.getUser()
       .then(({ data }) => {
-        if (!cancelled) setChatBase(data.user ? "/chat" : "/");
+        if (!cancelled) setChatBase(data.user ? "/chat" : "/app");
       });
     return () => {
       cancelled = true;
@@ -60,7 +60,7 @@ export function ChatHistoryList() {
           No learning history yet. Start a chat to begin building your Japanese learning journey.
         </p>
         <a
-          href={chatBase === "/chat" ? "/chat" : "/"}
+          href={chatBase === "/chat" ? "/chat" : "/app"}
           className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#155EEF] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#1B6CFF]"
         >
           Start chatting

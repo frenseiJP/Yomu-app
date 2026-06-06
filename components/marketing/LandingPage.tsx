@@ -49,6 +49,12 @@ export default function LandingPage() {
             Phrase guides
           </Link>
           <Link
+            href="/app"
+            className="hidden rounded-lg px-3 py-2 text-sm text-slate-400 hover:text-slate-200 md:inline"
+          >
+            Open app
+          </Link>
+          <Link
             href="/login"
             className="rounded-lg px-3 py-2 text-sm text-slate-300 hover:text-white"
           >

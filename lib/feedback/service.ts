@@ -10,8 +10,8 @@ import type { BetaFeedback, BetaFeedbackSource } from "@/lib/feedback/types";
 const SHOW_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const MAX_SUBMISSIONS = 12;
 
-/** Show feedback prompt every N user messages in chat (3, 6, 9, …). */
-export const BETA_FEEDBACK_USER_MESSAGE_INTERVAL = 3;
+/** Show feedback prompt every N user messages in chat (6, 12, 18, …). */
+export const BETA_FEEDBACK_USER_MESSAGE_INTERVAL = 6;
 
 function nowIso(): string {
   return new Date().toISOString();
