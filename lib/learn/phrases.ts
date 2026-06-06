@@ -495,6 +495,256 @@ const PHRASES: LearnPhrase[] = [
     relatedSlugs: ["daijoubu-desu", "wakarimashita"],
     tryPrompt: "How do I soften my Japanese so it sounds less direct?",
   },
+  {
+    slug: "gochisousama",
+    topic: "ごちそうさま",
+    reading: "ごちそうさま",
+    title: "Gochisousama — After-Meal Gratitude",
+    seoTitle: "Gochisousama (ごちそうさま): Meaning & When to Say It | Frensei",
+    seoDescription:
+      "ごちそうさま thanks everyone who made the meal possible. Learn the polite form ごちそうさまでした and pairing with いただきます.",
+    meaningEn: "Thank you for the feast / that was a great meal",
+    level: "N5",
+    nuance:
+      "Mirrors いただきます after eating. Acknowledges effort and ingredients—not flattery about taste alone.",
+    culturalNote:
+      "Say once when finished, especially when leaving a restaurant or someone's home. ごちそうさまでした is safer with hosts.",
+    examples: [
+      { ja: "ごちそうさまでした。", en: "Thank you for the meal.", context: "Leaving a friend's dinner" },
+      { ja: "ごちそうさま。", en: "Thanks for food.", context: "Casual with close friends" },
+    ],
+    commonMistakes: [
+      "Saying it before eating (that is いただきます)",
+      "Skipping it when someone cooked for you",
+    ],
+    relatedSlugs: ["itadakimasu", "arigatou-gozaimasu"],
+    tryPrompt: "When do I say ごちそうさまでした?",
+  },
+  {
+    slug: "ganbatte",
+    topic: "頑張って",
+    reading: "がんばって",
+    title: "Ganbatte — Cheer Someone On Naturally",
+    seoTitle: "Ganbatte (頑張って): Meaning, Usage & Polite Alternatives | Frensei",
+    seoDescription:
+      "頑張って encourages effort before exams, sports, or tough days. Learn when it helps—and when お大事に is better.",
+    meaningEn: "Do your best / hang in there",
+    level: "N5",
+    nuance:
+      "Signals solidarity, not orders. Tone matters—can feel warm or intense depending on relationship.",
+    culturalNote:
+      "Common before tests and presentations. After illness, お大事に or お大事にしてください is more appropriate than 頑張って.",
+    examples: [
+      { ja: "明日の試験、頑張って。", en: "Good luck on tomorrow's exam.", context: "Text to a classmate" },
+      { ja: "みんな、頑張りましょう。", en: "Let's all do our best.", context: "Team meeting" },
+    ],
+    commonMistakes: [
+      "Telling someone sick to 頑張って (sounds harsh)",
+      "Overusing it when quiet support is enough",
+    ],
+    relatedSlugs: ["otsukaresama", "daijoubu-desu"],
+    tryPrompt: "Is 頑張って appropriate before a job interview?",
+  },
+  {
+    slug: "ikura-desu-ka",
+    topic: "いくらですか",
+    reading: "いくらですか",
+    title: "Ikura Desu Ka — Asking Price Politely",
+    seoTitle: "Ikura Desu Ka: How to Ask \"How Much?\" in Japanese | Frensei",
+    seoDescription:
+      "いくらですか works in shops and markets. Learn casual いくら？ and how to sound polite at souvenir stores.",
+    meaningEn: "How much is it?",
+    level: "N5",
+    nuance:
+      "ですか keeps it neutral-polite. Pointing at items while asking is normal; bargaining is rare except flea markets.",
+    culturalNote:
+      "At konbini prices are fixed—asking is odd. At department stores staff may walk you to the register instead of quoting verbally.",
+    examples: [
+      { ja: "これはいくらですか。", en: "How much is this?", context: "Souvenir shop" },
+      { ja: "全部でいくら？", en: "How much for everything?", context: "Casual market stall" },
+    ],
+    commonMistakes: [
+      "Using overly casual いくら？ with luxury shop staff",
+      "Forgetting を when specifying an item (これはいくらですか)",
+    ],
+    relatedSlugs: ["kore-kudasai", "sumimasen"],
+    tryPrompt: "How do I ask the price politely in a department store?",
+  },
+  {
+    slug: "doko-desu-ka",
+    topic: "どこですか",
+    reading: "どこですか",
+    title: "Doko Desu Ka — Asking Where Things Are",
+    seoTitle: "Doko Desu Ka: Asking \"Where?\" in Japanese | Frensei",
+    seoDescription:
+      "どこですか helps you navigate stations, restrooms, and meeting spots. Learn patterns with トイレはどこですか.",
+    meaningEn: "Where is it?",
+    level: "N5",
+    nuance:
+      "Place the topic before どこ: 駅はどこですか. どこにありますか is slightly more formal/locational.",
+    culturalNote:
+      "Staff often gesture or walk you partway—following quickly is polite. Say ありがとうございます after.",
+    examples: [
+      { ja: "トイレはどこですか。", en: "Where is the restroom?", context: "Restaurant" },
+      { ja: "出口はどこ？", en: "Where's the exit?", context: "Casual with friends" },
+    ],
+    commonMistakes: [
+      "Only saying どこ？ without context to strangers",
+      "Confusing どこに行きますか (where are you going) when asking location",
+    ],
+    relatedSlugs: ["sumimasen", "chotto-matte"],
+    tryPrompt: "How do I ask where the station exit is politely?",
+  },
+  {
+    slug: "suki-desu",
+    topic: "好きです",
+    reading: "すきです",
+    title: "Suki Desu — Likes, Food, and Soft Confessions",
+    seoTitle: "Suki Desu (好きです): Saying \"I Like\" in Japanese | Frensei",
+    seoDescription:
+      "好きです covers hobbies, food, and feelings. Learn 〜が好きです patterns and how directness differs from English.",
+    meaningEn: "I like (it / you)",
+    level: "N5",
+    nuance:
+      "が marks the liked thing: ラーメンが好きです. Romantic 好きです is short and weighty—context does the work.",
+    culturalNote:
+      "Japanese often expresses preference indirectly. Listing specifics (銀座の寿司が好き) sounds more natural than global statements.",
+    examples: [
+      { ja: "日本料理が好きです。", en: "I like Japanese food.", context: "Self-introduction" },
+      { ja: "この曲、好き。", en: "I like this song.", context: "Casual chat" },
+    ],
+    commonMistakes: [
+      "Using を instead of が (×日本料理を好き)",
+      "Saying 好きです to a boss about their hobby (can sound too personal)",
+    ],
+    relatedSlugs: ["konnichiwa", "arigatou-gozaimasu"],
+    tryPrompt: "How do I say I like ramen without sounding like a textbook?",
+  },
+  {
+    slug: "mou-ichido",
+    topic: "もう一度",
+    reading: "もういちど",
+    title: "Mou Ichido — \"One More Time\" Politely",
+    seoTitle: "Mou Ichido (もう一度): Asking Someone to Repeat | Frensei",
+    seoDescription:
+      "もう一度 is essential in language learning and meetings. Learn softer もう一度お願いします and casual もう一回.",
+    meaningEn: "Once more / one more time",
+    level: "N5",
+    nuance:
+      "お願いします softens requests. In classrooms teachers expect もう一度言ってください from learners.",
+    culturalNote:
+      "Covering your mouth slightly and nodding after a repeat shows you are trying—not just demanding.",
+    examples: [
+      { ja: "もう一度お願いします。", en: "Could you say that again?", context: "Language exchange" },
+      { ja: "もう一回。", en: "One more time.", context: "Casual with friends" },
+    ],
+    commonMistakes: [
+      "Demanding もう一度！ without お願いします to superiors",
+      "Using English \"repeat\" loanwords in formal settings",
+    ],
+    relatedSlugs: ["sumimasen", "wakarimashita"],
+    tryPrompt: "What's a polite way to ask my teacher to repeat in Japanese?",
+  },
+  {
+    slug: "kekkou-desu",
+    topic: "結構です",
+    reading: "けっこうです",
+    title: "Kekkou Desu — Declining Offers Gracefully",
+    seoTitle: "Kekkou Desu (結構です): Saying \"No Thank You\" in Japanese | Frensei",
+    seoDescription:
+      "結構です softly declines second helpings or sales pitches. Learn pairing with a bow and when いいえ alone sounds harsh.",
+    meaningEn: "No thank you / I'm fine",
+    level: "N4",
+    nuance:
+      "Implies you are satisfied already. Softer than blunt いらないです in many service contexts.",
+    culturalNote:
+      "At meals, refusing more rice with 結構です is standard. Smile and hand gesture (palms forward) help.",
+    examples: [
+      { ja: "お代わりは結構です。", en: "No more refills, thank you.", context: "Restaurant" },
+      { ja: "今日は結構です。", en: "I'm good for today.", context: "Declining a drink offer" },
+    ],
+    commonMistakes: [
+      "Using 結構です to mean \"quite good\" without context (it has both senses)",
+      "Flat いいえ alone to a host offering food",
+    ],
+    relatedSlugs: ["daijoubu-desu", "arigatou-gozaimasu"],
+    tryPrompt: "How do I politely decline more food in Japanese?",
+  },
+  {
+    slug: "tetsudatte-kudasai",
+    topic: "手伝ってください",
+    reading: "てつだってください",
+    title: "Tetsudatte Kudasai — Asking for Help",
+    seoTitle: "Tetsudatte Kudasai: How to Ask for Help in Japanese | Frensei",
+    seoDescription:
+      "手伝ってください requests assistance clearly but politely. Learn shorter 手伝って and workplace お手伝いしましょうか.",
+    meaningEn: "Please help me",
+    level: "N4",
+    nuance:
+      "ください frames it as a request, not an order. Adding すみませんが first softens further.",
+    culturalNote:
+      "Offering help uses different grammar: 手伝いましょうか. Accepting with お願いします completes the exchange.",
+    examples: [
+      { ja: "すみません、手伝ってください。", en: "Excuse me, please help me.", context: "Moving luggage" },
+      { ja: "ちょっと手伝って。", en: "Give me a hand.", context: "Casual with roommate" },
+    ],
+    commonMistakes: [
+      "Using 手伝ってください for trivial favors without thanks afterward",
+      "Confusing with 助けて (emergency help!)",
+    ],
+    relatedSlugs: ["onegaishimasu", "sumimasen"],
+    tryPrompt: "How do I ask a coworker for help politely in Japanese?",
+  },
+  {
+    slug: "odaiji-ni",
+    topic: "お大事に",
+    reading: "おだいじに",
+    title: "Odaiji Ni — When Someone Is Sick",
+    seoTitle: "Odaiji Ni (お大事に): Get Well Wishes in Japanese | Frensei",
+    seoDescription:
+      "お大事に is the standard get-well phrase. Learn お大事にしてください for extra care and why 頑張って can sound wrong.",
+    meaningEn: "Take care / get well",
+    level: "N5",
+    nuance:
+      "Wishes recovery, not effort. お大事にしてください adds polite distance for colleagues and clients.",
+    culturalNote:
+      "Sent in LINE messages with short updates expected later. Visiting with omiyage is common for close friends.",
+    examples: [
+      { ja: "お大事にしてください。", en: "Please take care of yourself.", context: "Email to sick colleague" },
+      { ja: "お大事に！", en: "Get well soon!", context: "Text to a friend" },
+    ],
+    commonMistakes: [
+      "Saying 頑張って to someone with fever",
+      "Using お疲れ様 to someone resting at home sick",
+    ],
+    relatedSlugs: ["ganbatte", "daijoubu-desu"],
+    tryPrompt: "What should I text a friend who caught a cold in Japanese?",
+  },
+  {
+    slug: "tanoshimi-ni",
+    topic: "楽しみにしています",
+    reading: "たのしみにしています",
+    title: "Tanoshimi Ni Shiteimasu — Looking Forward To It",
+    seoTitle: "Tanoshimi Ni Shiteimasu: \"Looking Forward\" in Japanese | Frensei",
+    seoDescription:
+      "楽しみにしています closes emails and plans warmly. Learn shorter 楽しみにしてる and business 楽しみにしております.",
+    meaningEn: "I'm looking forward to it",
+    level: "N4",
+    nuance:
+      "Shows positive anticipation for meetings, trips, or collaborations. しております elevates formality.",
+    culturalNote:
+      "Common after confirming a dinner date or project kickoff. Pairs well with よろしくお願いします in emails.",
+    examples: [
+      { ja: "来週のイベント、楽しみにしています。", en: "I'm looking forward to next week's event.", context: "Work chat" },
+      { ja: "楽しみにしてる！", en: "Can't wait!", context: "Casual with friends" },
+    ],
+    commonMistakes: [
+      "Using 楽しみです alone in formal email (やや幼い印象)",
+      "Forgetting to follow up if plans cancel",
+    ],
+    relatedSlugs: ["yoroshiku-onegaishimasu", "arigatou-gozaimasu"],
+    tryPrompt: "How do I say I'm looking forward to our meeting in polite Japanese?",
+  },
 ];
 
 const bySlug = new Map(PHRASES.map((p) => [p.slug, p]));

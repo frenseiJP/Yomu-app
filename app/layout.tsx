@@ -40,14 +40,7 @@ export const metadata: Metadata = {
     description: "Learn Japanese naturally with Frensei, your AI-powered Japanese coach. Practice real conversations, master culture, and build vocabulary with personalized AI guidance.",
     siteName: "Frensei",
     locale: "en_US",
-    images: [
-      {
-        url: `${SITE_URL}/icons/icon-512.svg`,
-        width: 512,
-        height: 512,
-        alt: "Frensei",
-      },
-    ],
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Frensei" }],
   },
   twitter: {
     card: "summary_large_image",

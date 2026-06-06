@@ -132,6 +132,7 @@ export type PrototypeUiText = {
   chatSuggestedFollowUps: string;
   chatFollowUpNice: string;
   chatFollowUpOk: string;
+  chatFollowUpRecommended: string;
   chatContextLoadingHint: string;
   attachImageAria: string;
   imagePlaceholderLabel: string;
@@ -355,6 +356,7 @@ const UI_EN: PrototypeUiText = {
     "Pick the best follow-up for this reply (one fits the thread best).",
   chatFollowUpNice: "Nice — that continues the topic well.",
   chatFollowUpOk: "Good question too. Another chip matched the thread a bit better.",
+  chatFollowUpRecommended: "Recommended",
   chatContextLoadingHint: "Updating suggestions…",
   attachImageAria: "Attach image",
   imagePlaceholderLabel: "Image placeholder:",
@@ -580,6 +582,7 @@ const UI_JA: PrototypeUiText = {
     "この返信に続く質問として、いちばん合うものを選んでみてください。",
   chatFollowUpNice: "いいですね — 話の流れに合っています。",
   chatFollowUpOk: "それもアリです。別の候補の方が、この返信により沿っていました。",
+  chatFollowUpRecommended: "おすすめ",
   chatContextLoadingHint: "候補を更新しています…",
   attachImageAria: "画像を添付",
   imagePlaceholderLabel: "画像（プレースホルダー）:",
@@ -804,6 +807,7 @@ const UI_KO: PrototypeUiText = {
     "이 답변에 이어질 질문 중 가장 알맞은 것을 골라 보세요.",
   chatFollowUpNice: "좋아요 — 대화 흐름에 잘 맞습니다.",
   chatFollowUpOk: "그것도 괜찮아요. 다른 칩이 답변과 조금 더 잘 맞았어요.",
+  chatFollowUpRecommended: "추천",
   chatContextLoadingHint: "추천을 불러오는 중…",
   attachImageAria: "이미지 첨부",
   imagePlaceholderLabel: "이미지(플레이스홀더):",
@@ -1023,6 +1027,7 @@ const UI_ZH: PrototypeUiText = {
   chatSuggestedFollowUps: "请选出最贴合这条回复的后续提问。",
   chatFollowUpNice: "选得好 — 和话题衔接很自然。",
   chatFollowUpOk: "也可以。另一个选项更贴近刚才的回复。",
+  chatFollowUpRecommended: "推荐",
   chatContextLoadingHint: "正在更新建议…",
   attachImageAria: "添加图片",
   imagePlaceholderLabel: "图片（占位）:",

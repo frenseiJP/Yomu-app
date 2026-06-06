@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, BookOpen, MessageCircle, Sparkles } from "lucide-react";
 import GuestTryChat from "@/components/marketing/GuestTryChat";
 import { getAllPhrases } from "@/lib/learn/phrases";
 import { logBetaEvent } from "@/lib/analytics/client";
+import { createClient } from "@/src/utils/supabase/client";
 
 const FEATURED_SLUGS = [
   "itadakimasu",
@@ -18,9 +19,22 @@ const FEATURED_SLUGS = [
 
 export default function LandingPage() {
   const featured = getAllPhrases().filter((p) => FEATURED_SLUGS.includes(p.slug));
+  const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
     void logBetaEvent({ eventType: "landing_view", route: "/" });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void createClient()
+      .auth.getUser()
+      .then(({ data }) => {
+        if (!cancelled) setSignedIn(Boolean(data.user));
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -48,31 +62,49 @@ export default function LandingPage() {
           >
             Phrase guides
           </Link>
-          <Link
-            href="/app"
-            className="hidden rounded-lg px-3 py-2 text-sm text-slate-400 hover:text-slate-200 md:inline"
-          >
-            Open app
-          </Link>
-          <Link
-            href="/login"
-            className="rounded-lg px-3 py-2 text-sm text-slate-300 hover:text-white"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/login?intent=signup"
-            onClick={() =>
-              void logBetaEvent({
-                eventType: "signup_cta_click",
-                route: "/",
-                metadata: { source: "landing_header" },
-              })
-            }
-            className="rounded-xl bg-gradient-to-r from-pink-500/90 to-pink-600/90 px-4 py-2 text-sm font-medium text-white shadow-lg hover:from-pink-500 hover:to-pink-600"
-          >
-            Start free
-          </Link>
+          {signedIn ? (
+            <Link
+              href="/chat"
+              onClick={() =>
+                void logBetaEvent({
+                  eventType: "home_cta_click",
+                  route: "/",
+                  metadata: { cta: "continue_learning_header" },
+                })
+              }
+              className="rounded-xl bg-gradient-to-r from-wa-ruri to-wa-asagi px-4 py-2 text-sm font-medium text-white shadow-lg hover:opacity-95"
+            >
+              Continue learning
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/app"
+                className="hidden rounded-lg px-3 py-2 text-sm text-slate-400 hover:text-slate-200 md:inline"
+              >
+                Open app
+              </Link>
+              <Link
+                href="/login"
+                className="rounded-lg px-3 py-2 text-sm text-slate-300 hover:text-white"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/login?intent=signup"
+                onClick={() =>
+                  void logBetaEvent({
+                    eventType: "signup_cta_click",
+                    route: "/",
+                    metadata: { source: "landing_header" },
+                  })
+                }
+                className="rounded-xl bg-gradient-to-r from-pink-500/90 to-pink-600/90 px-4 py-2 text-sm font-medium text-white shadow-lg hover:from-pink-500 hover:to-pink-600"
+              >
+                Start free
+              </Link>
+            </>
+          )}
         </nav>
       </header>
 

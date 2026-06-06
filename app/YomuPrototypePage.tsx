@@ -176,7 +176,12 @@ import {
 import type { GuidedTutorialStep } from "@/lib/tutorial/types";
 import HomeView from "@/components/home/HomeView";
 import VocabularyPage from "@/components/vocabulary/VocabularyPage";
-import { getVocabularyLibrary } from "@/lib/vocabulary/service";
+import {
+  createVocabularyFromChat,
+  getVocabularyLibrary,
+  isPersistedVocabularyItem,
+} from "@/lib/vocabulary/service";
+import { migrateLegacyVocabularyIfNeeded } from "@/lib/vocabulary/migrate";
 import {
   inferMistakeCategory,
   mistakeCategoryLabel,
@@ -496,17 +501,6 @@ function toViewMessages(rows: StoredChatMessage[]): Message[] {
   }));
 }
 
-/** 単語帳の1件：日本語・かな(表示切替可)・ローマ字・訳(複数)・品詞・例文(AI生成) */
-type VocabItem = {
-  id: number;
-  word: string;
-  kana?: string;
-  romaji: string;
-  translations: string[];
-  partOfSpeech?: string;
-  exampleSentences: string[];
-};
-
 type DailyMission = {
   id: string;
   title: string;
@@ -543,32 +537,6 @@ function getTodaysMission(): DailyMission {
 }
 
 const BG = "#020617";
-const LEGACY_VOCAB_STORAGE_KEY = "yomu_my_vocab";
-function vocabStorageKey(userId: string): string {
-  return `frensei:vocab:legacy-ui:v1:${userId}`;
-}
-
-function migrateVocabItem(v: Record<string, unknown>): VocabItem {
-  const id = typeof v.id === "number" ? v.id : Date.now();
-  const word = typeof v.word === "string" ? v.word : "";
-  const romaji =
-    typeof v.romaji === "string"
-      ? v.romaji
-      : typeof v.meaning === "string"
-        ? v.meaning
-        : "";
-  const kana = typeof v.kana === "string" ? v.kana : undefined;
-  const translations = Array.isArray(v.translations)
-    ? (v.translations as string[])
-    : typeof v.meaning === "string"
-      ? [v.meaning]
-      : [];
-  const partOfSpeech = typeof v.partOfSpeech === "string" ? v.partOfSpeech : undefined;
-  const exampleSentences = Array.isArray(v.exampleSentences)
-    ? (v.exampleSentences as string[])
-    : [];
-  return { id, word, kana, romaji, translations, partOfSpeech, exampleSentences };
-}
 
 function buildWelcomeMessage(lang: Lang): Message {
   const { uiText } = getPrototypeCopy(lang);
@@ -863,17 +831,10 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const [draftRegion, setDraftRegion] = useState<Region>(authRegion);
   const [choiceSheet, setChoiceSheet] = useState<ChoiceSheetKind | null>(null);
   const [regionChoiceApplyImmediate, setRegionChoiceApplyImmediate] = useState(false);
-  const [vocab, setVocab] = useState<VocabItem[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const raw = window.localStorage.getItem(LEGACY_VOCAB_STORAGE_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw) as unknown[];
-      return (parsed || []).map((v) => migrateVocabItem(v as Record<string, unknown>));
-    } catch {
-      return [];
-    }
-  });
+  const [vocabRefreshKey, setVocabRefreshKey] = useState(0);
+  const [vocabSaveToast, setVocabSaveToast] = useState<{ message: string; error?: boolean } | null>(
+    null,
+  );
   const [vocabKanaVisible, setVocabKanaVisible] = useState(true);
   const [vocabMenu, setVocabMenu] = useState<{ phrase: string; reading: string; romaji?: string } | null>(null);
   const [vocabAdding, setVocabAdding] = useState(false);
@@ -1423,31 +1384,25 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     };
   }, []);
 
-  const saveWord = async (word: string, meaning: string, example: string) => {
-    const authSupabase = createAuthClient();
-    const {
-      data: { user },
-    } = await authSupabase.auth.getUser();
-    if (!user) {
-      alert(uiText.alertSignInVocab);
-      return;
-    }
-    const { error } = await authSupabase.from("favorites").insert([
-      {
-        user_id: user.id,
-        word,
-        meaning,
-        example,
-        level: "N3",
-        topic: currentTopic || "chat",
-      },
-    ]);
-    if (error) {
-      alert(uiText.alertCouldNotSaveWord);
-    } else {
-      alert(uiText.alertAddedVocab);
-    }
-  };
+  const saveWord = useCallback(
+    async (word: string, meaning: string, example: string) => {
+      try {
+        createVocabularyFromChat({
+          term: word,
+          meaning: meaning.trim() || "Saved from chat",
+          exampleSentence: example.trim() || word,
+          sourceSessionId: currentSessionId ?? undefined,
+          userId: habitUserId,
+          tags: ["chat_save"],
+        });
+        setVocabRefreshKey((k) => k + 1);
+        setVocabSaveToast({ message: uiText.alertAddedVocab });
+      } catch {
+        setVocabSaveToast({ message: uiText.alertCouldNotSaveWord, error: true });
+      }
+    },
+    [currentSessionId, habitUserId, uiText.alertAddedVocab, uiText.alertCouldNotSaveWord],
+  );
 
   const setCookie = (name: string, value: string) => {
     document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=31536000; SameSite=Lax`;
@@ -1739,33 +1694,22 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   };
 
   useEffect(() => {
-    if (!habitUserId || typeof window === "undefined") return;
-    try {
-      const scopedRaw = window.localStorage.getItem(vocabStorageKey(habitUserId));
-      if (scopedRaw) {
-        const parsed = JSON.parse(scopedRaw) as unknown[];
-        setVocab((parsed || []).map((v) => migrateVocabItem(v as Record<string, unknown>)));
-        return;
-      }
-      // legacy key から userId スコープへ 1 回だけ移行
-      const legacyRaw = window.localStorage.getItem(LEGACY_VOCAB_STORAGE_KEY);
-      if (!legacyRaw) return;
-      window.localStorage.setItem(vocabStorageKey(habitUserId), legacyRaw);
-      const parsed = JSON.parse(legacyRaw) as unknown[];
-      setVocab((parsed || []).map((v) => migrateVocabItem(v as Record<string, unknown>)));
-    } catch {
-      /* ignore */
-    }
+    if (!habitUserId || habitUserId === "guest" || typeof window === "undefined") return;
+    const added = migrateLegacyVocabularyIfNeeded(habitUserId);
+    if (added > 0) setVocabRefreshKey((k) => k + 1);
   }, [habitUserId]);
 
   useEffect(() => {
-    if (!habitUserId || typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(vocabStorageKey(habitUserId), JSON.stringify(vocab));
-    } catch {
-      /* ignore */
-    }
-  }, [vocab, habitUserId]);
+    if (!vocabSaveToast) return;
+    const timer = window.setTimeout(() => setVocabSaveToast(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [vocabSaveToast]);
+
+  const savedVocabCount = useMemo(() => {
+    void vocabRefreshKey;
+    if (!habitUserId || habitUserId === "guest") return 0;
+    return getVocabularyLibrary(habitUserId).filter(isPersistedVocabularyItem).length;
+  }, [habitUserId, vocabRefreshKey]);
 
   const todaysMission = useMemo(() => getTodaysMission(), []);
   const [missionCompleted, setMissionCompleted] = useState(false);
@@ -2607,7 +2551,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   }, [createNewSession, currentSessionId, habitUserId, openSession]);
 
   const handleAddVocab = async (word: string, romaji: string) => {
-    if (vocab.some((v) => v.word === word)) {
+    if (getVocabularyLibrary(habitUserId).some((v) => v.term === word)) {
       setVocabMenu(null);
       return;
     }
@@ -2618,36 +2562,14 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ word, romaji }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setVocab((prev) => [
-          {
-            id: Date.now(),
-            word,
-            romaji,
-            translations: [],
-            exampleSentences: [],
-          },
-          ...prev,
-        ]);
-        return;
-      }
-      const item: VocabItem = {
-        id: Date.now(),
-        word,
-        kana: data.kana,
-        romaji,
-        translations: Array.isArray(data.translations) ? data.translations : [],
-        partOfSpeech: data.partOfSpeech,
-        exampleSentences: Array.isArray(data.exampleSentences) ? data.exampleSentences : [],
-      };
-      setVocab((prev) => [item, ...prev]);
-
-      await saveWord(
-        item.word,
-        item.translations[0] ?? "",
-        item.exampleSentences[0] ?? ""
-      );
+      const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      const translations = Array.isArray(data.translations)
+        ? data.translations.filter((x): x is string => typeof x === "string")
+        : [];
+      const examples = Array.isArray(data.exampleSentences)
+        ? data.exampleSentences.filter((x): x is string => typeof x === "string")
+        : [];
+      await saveWord(word, translations[0] ?? romaji, examples[0] ?? word);
       void logBetaEvent({
         eventType: "vocabulary_save",
         userId: habitUserId,
@@ -2660,6 +2582,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       });
     } finally {
       setVocabAdding(false);
+      setVocabMenu(null);
     }
   };
 
@@ -2683,9 +2606,9 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
 
   // Record画面用：4軸スキルチャート用の値と座標
-  const vocabScore = Math.min(vocab.length / 20, 1); // 語彙
+  const vocabScore = Math.min(savedVocabCount / 20, 1); // 語彙
   const naturalScore = Math.min((streakDays.filter(Boolean).length + 2) / 7, 1); // 自然さ
-  const grammarScore = 0.6 + Math.min(vocab.length / 50, 0.4); // 文法
+  const grammarScore = 0.6 + Math.min(savedVocabCount / 50, 0.4); // 文法
   const speedScore = Math.min(speechRate / 1.2, 1); // 速度（読み上げ設定からのイメージ）
 
   const skillRadarPoints = (() => {
@@ -3117,7 +3040,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   Vocabulary
                 </p>
                 <p className="mt-2 text-[13px] text-slate-300">
-                  {formatVocabSavedLine(uiText, vocab.length)}
+                  {formatVocabSavedLine(uiText, savedVocabCount)}
                 </p>
                 <p className="mt-1 text-[12px] text-slate-400">
                   Keep useful expressions and corrections in your personal library.
@@ -4125,6 +4048,11 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                               : "border-pink-500/25 bg-pink-500/8 hover:border-pink-500/45 hover:bg-pink-500/15"
                           }`}
                         >
+                          {isRecommended ? (
+                            <span className="mb-0.5 block text-[10px] font-medium uppercase tracking-wide text-violet-300/90">
+                              {uiText.chatFollowUpRecommended}
+                            </span>
+                          ) : null}
                           {prompt}
                         </button>
                       );
@@ -4241,6 +4169,19 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           line2={missionMicroToast.l2}
           onDismiss={dismissMissionToast}
         />
+      ) : null}
+
+      {vocabSaveToast ? (
+        <div
+          role="status"
+          className={`fixed bottom-24 left-1/2 z-50 max-w-sm -translate-x-1/2 rounded-xl border px-4 py-2.5 text-center text-sm shadow-lg backdrop-blur-sm ${
+            vocabSaveToast.error
+              ? "border-red-500/40 bg-red-950/90 text-red-100"
+              : "border-emerald-500/35 bg-slate-950/95 text-emerald-100"
+          }`}
+        >
+          {vocabSaveToast.message}
+        </div>
       ) : null}
 
       <GuidedTutorialWelcome
