@@ -7,7 +7,7 @@ export default function Footer() {
   const pathname = usePathname() || "";
   const isChatRoute = pathname === "/chat" || pathname.startsWith("/chat/");
   const isAppShellRoute =
-    pathname === "/" ||
+    pathname === "/app" ||
     pathname === "/vocabulary" ||
     pathname === "/progress" ||
     pathname === "/more" ||

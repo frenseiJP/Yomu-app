@@ -50,6 +50,12 @@ function pickAllowedMetadata(
     scenario_started: ["topicId", "source"],
     save_prompt_shown: ["messageId", "candidateCount", "topCandidateType"],
     save_clicked: ["candidateType", "source", "messageId"],
+    landing_view: [],
+    guest_chat_start: [],
+    guest_chat_turn: ["turn", "source"],
+    guest_chat_limit: ["source"],
+    signup_cta_click: ["source", "trigger", "slug"],
+    share_copy: ["source"],
   };
   const out: Record<string, JsonLike> = {};
   for (const key of allowlist[eventType]) {

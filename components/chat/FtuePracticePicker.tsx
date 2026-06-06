@@ -1,28 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { FtuePracticeMode } from "@/lib/ftue/types";
 
 type Props = {
   onPick: (mode: FtuePracticeMode) => void;
-  /** 無操作 2 秒後に natural を自動選択 */
-  autoSelectMs?: number;
 };
 
-export default function FtuePracticePicker({ onPick, autoSelectMs = 2000 }: Props) {
+export default function FtuePracticePicker({ onPick }: Props) {
   const [highlight, setHighlight] = useState<"natural" | "daily" | "free">("natural");
   const pickedRef = useRef(false);
-  const onPickRef = useRef(onPick);
-  onPickRef.current = onPick;
-
-  useEffect(() => {
-    const t = window.setTimeout(() => {
-      if (pickedRef.current) return;
-      pickedRef.current = true;
-      onPickRef.current("natural");
-    }, autoSelectMs);
-    return () => window.clearTimeout(t);
-  }, [autoSelectMs]);
 
   const pick = (mode: FtuePracticeMode) => {
     if (pickedRef.current) return;

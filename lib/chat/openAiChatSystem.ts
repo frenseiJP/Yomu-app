@@ -7,6 +7,14 @@ import {
   buildLearnerProfileBlock,
 } from "@/lib/chat/senseiSystemPrompt";
 
+function jlptToPhase(jlpt: string): 1 | 2 | 3 | 4 {
+  const level = jlpt.toUpperCase();
+  if (level.includes("N5")) return 1;
+  if (level.includes("N4")) return 2;
+  if (level.includes("N2") || level.includes("N1")) return 4;
+  return 3;
+}
+
 export function parseCoachContextPayload(raw: unknown): CoachContextPayload | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
@@ -175,11 +183,12 @@ export function buildOpenAiChatSystemPrompt(params: {
     normalizeUiLang(params.languageFromClient) ?? detectLanguageFromText(lastUserText);
 
   const coach = parseCoachContextPayload(params.coachContext);
+  const jlptLevel = coach?.jlptLevel ?? "N3";
   const learnerProfile = buildLearnerProfileBlock({
     uiLang,
     streak: coach?.streak,
-    jlptLevel: coach?.jlptLevel ?? "N3",
-    phase: 3,
+    jlptLevel,
+    phase: jlptToPhase(jlptLevel),
   });
 
   const toneInstruction = getToneInstruction(uiLang, toneKey);

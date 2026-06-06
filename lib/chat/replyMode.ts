@@ -65,10 +65,9 @@ export function inferReplyModeHint(text: string): SenseiReplyMode {
     return "correction";
   }
 
-  // Japanese sentence without a clear question → likely wants a rewrite
-  if (hasJapanese && !looksLikeQuestion && t.length >= 6) {
-    const endsLikeStatement = /[。．!！]?$/.test(t) && !/[?？]$/.test(t);
-    if (endsLikeStatement) return "correction";
+  // Japanese text without explicit correction intent → explain (not auto-correct)
+  if (hasJapanese && looksLikeQuestion) {
+    return "explain";
   }
 
   return "explain";

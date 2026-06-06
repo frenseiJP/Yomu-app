@@ -23,6 +23,12 @@ export const BETA_EVENT_TYPES = [
   "scenario_started",
   "save_prompt_shown",
   "save_clicked",
+  "landing_view",
+  "guest_chat_start",
+  "guest_chat_turn",
+  "guest_chat_limit",
+  "signup_cta_click",
+  "share_copy",
 ] as const;
 
 export type BetaEventType = (typeof BETA_EVENT_TYPES)[number];

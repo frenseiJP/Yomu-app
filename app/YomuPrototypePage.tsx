@@ -566,25 +566,6 @@ function formatTime(dateIso: string) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function applyPoliteness(text: string, level: Politeness): string {
-  if (level === "neutral") return text;
-  if (level === "casual") {
-    return (
-      text
-        .replace("です。", "だよ。")
-        .replace(/ください。/g, "ね。")
-        .replace(/ましょう。/g, "よう。")
-    );
-  }
-  return (
-    "If I may, " +
-    text
-      .replace("です。", "でございます。")
-      .replace(/ください。/g, "いただけますと幸いです。")
-      .replace(/ましょう。/g, "まいりましょう。")
-  );
-}
-
 const FURIGANA_DICTIONARY: Record<string, string> = {
   日本語: "にほんご",
   文化: "ぶんか",
@@ -1827,6 +1808,28 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     }
     return null;
   }, [messages]);
+
+  const starterFollowUps = useMemo(
+    () =>
+      [
+        uiText.quickPrompt1,
+        uiText.quickPrompt2,
+        uiText.quickPrompt3,
+      ] as [string, string, string],
+    [uiText.quickPrompt1, uiText.quickPrompt2, uiText.quickPrompt3],
+  );
+
+  const followUpsToShow = useMemo((): [string, string, string] | null => {
+    if (latestFollowUpContext?.followUps?.length === 3) {
+      return latestFollowUpContext.followUps as [string, string, string];
+    }
+    const userTurns = messages.filter((m) => m.role === "user").length;
+    if (userTurns === 0 && !contextLoadingId) return starterFollowUps;
+    return null;
+  }, [latestFollowUpContext, messages, contextLoadingId, starterFollowUps]);
+
+  const isContextLoading =
+    contextLoadingId !== null && contextLoadingId === lastAssistantMessageId;
 
   const enrichChatContext = useCallback(
     async (
@@ -3081,7 +3084,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             onNavigateHome={() => {
               setVocabInitialCategory(null);
               setActiveView("home");
-              if (pathname !== "/") router.push("/");
+              if (pathname !== "/app") router.push("/app");
             }}
           />
         )}
@@ -3602,11 +3605,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 const toneForMessage = isAssistant
                   ? (msg.replyTone ?? politeness)
                   : politeness;
-                const displayText = isAssistant
-                  ? appLang === "ja"
-                    ? applyPoliteness(msg.baseText, toneForMessage)
-                    : msg.baseText
-                  : msg.baseText;
+                const displayText = msg.baseText;
                 const hasMetaStrip =
                   isAssistant &&
                   Boolean(msg.culturalNote || msg.showToneMeta || msg.tipsNote);
@@ -4000,6 +3999,45 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   }}
                   onSelectTopic={(topic) => startTopicScenario(topic, "chat_picker")}
                 />
+              ) : null}
+              {followUpFeedback ? (
+                <p
+                  className={`rounded-xl border px-3 py-2 text-center text-[12px] ${
+                    followUpFeedback === "nice"
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                      : "border-sky-500/30 bg-sky-500/10 text-sky-200"
+                  }`}
+                  role="status"
+                >
+                  {followUpFeedback === "nice"
+                    ? uiText.chatFollowUpNice
+                    : uiText.chatFollowUpOk}
+                </p>
+              ) : null}
+              {isContextLoading ? (
+                <p className="text-center text-[11px] text-slate-500" role="status">
+                  {uiText.chatContextLoadingHint}
+                </p>
+              ) : null}
+              {followUpsToShow && !isTyping && !ftueShowPicker && topicSelectorMode === "hidden" ? (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-medium text-slate-400">
+                    {uiText.chatSuggestedFollowUps}
+                  </p>
+                  <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap">
+                    {followUpsToShow.map((prompt, idx) => (
+                      <button
+                        key={`${prompt}-${idx}`}
+                        type="button"
+                        disabled={isLoading}
+                        onClick={() => handleQuickSend(prompt, idx)}
+                        className="btn-wa-hover rounded-xl border border-pink-500/25 bg-pink-500/8 px-3 py-2 text-left text-[12px] leading-snug text-slate-100 transition hover:border-pink-500/45 hover:bg-pink-500/15 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:min-w-[9rem]"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ) : null}
               <ChatCoachToolsBar
                 defaultOpen={Boolean(speakPracticeLine)}
