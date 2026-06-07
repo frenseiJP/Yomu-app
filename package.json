@@ -9,7 +9,8 @@
     "lint": "next lint",
     "feedback:setup": "bash scripts/setup-feedback-sheets.sh",
     "ping:sitemap": "node scripts/ping-sitemap.mjs",
-    "analytics:report": "node scripts/analytics-report.mjs"
+    "analytics:report": "node scripts/analytics-report.mjs",
+    "analytics:setup": "node scripts/setup-analytics.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",

@@ -1,4 +1,4 @@
-export type FeedbackSource = "feedback_form" | "report";
+export type FeedbackSource = "feedback_form" | "report" | "analytics_event";
 
 export type FeedbackSheetPayload = {
   source: FeedbackSource;

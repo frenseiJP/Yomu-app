@@ -125,6 +125,9 @@ export default function AdminAnalyticsPage() {
             <p className="mt-1 text-sm text-slate-400">
               アプデ優先度の判断用 — 個人のチャット本文は含みません
             </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Supabase 未設定時は Google スプレッドシートの Analytics タブにも記録されます
+            </p>
           </div>
           <div className="flex gap-2">
             {([7, 14, 30] as Range[]).map((d) => (

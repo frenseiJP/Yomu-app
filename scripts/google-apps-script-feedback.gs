@@ -12,6 +12,7 @@
 const SPREADSHEET_ID = "";
 
 const SHEET_NAME = "Feedback";
+const ANALYTICS_SHEET_NAME = "Analytics";
 
 function doGet() {
   try {
@@ -40,17 +41,35 @@ function doPost(e) {
 
     const data = JSON.parse(e.postData.contents);
     const ss = getSpreadsheet_();
-    const sheet = getOrCreateSheet_(ss);
 
-    sheet.appendRow([
-      data.createdAt || new Date().toISOString(),
-      data.userId || "",
-      data.displayName || "",
-      data.body || "",
-      data.route || "",
-      data.source || "feedback_form",
-      data.reportContext || "",
-    ]);
+    if (data.source === "analytics_event") {
+      const sheet = getOrCreateSheet_(ss, ANALYTICS_SHEET_NAME);
+      var parsed = {};
+      try {
+        parsed = JSON.parse(data.body || "{}");
+      } catch (err) {
+        parsed = { raw: data.body || "" };
+      }
+      sheet.appendRow([
+        data.createdAt || new Date().toISOString(),
+        data.userId || "",
+        parsed.eventType || "",
+        parsed.sessionId || "",
+        data.route || "",
+        JSON.stringify(parsed.metadata || parsed.raw || ""),
+      ]);
+    } else {
+      const sheet = getOrCreateSheet_(ss, SHEET_NAME);
+      sheet.appendRow([
+        data.createdAt || new Date().toISOString(),
+        data.userId || "",
+        data.displayName || "",
+        data.body || "",
+        data.route || "",
+        data.source || "feedback_form",
+        data.reportContext || "",
+      ]);
+    }
 
     return jsonResponse({
       ok: true,
@@ -83,19 +102,15 @@ function getSpreadsheet_() {
   );
 }
 
-function getOrCreateSheet_(ss) {
-  let sheet = ss.getSheetByName(SHEET_NAME);
-  const headers = [
-    "createdAt",
-    "userId",
-    "displayName",
-    "body",
-    "route",
-    "source",
-    "reportContext",
-  ];
+function getOrCreateSheet_(ss, name) {
+  const sheetName = name || SHEET_NAME;
+  let sheet = ss.getSheetByName(sheetName);
+  const headers =
+    sheetName === ANALYTICS_SHEET_NAME
+      ? ["createdAt", "userId", "eventType", "sessionId", "route", "metadata"]
+      : ["createdAt", "userId", "displayName", "body", "route", "source", "reportContext"];
   if (!sheet) {
-    sheet = ss.insertSheet(SHEET_NAME);
+    sheet = ss.insertSheet(sheetName);
     sheet.appendRow(headers);
     return sheet;
   }

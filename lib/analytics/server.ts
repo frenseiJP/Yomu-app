@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { mirrorAnalyticsToSheets } from "@/lib/analytics/sheetsMirror";
 import { BETA_EVENT_TYPES, type BetaEventInput } from "@/lib/analytics/types";
 
 type JsonLike = string | number | boolean | null | JsonLike[] | { [key: string]: JsonLike };
@@ -78,16 +79,26 @@ function getAdminClient() {
 export async function logBetaEventServer(input: BetaEventInput): Promise<void> {
   try {
     if (!isEventType(input.eventType)) return;
-    const supabase = getAdminClient();
-    if (!supabase) return;
-    await supabase.from("beta_event_logs").insert({
+    const row = {
       event_type: input.eventType,
       user_id: asString(input.userId, 128),
       session_id: asString(input.sessionId, 128),
       route: asString(input.route, 256),
       metadata: pickAllowedMetadata(input.eventType, input.metadata),
-    });
+    };
+
+    const supabase = getAdminClient();
+    if (supabase) {
+      const { error } = await supabase.from("beta_event_logs").insert(row);
+      if (!error) return;
+    }
+
+    await mirrorAnalyticsToSheets(input);
   } catch {
-    // Fail silently by design.
+    try {
+      await mirrorAnalyticsToSheets(input);
+    } catch {
+      // Fail silently by design.
+    }
   }
 }
