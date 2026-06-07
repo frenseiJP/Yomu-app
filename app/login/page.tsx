@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/src/utils/supabase/client";
 import { logBetaEvent } from "@/lib/analytics/client";
+import { hasPendingGuestChat } from "@/lib/guest/pendingChat";
 import { Mail, Lock, BookOpen, Eye, EyeOff } from "lucide-react";
 
 type Mode = "login" | "signup";
@@ -37,6 +38,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [continueGuest, setContinueGuest] = useState(false);
 
   const supabase = createClient();
 
@@ -47,7 +49,27 @@ export default function LoginPage() {
     if (q.get("intent") === "signup" || q.get("signup") === "1") {
       setMode("signup");
     }
+    if (q.get("continue") === "guest" || hasPendingGuestChat()) {
+      setContinueGuest(true);
+    }
   }, []);
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const redirectTo = `${window.location.origin}/auth/callback?next=/chat`;
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo },
+      });
+      if (oauthError) setError(oauthError.message);
+    } catch {
+      setError("Google sign-in failed. Please try email instead.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const checkSession = async () => {
@@ -195,6 +217,26 @@ export default function LoginPage() {
             Sign up
           </button>
         </div>
+
+        {continueGuest ? (
+          <div className="mb-4 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2.5 text-xs leading-relaxed text-sky-100">
+            Your trial chat is saved. Sign up or sign in to continue where you left off.
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => void handleGoogleSignIn()}
+          className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900/80 py-3 text-sm font-medium text-slate-100 transition hover:border-slate-600 hover:bg-slate-900"
+        >
+          <span className="text-base" aria-hidden>
+            G
+          </span>
+          Continue with Google
+        </button>
+
+        <p className="mb-4 text-center text-[11px] text-slate-500">or use email</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

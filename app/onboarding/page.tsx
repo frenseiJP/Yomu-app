@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/src/utils/supabase/server";
 import { getLangServer } from "@/src/utils/i18n/serverLang";
 import { t } from "@/src/utils/i18n/t";
+import PendingGuestNote from "@/components/onboarding/PendingGuestNote";
 
 const ICON_CHOICES = [
   { value: "🌸", label: "Cherry" },
@@ -103,6 +104,7 @@ export default async function OnboardingPage() {
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 antialiased">
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+        <PendingGuestNote />
         <header className="mb-6">
           <h1 className="font-wa-serif text-lg font-semibold text-slate-50 sm:text-xl">
             {t(lang, "onboardingTitle")}

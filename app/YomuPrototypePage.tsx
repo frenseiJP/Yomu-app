@@ -182,6 +182,8 @@ import {
   isPersistedVocabularyItem,
 } from "@/lib/vocabulary/service";
 import { migrateLegacyVocabularyIfNeeded } from "@/lib/vocabulary/migrate";
+import { importPendingGuestChat } from "@/lib/guest/importPendingChat";
+import { consumeGuestImportBanner } from "@/lib/guest/pendingChat";
 import {
   inferMistakeCategory,
   mistakeCategoryLabel,
@@ -835,6 +837,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const [vocabSaveToast, setVocabSaveToast] = useState<{ message: string; error?: boolean } | null>(
     null,
   );
+  const [guestImportBanner, setGuestImportBanner] = useState(false);
   const [vocabKanaVisible, setVocabKanaVisible] = useState(true);
   const [vocabMenu, setVocabMenu] = useState<{ phrase: string; reading: string; romaji?: string } | null>(null);
   const [vocabAdding, setVocabAdding] = useState(false);
@@ -1096,9 +1099,21 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         setChatHomeRoute(user?.id ? "/chat" : "/app");
         setHabitUserId(uid);
         setJlptLevel(readStoredJlpt(uid));
-        if (user?.id) void pullProgressFromCloud(uid).then(() => refreshHabitData(uid));
-        else refreshHabitData(uid);
-        refreshChatSessions(uid, sessionFromUrl);
+        let preferredSession = sessionFromUrl;
+        if (user?.id) {
+          const importedSessionId = importPendingGuestChat(uid);
+          if (importedSessionId) {
+            writeFtuePersist({ pickerDone: true, firstLearningCompleted: true });
+            markTutorialCompleted(uid);
+            preferredSession = importedSessionId;
+            setGuestImportBanner(consumeGuestImportBanner());
+            setActiveView("chat");
+          }
+          void pullProgressFromCloud(uid).then(() => refreshHabitData(uid));
+        } else {
+          refreshHabitData(uid);
+        }
+        refreshChatSessions(uid, preferredSession);
       } catch {
         if (!mounted) return;
         const uid = getOrCreateUserId();
@@ -4181,6 +4196,23 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           }`}
         >
           {vocabSaveToast.message}
+        </div>
+      ) : null}
+
+      {guestImportBanner ? (
+        <div
+          role="status"
+          className="fixed bottom-24 left-1/2 z-50 max-w-sm -translate-x-1/2 rounded-xl border border-sky-500/35 bg-slate-950/95 px-4 py-3 text-center text-sm text-sky-100 shadow-lg backdrop-blur-sm"
+        >
+          <p className="font-medium">Your trial chat is ready</p>
+          <p className="mt-1 text-[12px] text-slate-400">Keep the conversation going — ask a follow-up below.</p>
+          <button
+            type="button"
+            onClick={() => setGuestImportBanner(false)}
+            className="mt-2 text-[11px] text-slate-500 hover:text-slate-300"
+          >
+            Dismiss
+          </button>
         </div>
       ) : null}
 

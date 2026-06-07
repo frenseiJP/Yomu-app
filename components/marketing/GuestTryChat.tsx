@@ -20,6 +20,10 @@ import { inferReplyModeHint } from "@/lib/chat/replyMode";
 import { streamChatCompletion } from "@/lib/chat/streamClient";
 import { buildShareUrl } from "@/lib/share/encode";
 import { logBetaEvent } from "@/lib/analytics/client";
+import {
+  lastUserPreview,
+  savePendingGuestChat,
+} from "@/lib/guest/pendingChat";
 
 type ChatLine = {
   id: number;
@@ -126,11 +130,22 @@ export default function GuestTryChat({
             : fallbackStructuredCoachPayload(trimmed);
         const body = buildSenseiChatMessage(payload, trimmed);
 
-        setLines((prev) =>
+        const nextLines = (prev: ChatLine[]) =>
           prev.map((l) =>
             l.id === assistantId ? { ...l, text: body, payload } : l,
-          ),
-        );
+          );
+        setLines((prev) => {
+          const updated = nextLines(prev);
+          savePendingGuestChat(
+            updated.map((l) => ({
+              role: l.role,
+              text: l.text,
+              payload: l.payload,
+            })),
+            source,
+          );
+          return updated;
+        });
 
         if (payload.replyMode === "correction" && payload.correctedSentence) {
           const url = buildShareUrl(
@@ -185,6 +200,10 @@ export default function GuestTryChat({
   };
 
   const atLimit = turnsLeft <= 0;
+  const lastPreview = lastUserPreview(
+    lines.map((l) => ({ role: l.role, text: l.text, payload: l.payload })),
+  );
+  const signupHref = `/login?intent=signup&continue=guest${source ? `&from=${encodeURIComponent(source)}` : ""}`;
 
   return (
     <div
@@ -199,7 +218,10 @@ export default function GuestTryChat({
           </div>
           <div>
             <p className="font-wa-serif text-sm font-semibold text-slate-100">Try Frensei</p>
-            <p className="text-[11px] text-slate-500">No sign-up · {turnsLeft} messages left</p>
+            <p className="text-[11px] text-slate-500">
+              No sign-up · {turnsLeft} message{turnsLeft === 1 ? "" : "s"} left
+              {turnsLeft === 1 ? " — save this chat next" : ""}
+            </p>
           </div>
         </div>
         <Sparkles className="h-4 w-4 text-pink-400/80" aria-hidden />
@@ -255,27 +277,49 @@ export default function GuestTryChat({
       ) : null}
 
       {atLimit ? (
-        <div className="border-t border-pink-500/20 bg-pink-500/5 px-4 py-4 text-center">
-          <p className="text-sm font-medium text-slate-100">Free trial complete</p>
-          <p className="mt-1 text-[12px] text-slate-400">
-            Sign up free to keep chatting, save words, and track progress.
+        <div className="border-t border-pink-500/20 bg-gradient-to-b from-pink-500/8 to-slate-950/90 px-4 py-4 text-center">
+          <p className="text-sm font-semibold text-slate-100">Continue this conversation</p>
+          {lastPreview ? (
+            <p className="mt-2 rounded-xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-left text-[12px] text-slate-300">
+              <span className="text-slate-500">You asked: </span>
+              {lastPreview}
+            </p>
+          ) : null}
+          <p className="mt-2 text-[12px] leading-relaxed text-slate-400">
+            Create a free account to keep chatting, save words, and pick up right where you left off.
           </p>
           <Link
-            href="/login?intent=signup"
-            onClick={() =>
+            href={signupHref}
+            onClick={() => {
+              savePendingGuestChat(
+                lines.map((l) => ({ role: l.role, text: l.text, payload: l.payload })),
+                source,
+              );
               void logBetaEvent({
                 eventType: "signup_cta_click",
                 route: window.location.pathname,
                 metadata: { source, trigger: "guest_limit" },
-              })
-            }
-            className="mt-3 inline-flex rounded-xl bg-gradient-to-r from-pink-500 to-pink-600 px-5 py-2.5 text-sm font-medium text-white shadow-lg hover:from-pink-400 hover:to-pink-500"
+              });
+            }}
+            className="mt-3 inline-flex w-full justify-center rounded-xl bg-gradient-to-r from-pink-500 to-pink-600 px-5 py-2.5 text-sm font-medium text-white shadow-lg hover:from-pink-400 hover:to-pink-500"
           >
-            Create free account
+            Continue this chat — free
+          </Link>
+          <Link
+            href="/login"
+            className="mt-2 inline-block text-[11px] text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
+          >
+            Already have an account? Sign in
           </Link>
         </div>
       ) : (
-        <div className="flex items-end gap-2 border-t border-slate-800/80 px-3 py-3">
+        <div className="border-t border-slate-800/80">
+          {turnsLeft === 1 ? (
+            <p className="border-b border-amber-500/15 bg-amber-500/5 px-4 py-2 text-center text-[11px] text-amber-100/90">
+              Last free message — sign up after this to save and continue your chat.
+            </p>
+          ) : null}
+          <div className="flex items-end gap-2 px-3 py-3">
           <textarea
             rows={1}
             value={input}
@@ -299,6 +343,7 @@ export default function GuestTryChat({
           >
             <Send className="h-4 w-4" />
           </button>
+          </div>
         </div>
       )}
     </div>
