@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/src/utils/supabase/client";
+import { logBetaEvent } from "@/lib/analytics/client";
 import { Mail, Lock, BookOpen, Eye, EyeOff } from "lucide-react";
 
 type Mode = "login" | "signup";
@@ -97,7 +98,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (mode === "login") {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
         });
@@ -109,6 +110,12 @@ export default function LoginPage() {
           }
           return;
         }
+        void logBetaEvent({
+          eventType: "login_success",
+          userId: signInData.user?.id,
+          route: "/login",
+          metadata: { mode: "login" },
+        });
       } else {
         const { error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),

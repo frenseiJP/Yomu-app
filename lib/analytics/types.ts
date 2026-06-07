@@ -28,6 +28,7 @@ export const BETA_EVENT_TYPES = [
   "guest_chat_turn",
   "guest_chat_limit",
   "signup_cta_click",
+  "login_success",
   "share_copy",
 ] as const;
 

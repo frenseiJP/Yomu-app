@@ -55,6 +55,7 @@ function pickAllowedMetadata(
     guest_chat_turn: ["turn", "source"],
     guest_chat_limit: ["source"],
     signup_cta_click: ["source", "trigger", "slug"],
+    login_success: ["mode"],
     share_copy: ["source"],
   };
   const out: Record<string, JsonLike> = {};
