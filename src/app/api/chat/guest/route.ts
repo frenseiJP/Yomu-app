@@ -1,15 +1,13 @@
+import { clampChatMessages } from "@/lib/chat/clampMessages";
 import {
   buildOpenAiChatSystemPrompt,
-  SENSEI_CHAT_TEMPERATURE,
+  senseiStructuredTemperature,
 } from "@/lib/chat/openAiChatSystem";
 import { parseSenseiChatPayload } from "@/lib/ftue/format";
 import { consumeRateLimit, getClientIp } from "@/lib/security/rateLimit";
 import { logBetaEventServer } from "@/lib/analytics/server";
 
 const OPENAI_MODEL = "gpt-4o-mini";
-const MAX_MESSAGES = 6;
-const MAX_MESSAGE_CHARS = 800;
-const MAX_TOTAL_CHARS = 4_000;
 const MAX_REQUEST_BODY_BYTES = 20_000;
 
 async function parseJsonBodyWithLimit(req: Request): Promise<unknown | null> {
@@ -21,25 +19,6 @@ async function parseJsonBodyWithLimit(req: Request): Promise<unknown | null> {
   } catch {
     return {};
   }
-}
-
-function clampMessages(raw: unknown): { role: "user" | "assistant"; content: string }[] {
-  if (!Array.isArray(raw)) return [];
-  const out: { role: "user" | "assistant"; content: string }[] = [];
-  let total = 0;
-  for (const m of raw) {
-    if (!m || typeof m !== "object") continue;
-    const role = (m as { role?: unknown }).role;
-    const content = (m as { content?: unknown }).content;
-    if ((role !== "user" && role !== "assistant") || typeof content !== "string") continue;
-    const c = content.trim().slice(0, MAX_MESSAGE_CHARS);
-    if (!c) continue;
-    total += c.length;
-    if (total > MAX_TOTAL_CHARS) break;
-    out.push({ role, content: c });
-    if (out.length >= MAX_MESSAGES) break;
-  }
-  return out;
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -78,7 +57,11 @@ export async function POST(req: Request): Promise<Response> {
     messages?: unknown;
     language?: unknown;
   };
-  const messages = clampMessages(rawMessages);
+  const messages = clampChatMessages(rawMessages, {
+    maxMessages: 8,
+    maxMessageChars: 1_200,
+    maxTotalChars: 5_000,
+  });
   const userTurns = messages.filter((m) => m.role === "user").length;
   if (userTurns > 3) {
     return Response.json({ error: "guest_limit", limit: 3 }, { status: 403 });
@@ -103,7 +86,7 @@ export async function POST(req: Request): Promise<Response> {
     },
     body: JSON.stringify({
       model: OPENAI_MODEL,
-      temperature: SENSEI_CHAT_TEMPERATURE,
+      temperature: senseiStructuredTemperature(lastUserText),
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },

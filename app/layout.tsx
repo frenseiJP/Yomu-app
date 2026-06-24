@@ -7,6 +7,7 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import Footer from "@/components/Footer";
 import MobileAppBridge from "@/components/MobileAppBridge";
 import PageViewLogger from "@/components/analytics/PageViewLogger";
+import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import { getSiteUrl } from "@/lib/siteUrl";
 
 const SITE_URL = getSiteUrl();
@@ -72,6 +73,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <AuthProvider>
             <LanguageProvider>
+              <GoogleAnalytics />
               <PageViewLogger />
               {children}
               <MobileAppBridge />

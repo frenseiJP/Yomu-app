@@ -57,6 +57,20 @@ function parseFollowUps(raw: unknown): string[] {
     .slice(0, 3);
 }
 
+function parseRecentTurns(raw: unknown): { role: string; content: string }[] {
+  if (!Array.isArray(raw)) return [];
+  const out: { role: string; content: string }[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const role = o.role === "user" || o.role === "assistant" ? o.role : null;
+    const content = typeof o.content === "string" ? o.content.trim().slice(0, 400) : "";
+    if (role && content) out.push({ role, content });
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
 /**
  * アシスタント返信に即した語彙ハイライトと次の3択フォローを生成する。
  */
@@ -116,6 +130,7 @@ export async function POST(req: Request): Promise<Response> {
       ? body.userText.trim().slice(0, MAX_USER_TEXT_CHARS)
       : "";
   const uiLang = normalizeUiLang(body.language);
+  const recentTurns = parseRecentTurns(body.recentTurns);
 
   if (!assistantText) {
     return NextResponse.json({ error: "assistantText required" }, { status: 400 });
@@ -129,11 +144,18 @@ export async function POST(req: Request): Promise<Response> {
     "followUps: array of exactly 3 short strings — possible NEXT user messages to continue the lesson, written entirely in "
       + langName +
       ".",
+    "Each follow-up must logically continue the CURRENT thread (same topic as the assistant reply and recent turns), not start an unrelated lesson.",
     "bestFollowUpIndex: integer 0, 1, or 2 — which followUps entry is the BEST continuation (deeper, on-topic, builds on the assistant reply). The other two should be plausible but weaker, slightly off-topic, or generic.",
     "Shuffle mentally: do not always put the best follow-up first.",
     "reading: hiragana reading for phrase (for internal use).",
     "romaji: Hepburn romaji (lowercase ascii) — UI shows phrase as: phrase (romaji) for tap-to-save.",
   ].join("\n");
+
+  const recentBlock =
+    recentTurns.length > 0
+      ? "\n\n--- Recent conversation (for thread continuity) ---\n" +
+        recentTurns.map((t) => `${t.role}: ${t.content}`).join("\n")
+      : "";
 
   const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -155,6 +177,7 @@ export async function POST(req: Request): Promise<Response> {
           role: "user",
           content:
             instruction +
+            recentBlock +
             "\n\n--- Last user message ---\n" +
             (userText || "(none)") +
             "\n\n--- Assistant reply ---\n" +

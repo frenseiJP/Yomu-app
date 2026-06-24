@@ -1,4 +1,7 @@
-export const GUEST_CHAT_MAX_TURNS = 3;
+import { GUEST_CHAT_MAX_TURNS } from "@/lib/plan/limits";
+
+export { GUEST_CHAT_MAX_TURNS };
+
 export const GUEST_TURN_KEY = "frensei:guest:turns:v1";
 
 export function readGuestTurns(): number {

@@ -1,10 +1,19 @@
 "use client";
 
-import { MessageCircle, BookOpen, Target, Compass } from "lucide-react";
+import Link from "next/link";
+import type { HomeCopy } from "@/lib/i18n/homeCopy";
+import type { ProgressCopy } from "@/lib/i18n/progressCopy";
+import { localizeRetentionMission } from "@/lib/i18n/missionCopy";
+import type { Lang } from "@/src/utils/i18n/types";
+import type { CoachNote } from "@/lib/coach/notes";
+import type { RecentWin } from "@/lib/coach/recentWins";
+import { MessageCircle, BookOpen, Target, Compass, Sparkles } from "lucide-react";
 import type { TopicPrompt } from "@/lib/topic/types";
 import DailyUsefulPhraseCard from "@/components/habit/DailyUsefulPhraseCard";
 import SeasonalProgressCard from "@/components/progress/SeasonalProgressCard";
 import CollapsibleSection from "@/components/ui/CollapsibleSection";
+import CoachNotesCard from "@/components/coach/CoachNotesCard";
+import RecentWinsCard from "@/components/coach/RecentWinsCard";
 import type { DailyUsefulPhrase } from "@/lib/dailyPhrase/phrases";
 import {
   homeCard,
@@ -24,16 +33,23 @@ type RecentChat = {
 };
 
 type Props = {
+  copy: HomeCopy;
+  lang: Lang;
+  progressCopy: ProgressCopy;
   dailyUsefulPhrase: DailyUsefulPhrase;
   retentionMissionDay: RetentionDailyMissionDay | null;
   recentChatSummary: RecentChat | null;
   seasonalState: SeasonalProgressState;
   dueReviews: DueReviews;
   isLightTheme: boolean;
+  coachNotes: CoachNote[];
+  recentWins: RecentWin[];
+  dailyReflection?: string | null;
   onPracticePhrase: () => void;
   onStartMission: () => void;
   onOpenRecentChat: (sessionId: string) => void;
   onStartNewChat: () => void;
+  onStartReflection?: () => void;
   onOpenProgress: () => void;
   coachFocus?: {
     label: string;
@@ -44,7 +60,6 @@ type Props = {
   onOpenReview?: () => void;
   todaysScenario?: TopicPrompt | null;
   onPracticeScenario?: () => void;
-  /** Analytics: fired before the matching action runs. */
   onCtaClick?: (cta: string) => void;
 };
 
@@ -53,16 +68,23 @@ function homeSectionClass(isLightTheme: boolean) {
 }
 
 export default function HomeView({
+  copy,
+  lang,
+  progressCopy,
   dailyUsefulPhrase,
   retentionMissionDay,
   recentChatSummary,
   seasonalState,
   dueReviews,
   isLightTheme,
+  coachNotes,
+  recentWins,
+  dailyReflection,
   onPracticePhrase,
   onStartMission,
   onOpenRecentChat,
   onStartNewChat,
+  onStartReflection,
   onOpenProgress,
   coachFocus,
   onPracticeFocus,
@@ -72,6 +94,9 @@ export default function HomeView({
   onCtaClick,
 }: Props) {
   const reviewCount = dueReviews.words.length + dueReviews.mistakes.length;
+  const missionDisplay = retentionMissionDay
+    ? localizeRetentionMission(retentionMissionDay.mission, lang)
+    : null;
   const labelClass = isLightTheme ? "text-neutral-500" : "text-slate-500";
   const titleClass = isLightTheme ? "text-neutral-900" : "text-slate-50";
   const bodyClass = isLightTheme ? "text-neutral-600" : "text-slate-300";
@@ -90,7 +115,6 @@ export default function HomeView({
   return (
     <div className={homeScrollArea}>
       <div className={homeStack}>
-        {/* Primary path — one obvious next step */}
         <section
           className={`w-full rounded-2xl border p-5 shadow-glass sm:p-6 ${
             isLightTheme
@@ -99,23 +123,48 @@ export default function HomeView({
           }`}
         >
           <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${labelClass}`}>
-            Your next step
+            {copy.nextStepLabel}
           </p>
           <h2 className={`mt-2 font-wa-serif text-xl leading-snug sm:text-2xl ${titleClass}`}>
-            Write with Sensei
+            {copy.nextStepTitle}
           </h2>
-          <p className={`mt-2 text-sm leading-relaxed ${bodyClass}`}>
-            Type in Japanese or English — get a natural correction and a short why.
-          </p>
+          <p className={`mt-2 text-sm leading-relaxed ${bodyClass}`}>{copy.nextStepBody}</p>
           <button
             type="button"
             onClick={primaryChat}
             className="btn-wa-hover btn-wa-hover-ruri mt-4 inline-flex min-h-[48px] w-full touch-manipulation items-center justify-center gap-2 rounded-xl bg-wa-ruri px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_40px_rgba(56,189,248,0.2)] hover:bg-wa-asagi"
           >
             <MessageCircle className="h-4 w-4" aria-hidden />
-            {recentChatSummary ? "Continue chat" : "Start chatting"}
+            {recentChatSummary ? copy.continueChat : copy.startChatting}
           </button>
         </section>
+
+        {dailyReflection && onStartReflection ? (
+          <section className={homeSectionClass(isLightTheme)}>
+            <div className="flex items-start gap-2">
+              <Sparkles className={`mt-0.5 h-4 w-4 shrink-0 ${isLightTheme ? "text-wa-ruri" : "text-violet-300"}`} />
+              <div className="min-w-0 flex-1">
+                <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${labelClass}`}>
+                  {copy.dailyReflection}
+                </p>
+                <p className={`mt-1 text-sm leading-relaxed ${bodyClass}`}>{dailyReflection}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onCtaClick?.("daily_reflection");
+                onStartReflection();
+              }}
+              className="mt-3 inline-flex min-h-[40px] w-full items-center justify-center rounded-lg border border-violet-500/35 bg-violet-500/10 px-3 text-[12px] font-medium text-violet-100 hover:bg-violet-500/15"
+            >
+              {copy.startReflection}
+            </button>
+          </section>
+        ) : null}
+
+        <CoachNotesCard title={copy.coachNotes} notes={coachNotes} isLightTheme={isLightTheme} />
+        <RecentWinsCard title={copy.recentWins} wins={recentWins} isLightTheme={isLightTheme} />
 
         {reviewCount > 0 ? (
           <button
@@ -134,15 +183,15 @@ export default function HomeView({
               <BookOpen className={`h-5 w-5 shrink-0 ${isLightTheme ? "text-amber-700" : "text-amber-300"}`} />
               <div>
                 <p className={`text-sm font-medium ${isLightTheme ? "text-amber-950" : "text-amber-100"}`}>
-                  {reviewCount} review{reviewCount === 1 ? "" : "s"} waiting
+                  {copy.reviewsWaiting(reviewCount)}
                 </p>
                 <p className={`text-[12px] ${isLightTheme ? "text-amber-800/80" : "text-amber-200/70"}`}>
-                  Quick cloze from your saved corrections
+                  {copy.reviewsDesc}
                 </p>
               </div>
             </div>
             <span className={`text-[12px] font-medium ${isLightTheme ? "text-amber-800" : "text-amber-200"}`}>
-              Open →
+              {copy.openArrow}
             </span>
           </button>
         ) : null}
@@ -153,7 +202,7 @@ export default function HomeView({
               <Compass className={`mt-0.5 h-4 w-4 shrink-0 ${isLightTheme ? "text-wa-ruri" : "text-sky-300"}`} />
               <div className="min-w-0 flex-1">
                 <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${labelClass}`}>
-                  Today&apos;s scenario
+                  {copy.todaysScenario}
                 </p>
                 <p className={`mt-1 text-sm font-medium ${titleClass}`}>{todaysScenario.title}</p>
                 <p className={`mt-1 line-clamp-2 text-[12px] leading-relaxed ${bodyClass}`}>
@@ -169,23 +218,24 @@ export default function HomeView({
               }}
               className="mt-3 inline-flex min-h-[40px] w-full items-center justify-center rounded-lg border border-wa-ruri/40 bg-wa-ruri/15 px-3 text-[12px] font-medium text-sky-700 hover:bg-wa-ruri/25 dark:text-sky-100"
             >
-              Practice in Chat
+              {copy.practiceInChat}
             </button>
           </section>
         ) : null}
 
-        {/* Today — mission + focus in one card */}
         <section className={homeSectionClass(isLightTheme)}>
-          <p className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${labelClass}`}>Today</p>
+          <p className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${labelClass}`}>{copy.today}</p>
 
           {retentionMissionDay ? (
-            <div className={`mt-3 rounded-xl border p-3 ${isLightTheme ? "border-neutral-200 bg-neutral-50" : "border-slate-700/60 bg-slate-900/50"}`}>
+            <div
+              className={`mt-3 rounded-xl border p-3 ${isLightTheme ? "border-neutral-200 bg-neutral-50" : "border-slate-700/60 bg-slate-900/50"}`}
+            >
               <div className="flex items-start gap-2">
                 <Target className={`mt-0.5 h-4 w-4 shrink-0 ${isLightTheme ? "text-wa-ruri" : "text-sky-300"}`} />
                 <div className="min-w-0 flex-1">
-                  <p className={`text-sm font-medium ${titleClass}`}>{retentionMissionDay.mission.title}</p>
+                  <p className={`text-sm font-medium ${titleClass}`}>{missionDisplay?.title}</p>
                   <p className={`mt-1 line-clamp-2 text-[12px] leading-relaxed ${bodyClass}`}>
-                    {retentionMissionDay.mission.prompt_en}
+                    {missionDisplay?.instruction ?? retentionMissionDay.mission.prompt_en}
                   </p>
                 </div>
               </div>
@@ -197,7 +247,7 @@ export default function HomeView({
                 }}
                 className="mt-3 inline-flex min-h-[40px] w-full items-center justify-center rounded-lg bg-wa-ruri/90 px-3 text-[12px] font-medium text-white hover:bg-wa-ruri"
               >
-                Start mission
+                {copy.startMission}
               </button>
             </div>
           ) : null}
@@ -209,7 +259,7 @@ export default function HomeView({
               }`}
             >
               <p className={`text-[12px] font-medium ${titleClass}`}>
-                Focus: {coachFocus.label}{" "}
+                {copy.focusPrefix} {coachFocus.label}{" "}
                 <span className={mutedClass}>{coachFocus.score}%</span>
               </p>
               <p className={`mt-1 text-[12px] leading-relaxed ${bodyClass}`}>{coachFocus.hint}</p>
@@ -221,13 +271,13 @@ export default function HomeView({
                 }}
                 className="mt-2 text-[12px] font-medium text-sky-600 hover:text-sky-500 dark:text-sky-300 dark:hover:text-sky-200"
               >
-                Practice with Sensei →
+                {copy.practiceFocus}
               </button>
             </div>
           ) : null}
 
           {!retentionMissionDay && !coachFocus ? (
-            <p className={`mt-2 text-sm ${bodyClass}`}>Open chat to start today&apos;s practice.</p>
+            <p className={`mt-2 text-sm ${bodyClass}`}>{copy.openChatHint}</p>
           ) : null}
         </section>
 
@@ -243,8 +293,8 @@ export default function HomeView({
         />
 
         <CollapsibleSection
-          title="Today's useful phrase"
-          subtitle={`${dailyUsefulPhrase.phrase} · tap to expand`}
+          title={progressCopy.usefulPhraseTitle}
+          subtitle={progressCopy.usefulPhraseSubtitle(dailyUsefulPhrase.phrase)}
           defaultOpen={false}
           tone="muted"
         >
@@ -258,6 +308,15 @@ export default function HomeView({
             compact
           />
         </CollapsibleSection>
+
+        <div className="flex justify-center pb-2">
+          <Link
+            href="/pricing"
+            className={`text-[12px] font-medium underline-offset-2 hover:underline ${isLightTheme ? "text-neutral-500 hover:text-neutral-800" : "text-slate-500 hover:text-slate-300"}`}
+          >
+            {copy.viewPlans}
+          </Link>
+        </div>
       </div>
     </div>
   );

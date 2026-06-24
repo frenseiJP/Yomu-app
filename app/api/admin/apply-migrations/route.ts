@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isAdminAuthorized } from "@/lib/analytics/adminAuth";
 
-const PROJECT_REF = "ardvgckclusmzwranpsd";
+const PROJECT_REF = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1]
+  ?? "jlhxzzhkjuduutyfpwzu";
 
 export async function POST(req: Request): Promise<Response> {
   if (!isAdminAuthorized(req)) {

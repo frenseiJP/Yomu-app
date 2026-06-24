@@ -72,17 +72,23 @@ export function parseSenseiChatPayload(
 
 export const parseFtueCoachPayload = parseSenseiChatPayload;
 
+function clipUserLine(text: string, max = 120): string {
+  const t = text.trim().replace(/\s+/g, " ");
+  if (!t) return "…";
+  return t.length > max ? `${t.slice(0, max)}…` : t;
+}
+
 export function fallbackStructuredCoachPayload(userSentence: string): FtueCoachPayload {
   const mode = inferReplyModeHint(userSentence);
-  const u = userSentence.trim();
+  const u = clipUserLine(userSentence, 200);
 
   if (mode === "explain" || mode === "reading") {
     return {
       replyMode: mode,
       answer:
         mode === "reading"
-          ? "Tell me which word or phrase you want to read. I'll give you Japanese (romaji) — English meaning plus pronunciation tips."
-          : "I had trouble finishing that answer — please try sending your question again.",
+          ? `I couldn't finish the reading help for "${clipUserLine(userSentence, 80)}". Please ask again with the exact word or phrase you want pronounced.`
+          : `I couldn't complete that answer about "${clipUserLine(userSentence, 80)}". Please try asking one part at a time, or rephrase your question.`,
       correctedSentence: "",
       whyEnglish: "",
       otherWay1: "",
@@ -90,20 +96,19 @@ export function fallbackStructuredCoachPayload(userSentence: string): FtueCoachP
     };
   }
 
-  const clip = u.length > 200 ? `${u.slice(0, 200)}…` : u || "…";
   return {
     replyMode: "correction",
-    niceLine: "Nice effort 👍",
-    studentSentence: clip,
-    correctedSentence: clip,
-    correctedEnglish: "Could not finish this turn — please try again.",
-    whyEnglish: "Please try again in a moment. Your line is still worth polishing.",
-    otherWay1: "もう一度、短く言い直してみてください。",
-    otherWay1Romaji: "mou ichido, mijikaku iinaoshite mite kudasai",
-    otherWay1English: "Try saying it again, a bit shorter.",
-    otherWay2: "語尾を少し変えてみるのもおすすめです。",
-    otherWay2Romaji: "gobi wo sukoshi kaete miru no mo osusume desu",
-    otherWay2English: "Try adjusting the ending politeness.",
+    niceLine: "Let me try again 👍",
+    studentSentence: u,
+    correctedSentence: u,
+    correctedEnglish: "I couldn't finish polishing this line — please send it again.",
+    whyEnglish: `I lost the thread on: "${clipUserLine(userSentence, 100)}". Send the same Japanese once more and I'll correct it properly.`,
+    otherWay1: "もう一度、同じ文を送ってください。",
+    otherWay1Romaji: "mou ichido, onaji bun wo okutte kudasai",
+    otherWay1English: "Please send the same sentence again.",
+    otherWay2: "短く言い直しても大丈夫です。",
+    otherWay2Romaji: "mijikaku iinaoshite mo daijoubu desu",
+    otherWay2English: "You can also try a shorter version.",
   };
 }
 
@@ -113,22 +118,5 @@ export function fallbackFtueCoachPayload(userSentence: string): FtueCoachPayload
     return fallbackStructuredCoachPayload(userSentence);
   }
 
-  const corrected = "すみません、少し遅れてしまいました。";
-  return {
-    replyMode: "correction",
-    niceLine: "Nice 👍",
-    studentSentence: userSentence.trim() || corrected,
-    studentRomaji: "sumimasen, sukoshi okurete shimaimashita",
-    correctedSentence: corrected,
-    correctedRomaji: "sumimasen, sukoshi okurete shimaimashita",
-    correctedEnglish: "Sorry, I ended up running a little late.",
-    whyEnglish:
-      "Pair すみません with a short reason. 〜てしまいました sounds softer than a bare past tense.",
-    otherWay1: "遅れてすみません。",
-    otherWay1Romaji: "okurete sumimasen",
-    otherWay1English: "Sorry for being late.",
-    otherWay2: "お待たせしてすみませんでした。",
-    otherWay2Romaji: "omachikite sumimasen deshita",
-    otherWay2English: "Sorry to have kept you waiting.",
-  };
+  return fallbackStructuredCoachPayload(userSentence);
 }

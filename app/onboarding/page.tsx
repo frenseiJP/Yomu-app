@@ -4,22 +4,9 @@ import { createClient } from "@/src/utils/supabase/server";
 import { getLangServer } from "@/src/utils/i18n/serverLang";
 import { t } from "@/src/utils/i18n/t";
 import PendingGuestNote from "@/components/onboarding/PendingGuestNote";
-
-const ICON_CHOICES = [
-  { value: "🌸", label: "Cherry" },
-  { value: "🌻", label: "Sunflower" },
-  { value: "🍁", label: "Maple" },
-  { value: "❄️", label: "Snow" },
-  { value: "🌊", label: "Ocean" },
-];
-
-const KOKUSEKI_CHOICES = [
-  { value: "JP", label: "Japan", emoji: "🇯🇵" },
-  { value: "US", label: "United States", emoji: "🇺🇸" },
-  { value: "KR", label: "Korea", emoji: "🇰🇷" },
-  { value: "CN", label: "China", emoji: "🇨🇳" },
-  { value: "OTHER", label: "Other / Global", emoji: "🌏" },
-];
+import ProfileAvatarField from "@/components/profile/ProfileAvatarField";
+import CountrySelect from "@/components/profile/CountrySelect";
+import { normalizeProfileIcon, PROFILE_ICON_DEFAULT } from "@/lib/profile/icon";
 
 type UserProfile = {
   user_id: string;
@@ -33,6 +20,13 @@ async function getExistingProfileUserId(userId: string) {
     .eq("user_id", userId)
     .limit(1);
   return (data?.[0] as UserProfile | undefined)?.user_id ?? null;
+}
+
+function countryLocale(lang: string): string {
+  if (lang === "ja") return "ja";
+  if (lang === "ko") return "ko";
+  if (lang === "zh") return "zh";
+  return "en";
 }
 
 export default async function OnboardingPage() {
@@ -51,15 +45,24 @@ export default async function OnboardingPage() {
     "use server";
 
     const displayName = String(formData.get("display_name") ?? "").trim();
-    const icon = String(formData.get("icon") ?? "").trim();
+    const icon = normalizeProfileIcon(String(formData.get("icon") ?? ""));
     const kokuseki = String(formData.get("kokuseki") ?? "").trim();
     const firstLanguage = String(formData.get("first_language") ?? "").trim();
     const settingsLanguage = String(formData.get("settings_language") ?? "").trim();
+    const goalWhy = String(formData.get("goal_why") ?? "").trim();
+    const goalHardest = String(formData.get("goal_hardest") ?? "").trim();
+    const goalMinutes = String(formData.get("goal_minutes") ?? "").trim();
 
-    // UI 上では設定言語も選べるが、「開始言語に統一」を優先するため settingsLanguage は必須にしない
-    if (!displayName || !icon || !kokuseki || !firstLanguage) {
+    if (!displayName || !kokuseki || !firstLanguage) {
       redirect("/onboarding");
     }
+
+    const allowed: Array<"ja" | "en" | "ko" | "zh"> = ["ja", "en", "ko", "zh"];
+    const langCookie = allowed.includes(settingsLanguage as "ja" | "en" | "ko" | "zh")
+      ? (settingsLanguage as "ja" | "en" | "ko" | "zh")
+      : firstLanguage === "en"
+        ? "en"
+        : "ja";
 
     const supabaseForAction = await createClient();
     const {
@@ -68,31 +71,45 @@ export default async function OnboardingPage() {
 
     if (!currentUser) redirect("/login");
 
-    // cookie: settings language（yomu_lang）は開始言語に統一
-    const lang = firstLanguage === "en" ? "en" : "ja";
-
-    cookies().set("yomu_lang", lang, {
+    cookies().set("yomu_lang", langCookie, {
       path: "/",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 365,
     });
 
-    // cookie: first language（今後の初期表示最適化で利用）
     cookies().set("yomu_first_lang", firstLanguage === "en" ? "en" : "ja", {
       path: "/",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 365,
     });
 
+    if (goalWhy) {
+      cookies().set("yomu_goal_why", goalWhy, { path: "/", sameSite: "lax", maxAge: 60 * 60 * 24 * 365 });
+    }
+    if (goalHardest) {
+      cookies().set("yomu_goal_hardest", goalHardest, {
+        path: "/",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 365,
+      });
+    }
+    if (goalMinutes) {
+      cookies().set("yomu_goal_minutes", goalMinutes, {
+        path: "/",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 365,
+      });
+    }
+
     await supabaseForAction.from("user_profiles").upsert(
       [
         {
           user_id: currentUser.id,
           display_name: displayName,
-          icon,
+          icon: icon || PROFILE_ICON_DEFAULT,
           kokuseki,
           first_language: firstLanguage === "en" ? "en" : "ja",
-          settings_language: lang,
+          settings_language: langCookie,
         },
       ],
       { onConflict: "user_id" },
@@ -110,7 +127,7 @@ export default async function OnboardingPage() {
             {t(lang, "onboardingTitle")}
           </h1>
           <p className="mt-1 text-[11px] text-slate-400 sm:text-xs">
-            Set up your profile and display language to match your learning style.
+            {t(lang, "onboardingDescription")}
           </p>
         </header>
 
@@ -124,7 +141,7 @@ export default async function OnboardingPage() {
                 name="display_name"
                 required
                 className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2.5 text-[13px] text-slate-100 placeholder:text-slate-500 focus:border-wa-ruri focus:outline-none focus:ring-1 focus:ring-wa-ruri/60"
-                placeholder="e.g. Sota"
+                placeholder={t(lang, "onboardingNamePlaceholder")}
                 maxLength={40}
               />
             </div>
@@ -133,36 +150,23 @@ export default async function OnboardingPage() {
               <p className="font-wa-serif text-[12px] font-semibold text-slate-200">
                 {t(lang, "onboardingIconLabel")}
               </p>
-              <div className="grid grid-cols-5 gap-2">
-                {ICON_CHOICES.map((i) => (
-                  <label
-                    key={i.value}
-                    className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-950/70 py-3 text-slate-300 transition hover:border-wa-ruri/60"
-                  >
-                    <input type="radio" name="icon" value={i.value} defaultChecked={i.value === "🌸"} className="sr-only" />
-                    <span className="text-2xl">{i.value}</span>
-                    <span className="mt-1 text-[10px]">{i.label}</span>
-                  </label>
-                ))}
-              </div>
+              <ProfileAvatarField
+                choosePhotoLabel={t(lang, "onboardingChoosePhoto")}
+                defaultHintLabel={t(lang, "onboardingAvatarDefaultHint")}
+                uploadingLabel={t(lang, "onboardingAvatarUploading")}
+                uploadErrorLabel={t(lang, "onboardingAvatarUploadError")}
+              />
             </div>
 
             <div className="space-y-2">
               <p className="font-wa-serif text-[12px] font-semibold text-slate-200">
                 {t(lang, "onboardingKokusekiLabel")}
               </p>
-              <select
-                name="kokuseki"
-                required
-                defaultValue="OTHER"
-                className="w-full appearance-none rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2.5 text-[13px] text-slate-100 focus:border-wa-ruri focus:outline-none focus:ring-1 focus:ring-wa-ruri/60"
-              >
-                {KOKUSEKI_CHOICES.map((k) => (
-                  <option key={k.value} value={k.value}>
-                    {k.emoji} {k.label}
-                  </option>
-                ))}
-              </select>
+              <CountrySelect
+                locale={countryLocale(lang)}
+                defaultValue="JP"
+                searchPlaceholder={t(lang, "onboardingCountrySearchPlaceholder")}
+              />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -191,10 +195,50 @@ export default async function OnboardingPage() {
                   defaultValue="en"
                   className="w-full appearance-none rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2.5 text-[13px] text-slate-100 focus:border-wa-ruri focus:outline-none focus:ring-1 focus:ring-wa-ruri/60"
                 >
-                  <option value="ja">Japanese</option>
-                  <option value="en">English (UI)</option>
+                  <option value="en">English</option>
+                  <option value="ja">日本語</option>
+                  <option value="ko">한국어</option>
+                  <option value="zh">中文</option>
                 </select>
               </div>
+            </div>
+
+            <div className="space-y-3 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4">
+              <p className="font-wa-serif text-[12px] font-semibold text-slate-200">
+                {lang === "ja" ? "学習の目的" : "Why are you learning Japanese?"}
+              </p>
+              <select
+                name="goal_why"
+                defaultValue="travel"
+                className="w-full rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2.5 text-[13px]"
+              >
+                <option value="travel">{lang === "ja" ? "旅行" : "Travel"}</option>
+                <option value="anime">{lang === "ja" ? "アニメ" : "Anime"}</option>
+                <option value="work">{lang === "ja" ? "仕事" : "Work"}</option>
+                <option value="living">{lang === "ja" ? "日本での生活" : "Living in Japan"}</option>
+                <option value="friends">{lang === "ja" ? "友人・家族" : "Friends & Family"}</option>
+              </select>
+              <select
+                name="goal_hardest"
+                defaultValue="speaking"
+                className="w-full rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2.5 text-[13px]"
+              >
+                <option value="speaking">{lang === "ja" ? "話すこと" : "Speaking"}</option>
+                <option value="listening">{lang === "ja" ? "聞くこと" : "Listening"}</option>
+                <option value="grammar">{lang === "ja" ? "文法" : "Grammar"}</option>
+                <option value="vocabulary">{lang === "ja" ? "語彙" : "Vocabulary"}</option>
+                <option value="confidence">{lang === "ja" ? "自信" : "Confidence"}</option>
+              </select>
+              <select
+                name="goal_minutes"
+                defaultValue="5"
+                className="w-full rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2.5 text-[13px]"
+              >
+                <option value="2">2 min / day</option>
+                <option value="5">5 min / day</option>
+                <option value="10">10 min / day</option>
+                <option value="20">20+ min / day</option>
+              </select>
             </div>
 
             <button
@@ -209,4 +253,3 @@ export default async function OnboardingPage() {
     </div>
   );
 }
-

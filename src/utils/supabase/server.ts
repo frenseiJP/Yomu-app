@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getSupabaseCookieOptions } from "@/lib/supabase/cookieOptions";
 
 /**
  * サーバーコンポーネント・Server Actions・Route Handlers 用の Supabase クライアントを作成します。
@@ -18,6 +19,7 @@ export async function createClient() {
   }
 
   return createServerClient(url, anonKey, {
+    cookieOptions: getSupabaseCookieOptions(),
     cookies: {
       getAll() {
         return cookieStore.getAll();

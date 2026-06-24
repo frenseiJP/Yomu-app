@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { detectBrowserLang } from "@/src/utils/i18n/clientLang";
 
 export type Language = "ja" | "en" | "zh" | "ko";
 
@@ -34,8 +35,7 @@ const LanguageContext = createContext<LanguageContextType>({
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>("en");
 
-  useEffect(() => {
-    // サーバー（設定保存など）がセットした cookie を最優先。古い localStorage より優先する。
+  const syncFromCookie = () => {
     const cookieLang = readCookie("yomu_lang");
     const cookieFirstLang = readCookie("yomu_first_lang");
     const fromCookie = (cookieLang ?? cookieFirstLang ?? null) as Language | null;
@@ -52,7 +52,29 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const local = localStorage.getItem("yomu-language") as Language | null;
     if (local && ["ja", "en", "zh", "ko"].includes(local)) {
       setLanguageState(local);
+      return;
     }
+
+    const browser = detectBrowserLang();
+    setLanguageState(browser);
+    writeCookie("yomu_lang", browser);
+  };
+
+  useEffect(() => {
+    // サーバー（設定保存など）がセットした cookie を最優先。古い localStorage より優先する。
+    syncFromCookie();
+  }, []);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") syncFromCookie();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", syncFromCookie);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", syncFromCookie);
+    };
   }, []);
 
   // ホーム（プロトタイプ）などが cookie を更新して dispatch したとき、Context も追従する
@@ -85,7 +107,17 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     writeCookie("yomu_lang", lang);
 
     window.dispatchEvent(new CustomEvent("yomu:lang-changed", { detail: { lang } }));
+
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = lang === "zh" ? "zh-Hans" : lang;
+    }
   };
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = language === "zh" ? "zh-Hans" : language;
+    }
+  }, [language]);
 
   const value = useMemo(() => ({ language, setLanguage }), [language]);
 

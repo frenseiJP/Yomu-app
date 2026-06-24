@@ -129,4 +129,8 @@ export interface CoachContextPayload {
   focusCategoryHint?: string;
   focusCategoryScore?: number;
   jlptLevel?: string;
+  /** Learner region for culturally relevant examples */
+  region?: string;
+  /** Current learning mode: free_chat, daily_mission, topic_practice, ftue, review, weak_point_drill */
+  learningMode?: string;
 }

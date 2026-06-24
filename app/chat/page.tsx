@@ -92,9 +92,9 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex min-h-screen min-h-[100dvh] flex-col overflow-x-hidden bg-[#020617]">
+    <div className="flex min-h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[#020617]">
       {/* メイン画面用ヘッダー: パーソナライズ挨拶 + ログアウト */}
-      <header className={`sticky top-0 z-[150] flex flex-shrink-0 items-center justify-between gap-2 border-b px-3 pb-3 pt-[max(12px,env(safe-area-inset-top,0px))] backdrop-blur-xl sm:gap-3 sm:px-6 sm:py-3 sm:pt-3 ${isLightTheme ? "border-slate-200 bg-white/95" : "border-slate-800/60 bg-slate-950/95"}`}>
+      <header className={`z-[150] flex flex-shrink-0 items-center justify-between gap-2 border-b px-3 pb-3 pt-[max(12px,env(safe-area-inset-top,0px))] backdrop-blur-xl sm:gap-3 sm:px-6 sm:py-3 sm:pt-3 ${isLightTheme ? "border-slate-200 bg-white/95" : "border-slate-800/60 bg-slate-950/95"}`}>
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-wa-ruri to-wa-asagi text-sm font-bold text-white shadow-lg">
             <BookOpen className="h-4 w-4" />
@@ -129,7 +129,7 @@ export default function ChatPage() {
         </div>
       </header>
 
-      <main className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col lg:max-w-[56rem]">
+      <main className="mx-auto flex min-h-0 w-full max-w-[60rem] flex-1 flex-col overflow-hidden">
         <YomuPrototypePage initialView="chat" embedded />
       </main>
     </div>

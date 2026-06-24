@@ -11,11 +11,19 @@
 // ← Paste your spreadsheet ID here (required for reliable writes)
 const SPREADSHEET_ID = "";
 
+// Injected by scripts/publish-analytics-gas.sh (matches Vercel ADMIN_ANALYTICS_SECRET)
+const ANALYTICS_EXPORT_SECRET = "__ADMIN_ANALYTICS_SECRET__";
+
 const SHEET_NAME = "Feedback";
 const ANALYTICS_SHEET_NAME = "Analytics";
 
-function doGet() {
+function doGet(e) {
   try {
+    const action = e && e.parameter ? e.parameter.action : null;
+    if (action === "analytics_summary") {
+      return jsonResponse(buildAnalyticsSummary_(e));
+    }
+
     const ss = getSpreadsheet_();
     return jsonResponse({
       ok: true,
@@ -23,6 +31,7 @@ function doGet() {
       spreadsheetId: ss.getId(),
       spreadsheetUrl: ss.getUrl(),
       sheetName: SHEET_NAME,
+      analyticsSheet: ANALYTICS_SHEET_NAME,
     });
   } catch (err) {
     return jsonResponse({
@@ -129,6 +138,79 @@ function ensureHeaders_(sheet, headers) {
       sheet.getRange(1, index + 1).setValue(label);
     }
   });
+}
+
+function buildAnalyticsSummary_(e) {
+  const secret = e && e.parameter ? e.parameter.secret : "";
+  if (!ANALYTICS_EXPORT_SECRET || ANALYTICS_EXPORT_SECRET.indexOf("__ADMIN_") === 0) {
+    return { ok: false, error: "analytics_export_not_configured" };
+  }
+  if (secret !== ANALYTICS_EXPORT_SECRET) {
+    return { ok: false, error: "unauthorized" };
+  }
+
+  const days = Number((e && e.parameter && e.parameter.days) || 7);
+  const rangeDays = days === 14 || days === 30 ? days : 7;
+  const cutoff = new Date();
+  cutoff.setUTCDate(cutoff.getUTCDate() - rangeDays);
+
+  const ss = getSpreadsheet_();
+  const rows = readAnalyticsSheetRows_(ss, cutoff).concat(readLegacyFeedbackAnalyticsRows_(ss, cutoff));
+  return { ok: true, source: "sheets", rangeDays: rangeDays, rows: rows };
+}
+
+function readAnalyticsSheetRows_(ss, cutoff) {
+  const sheet = ss.getSheetByName(ANALYTICS_SHEET_NAME);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+
+  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getValues();
+  const rows = [];
+  for (var i = 0; i < values.length; i++) {
+    var createdAt = values[i][0];
+    if (!createdAt) continue;
+    var created = createdAt instanceof Date ? createdAt : new Date(String(createdAt));
+    if (isNaN(created.getTime()) || created < cutoff) continue;
+    rows.push({
+      createdAt: created.toISOString(),
+      userId: String(values[i][1] || ""),
+      eventType: String(values[i][2] || ""),
+      sessionId: String(values[i][3] || ""),
+      route: String(values[i][4] || ""),
+      metadata: String(values[i][5] || ""),
+    });
+  }
+  return rows;
+}
+
+/** Backward compat: old GAS wrote analytics_event rows into Feedback sheet. */
+function readLegacyFeedbackAnalyticsRows_(ss, cutoff) {
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+
+  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, 7).getValues();
+  const rows = [];
+  for (var i = 0; i < values.length; i++) {
+    if (String(values[i][5] || "") !== "analytics_event") continue;
+    var createdAt = values[i][0];
+    if (!createdAt) continue;
+    var created = createdAt instanceof Date ? createdAt : new Date(String(createdAt));
+    if (isNaN(created.getTime()) || created < cutoff) continue;
+    var parsed = {};
+    try {
+      parsed = JSON.parse(String(values[i][3] || "{}"));
+    } catch (err) {
+      parsed = { raw: String(values[i][3] || "") };
+    }
+    rows.push({
+      createdAt: created.toISOString(),
+      userId: String(values[i][1] || ""),
+      eventType: String(parsed.eventType || ""),
+      sessionId: String(parsed.sessionId || ""),
+      route: String(values[i][4] || ""),
+      metadata: JSON.stringify(parsed.metadata || parsed.raw || ""),
+    });
+  }
+  return rows;
 }
 
 function jsonResponse(obj) {

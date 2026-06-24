@@ -1,3 +1,6 @@
+import { getSkillTreeLabel } from "@/lib/i18n/skillTree";
+import type { Lang } from "@/src/utils/i18n/types";
+
 export type MistakeCategory =
   | "particle"
   | "politeness"
@@ -44,15 +47,7 @@ export function inferMistakeCategory(input: {
   return "other";
 }
 
-export function mistakeCategoryLabel(cat?: MistakeCategory): string | null {
+export function mistakeCategoryLabel(cat?: MistakeCategory, lang: Lang = "en"): string | null {
   if (!cat || cat === "other") return null;
-  const map: Record<Exclude<MistakeCategory, "other">, string> = {
-    particle: "Particle",
-    politeness: "Politeness",
-    tense: "Tense",
-    word_choice: "Word choice",
-    word_order: "Word order",
-    register: "Register",
-  };
-  return map[cat];
+  return getSkillTreeLabel(lang, cat);
 }

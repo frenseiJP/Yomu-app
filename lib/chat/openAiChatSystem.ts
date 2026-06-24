@@ -46,6 +46,9 @@ export function parseCoachContextPayload(raw: unknown): CoachContextPayload | nu
       ? Math.max(0, Math.min(100, o.focusCategoryScore))
       : undefined;
   const jlptLevel = typeof o.jlptLevel === "string" ? o.jlptLevel.slice(0, 8) : undefined;
+  const region = typeof o.region === "string" ? o.region.slice(0, 80) : undefined;
+  const learningMode =
+    typeof o.learningMode === "string" ? o.learningMode.slice(0, 120) : undefined;
 
   return {
     recentMistakes,
@@ -58,6 +61,8 @@ export function parseCoachContextPayload(raw: unknown): CoachContextPayload | nu
     focusCategoryHint,
     focusCategoryScore,
     jlptLevel,
+    region,
+    learningMode,
   };
 }
 
@@ -132,23 +137,36 @@ const STRUCTURED_JSON_BLOCK = `
 === STRUCTURED OUTPUT (JSON only — choose mode first) ===
 Return ONLY one JSON object (no markdown fences).
 
+RELEVANCE (read before choosing mode):
+1. Answer the user's ACTUAL latest message first — stay on topic.
+2. Classify intent: correction | translation | explanation | conversation | app/help | general.
+3. Use correction JSON fields ONLY when the user submitted Japanese to polish or explicitly asked for correction.
+4. For grammar/meaning questions ("what does X mean?"), use explain — answer directly, do NOT force Better/Why/Other ways.
+5. For app/product questions, answer helpfully in the UI language — no forced Japanese lesson.
+6. If the request is unclear or too short, ask ONE clarifying question in "answer" (replyMode explain), e.g. "Could you give me one example sentence?"
+7. Keep responses concise and structured — avoid unrelated lessons.
+
 STEP 1 — Set "replyMode" to exactly one of:
-- "explain" — general questions about Japan, Japanese, grammar, culture, meaning, comparisons. The user is NOT asking you to fix a sentence they wrote.
-- "reading" — how to read, pronounce, or say a word/phrase/kanji. Focus on reading/pronunciation, not rewriting their message as a full sentence.
-- "correction" — the user submitted Japanese (or clearly wants their line rewritten). Use correction fields below.
+- "explain" — questions, translations, culture, grammar, app help, conversation coaching. User is NOT asking you to fix a sentence they wrote.
+- "reading" — how to read, pronounce, or say a word/phrase/kanji.
+- "correction" — user submitted Japanese to polish OR clearly wants their line rewritten.
 
 STEP 2 — Fields by mode:
 
 If replyMode is "explain" OR "reading":
   Required: "replyMode", "answer"
   Optional: "niceLine"
-  "answer" = full teaching reply in prose (follow OUTPUT LANGUAGE). Use Japanese (romaji) — English meaning for examples.
+  "answer" = full reply in prose (follow OUTPUT LANGUAGE). Use Japanese (romaji) — English meaning for examples.
   Do NOT include correctedSentence, studentSentence, or otherWay1/2.
 
 If replyMode is "correction":
   Required: "replyMode", "niceLine", "studentSentence", "studentRomaji", "correctedSentence", "correctedRomaji", "correctedEnglish", "whyEnglish", "otherWay1", "otherWay1Romaji", "otherWay1English", "otherWay2", "otherWay2Romaji", "otherWay2English"
 
 Plain string values only — no markdown fences inside JSON values.
+
+CONTEXT: Prior assistant messages may include compact tags like [correction ...] or [explain ...]. Use them to stay consistent — do not contradict earlier corrections.
+
+CONVERSATION THREAD: Short follow-ups ("why?", "more examples", "what about X?") refer to the immediately preceding topic unless the user clearly switches subject.
 `.trim();
 
 export type ChatOpenAiMode = "freeform_stream" | "structured_json";
@@ -220,5 +238,13 @@ export function buildOpenAiChatSystemPrompt(params: {
   return { systemPrompt, uiLang };
 }
 
-/** Sensei-recommended sampling temperature */
+/** Sensei-recommended sampling temperature (freeform stream) */
 export const SENSEI_CHAT_TEMPERATURE = 0.55;
+
+/** Lower temperature for structured JSON — more consistent corrections. */
+export function senseiStructuredTemperature(lastUserText: string): number {
+  const mode = inferReplyModeHint(lastUserText);
+  if (mode === "correction") return 0.35;
+  if (mode === "reading") return 0.4;
+  return 0.48;
+}

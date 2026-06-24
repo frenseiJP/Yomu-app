@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { appendBlobEvent } from "@/lib/analytics/blobStore";
 import { mirrorAnalyticsToSheets } from "@/lib/analytics/sheetsMirror";
 import { BETA_EVENT_TYPES, type BetaEventInput } from "@/lib/analytics/types";
 
@@ -90,12 +91,41 @@ export async function logBetaEventServer(input: BetaEventInput): Promise<void> {
     const supabase = getAdminClient();
     if (supabase) {
       const { error } = await supabase.from("beta_event_logs").insert(row);
-      if (!error) return;
+      if (!error) {
+        void appendBlobEvent({
+          event_type: row.event_type,
+          user_id: row.user_id,
+          session_id: row.session_id,
+          route: row.route,
+          metadata: row.metadata as Record<string, unknown> | null,
+        });
+        return;
+      }
     }
 
+    await appendBlobEvent({
+      event_type: row.event_type,
+      user_id: row.user_id,
+      session_id: row.session_id,
+      route: row.route,
+      metadata: row.metadata as Record<string, unknown> | null,
+    });
     await mirrorAnalyticsToSheets(input);
   } catch {
     try {
+      if (isEventType(input.eventType)) {
+        const meta = pickAllowedMetadata(input.eventType, input.metadata);
+        await appendBlobEvent({
+          event_type: input.eventType,
+          user_id: asString(input.userId, 128),
+          session_id: asString(input.sessionId, 128),
+          route: asString(input.route, 256),
+          metadata:
+            meta && typeof meta === "object" && !Array.isArray(meta)
+              ? (meta as Record<string, unknown>)
+              : null,
+        });
+      }
       await mirrorAnalyticsToSheets(input);
     } catch {
       // Fail silently by design.

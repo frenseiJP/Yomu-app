@@ -1,4 +1,3 @@
-import { recordsStorage } from "@/src/features/records/storage";
 import { generateRecordId, nowIso } from "@/src/features/records/storage/helpers";
 import type {
   DueReviews,
@@ -9,6 +8,7 @@ import type {
 } from "@/lib/habit/types";
 import { readHabitJson, writeHabitJson } from "@/lib/habit/storage";
 import { todayYmd, addDaysYmd } from "@/lib/habit/date";
+import { getLearnerVocabulary } from "@/lib/vocabulary/learnerStats";
 
 const KIND = "reviews_v1";
 
@@ -29,21 +29,20 @@ function save(userId: string, s: ReviewStore): void {
 /** Ensure queue has items from saved words / mistakes (idempotent-ish) */
 export function ensureReviewQueueSeeded(userId: string): void {
   const store = load(userId);
-  const words = recordsStorage.savedWords.getAllByUser(userId);
-  const mistakes = recordsStorage.mistakeLogs.getAllByUser(userId);
+  const vocab = getLearnerVocabulary(userId);
   const today = todayYmd();
   const existingWordIds = new Set(
     store.words.map((w) => w.relatedWordId).filter(Boolean) as string[],
   );
 
-  for (const sw of words) {
+  for (const sw of vocab.filter((v) => v.type === "word" || v.type === "phrase")) {
     if (existingWordIds.has(sw.id)) continue;
     store.words.push({
       id: generateRecordId("wrev"),
       userId,
       relatedWordId: sw.id,
-      word: sw.word,
-      meaningHint: sw.meaning.slice(0, 80),
+      word: sw.term,
+      meaningHint: (sw.meaning ?? "").slice(0, 80),
       nextReviewDate: today,
       intervalStep: 0,
       createdAt: nowIso(),
@@ -53,14 +52,14 @@ export function ensureReviewQueueSeeded(userId: string): void {
   }
 
   const existingMistakeIds = new Set(store.mistakes.map((m) => m.mistakeLogId));
-  for (const m of mistakes) {
+  for (const m of vocab.filter((v) => v.type === "correction")) {
     if (existingMistakeIds.has(m.id)) continue;
     store.mistakes.push({
       id: generateRecordId("mrev"),
       userId,
       mistakeLogId: m.id,
-      originalText: m.originalText,
-      correctedText: m.correctedText,
+      originalText: m.userSentence ?? m.term,
+      correctedText: m.correctedSentence ?? m.term,
       nextReviewDate: today,
       intervalStep: 0,
       createdAt: nowIso(),

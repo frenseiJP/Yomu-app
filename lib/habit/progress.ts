@@ -1,9 +1,13 @@
 import type { CategoryMasteryState, MistakeCategoryKey, UserProgressV1, UserStats } from "@/lib/habit/types";
 import { readHabitJson, writeHabitJson } from "@/lib/habit/storage";
-import { recordsStorage } from "@/src/features/records/storage";
 import { todayYmd, addDaysYmd, toYmd } from "@/lib/habit/date";
 import { listTopicPracticeResultsByUser } from "@/lib/topic/service";
 import { readLegacyUiVocab } from "@/lib/vocabulary/legacyStorage";
+import {
+  getCorrectionItems,
+  getLearnerVocabulary,
+  getSavedWordCount,
+} from "@/lib/vocabulary/learnerStats";
 
 const KIND = "progress_v1";
 
@@ -76,8 +80,8 @@ export function computeStreak(activeDays: string[]): number {
 
 export function getUserStats(userId: string): UserStats {
   const p = load(userId);
-  const savedWords = recordsStorage.savedWords.getAllByUser(userId).length;
-  const mistakes = recordsStorage.mistakeLogs.getAllByUser(userId).length;
+  const savedWords = getSavedWordCount(userId);
+  const mistakes = getCorrectionItems(userId).length;
 
   let legacyWords = 0;
   try {
@@ -90,7 +94,7 @@ export function getUserStats(userId: string): UserStats {
 
   return {
     streak: computeStreak(p.activeDays),
-    totalWords: Math.max(savedWords, legacyWords),
+    totalWords: Math.max(savedWords, legacyWords, getLearnerVocabulary(userId).length),
     totalMistakes: mistakes,
     totalSessions: p.learningDays.length,
     mistakesFixed: p.mistakesFixedCount,

@@ -7,15 +7,20 @@ import {
   masteryScoreFor,
   recommendedFocusCategory,
 } from "@/lib/coach/categoryMastery";
+import type { ProgressCopy } from "@/lib/i18n/progressCopy";
+import { getSkillTreeHint, getSkillTreeLabel } from "@/lib/i18n/skillTree";
 import type { MistakeCategoryKey } from "@/lib/habit/types";
+import type { Lang } from "@/src/utils/i18n/types";
 
 type Props = {
   userId: string;
+  lang: Lang;
+  copy: ProgressCopy;
   isLightTheme?: boolean;
   onPracticeCategory?: (key: MistakeCategoryKey) => void;
 };
 
-export default function SkillTreeCard({ userId, onPracticeCategory }: Props) {
+export default function SkillTreeCard({ userId, lang, copy, onPracticeCategory }: Props) {
   const focus = recommendedFocusCategory(userId);
 
   return (
@@ -23,17 +28,13 @@ export default function SkillTreeCard({ userId, onPracticeCategory }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-            Coach skill path
+            {copy.skillPathCoachTitle}
           </p>
-          <p className="mt-1 text-[12px] text-slate-400">
-            Built from your corrections and drills — not a grammar textbook.
-          </p>
+          <p className="mt-1 text-[12px] text-slate-400">{copy.skillPathCoachSubtitle}</p>
         </div>
         <p className="text-[11px] text-sky-300/90">
-          Focus now:{" "}
-          <span className="font-medium text-sky-100">
-            {SKILL_TREE_ORDER.find((s) => s.key === focus)?.label ?? "Particles"}
-          </span>
+          {copy.focusNow}{" "}
+          <span className="font-medium text-sky-100">{getSkillTreeLabel(lang, focus)}</span>
         </p>
       </div>
       <ul className="mt-4 space-y-2.5">
@@ -58,10 +59,10 @@ export default function SkillTreeCard({ userId, onPracticeCategory }: Props) {
                   </span>
                   <div className="min-w-0">
                     <p className={`font-medium ${unlocked ? "text-slate-100" : "text-slate-500"}`}>
-                      {node.label}
-                      {!unlocked ? " · locked" : null}
+                      {getSkillTreeLabel(lang, node.key)}
+                      {!unlocked ? ` ${copy.locked}` : null}
                     </p>
-                    <p className="truncate text-[11px] text-slate-500">{node.coachHint}</p>
+                    <p className="truncate text-[11px] text-slate-500">{getSkillTreeHint(lang, node.key)}</p>
                   </div>
                 </div>
                 <span className="shrink-0 font-medium text-slate-200">{score}%</span>
@@ -80,17 +81,14 @@ export default function SkillTreeCard({ userId, onPracticeCategory }: Props) {
                   onClick={() => onPracticeCategory(node.key)}
                   className="mt-1 text-[11px] font-medium text-sky-300 hover:text-sky-200"
                 >
-                  Practice this with Sensei →
+                  {copy.practiceWithSensei}
                 </button>
               ) : null}
             </li>
           );
         })}
       </ul>
-      <p className="mt-3 text-[11px] text-slate-500">
-        Unlock the next step at {WEAKNESS_GATE_THRESHOLD}% mastery. Keep chatting — your tree grows from real
-        mistakes.
-      </p>
+      <p className="mt-3 text-[11px] text-slate-500">{copy.unlockAt(WEAKNESS_GATE_THRESHOLD)}</p>
     </section>
   );
 }

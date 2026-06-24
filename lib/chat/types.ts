@@ -6,6 +6,8 @@ export interface ChatSession {
   title: string;
   createdAt: string;
   updatedAt: string;
+  /** Rolling thread summary for this conversation (fed to coachContext). */
+  summarySnippet?: string;
 }
 
 /** Serializable assistant metadata persisted with chat history */

@@ -35,6 +35,9 @@ function readStore(userId: string): ChatSessionStore {
 function writeStore(userId: string, store: ChatSessionStore): void {
   try {
     getStorage().setItem(key(userId), JSON.stringify(store));
+    if (typeof window !== "undefined") {
+      void import("@/lib/chat/cloudSync").then((m) => m.queueChatCloudSync(userId));
+    }
   } catch {
     /* ignore */
   }
@@ -142,5 +145,31 @@ export function upsertSession(userId: string, session: ChatSession): void {
   if (idx < 0) store.sessions.unshift(session);
   else store.sessions[idx] = session;
   if (!store.messagesBySession[session.id]) store.messagesBySession[session.id] = [];
+  writeStore(userId, store);
+}
+
+export function getSessionSummarySnippet(userId: string, sessionId: string): string {
+  const store = readStore(userId);
+  const session = store.sessions.find((s) => s.id === sessionId);
+  return session?.summarySnippet?.trim() ?? "";
+}
+
+export function appendSessionSummarySnippet(
+  userId: string,
+  sessionId: string,
+  line: string,
+): void {
+  const trimmed = line.trim();
+  if (!trimmed) return;
+  const store = readStore(userId);
+  const idx = store.sessions.findIndex((s) => s.id === sessionId);
+  if (idx < 0) return;
+  const prev = store.sessions[idx].summarySnippet?.trim() ?? "";
+  const combined = prev ? `${prev} | ${trimmed}` : trimmed;
+  store.sessions[idx] = {
+    ...store.sessions[idx],
+    summarySnippet: combined.slice(-600),
+    updatedAt: nowIso(),
+  };
   writeStore(userId, store);
 }

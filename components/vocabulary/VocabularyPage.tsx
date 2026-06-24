@@ -20,7 +20,8 @@ import type { VocabularyFilterState, VocabularyItem, VocabularyListCategory } fr
 import { useVocabularyUserId } from "@/lib/vocabulary/useVocabularyUserId";
 import { createClient } from "@/src/utils/supabase/client";
 import TutorialHintCard from "@/components/tutorial/TutorialHintCard";
-import { getTutorialHintCopy } from "@/lib/tutorial/copy";
+import { getTutorialHintCopy, tutorialSkipLabel } from "@/lib/tutorial/copy";
+import type { Lang } from "@/src/utils/i18n/types";
 import {
   clearGuidedTutorialSession,
   readGuidedTutorialSession,
@@ -34,7 +35,7 @@ import {
 } from "@/lib/layout/pageShell";
 import { dateLocaleForLang, getPrototypeCopy } from "@/src/utils/i18n/prototypeCopy";
 import { getLangClient } from "@/src/utils/i18n/clientLang";
-import type { Lang } from "@/src/utils/i18n/types";
+import { t } from "@/src/utils/i18n/t";
 
 type VocabularyPageProps = {
   /** Render inside YomuPrototypePage (bottom nav, no modal overlay). */
@@ -86,6 +87,17 @@ export default function VocabularyPage({
 
   useEffect(() => {
     setAppLang(getLangClient());
+    const onLangChanged = (event: Event) => {
+      const custom = event as CustomEvent<{ lang?: Lang }>;
+      setAppLang(custom.detail?.lang ?? getLangClient());
+    };
+    window.addEventListener("yomu:lang-changed", onLangChanged as EventListener);
+    const onVisibility = () => setAppLang(getLangClient());
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("yomu:lang-changed", onLangChanged as EventListener);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
 
   useEffect(() => {
@@ -119,10 +131,9 @@ export default function VocabularyPage({
     }
   }, [refreshKey]);
 
-  const isJa = appLang === "ja";
   const vocabTutorialHint =
     readGuidedTutorialSession()?.step === "vocabulary_intro"
-      ? getTutorialHintCopy("vocabulary_intro", isJa)
+      ? getTutorialHintCopy("vocabulary_intro", appLang as Lang)
       : null;
 
   const goToProgressTutorial = useCallback(() => {
@@ -249,11 +260,10 @@ export default function VocabularyPage({
             {all.length === 0 ? (
               <div className={`w-full rounded-2xl border p-6 ${emptyPanel}`}>
                 <h2 className={`text-base font-semibold ${emptyTitle}`}>
-                  Your vocabulary library is empty for now.
+                  {t(appLang, "vocabEmptyLibraryTitle")}
                 </h2>
                 <p className={`mt-2 text-sm leading-relaxed ${emptyBody}`}>
-                  Save useful phrases, corrections, and words from Chat or scenario practice to build your
-                  personal Japanese library.
+                  {t(appLang, "vocabEmptyLibraryBody")}
                 </p>
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   {inAppShell && onNavigateChat ? (
@@ -263,7 +273,7 @@ export default function VocabularyPage({
                       className={`inline-flex w-full items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-medium sm:w-auto ${emptyBtnPrimary}`}
                     >
                       <MessageCircle className="h-3.5 w-3.5" />
-                      Start chatting
+                      {t(appLang, "vocabStartChat")}
                     </button>
                   ) : (
                     <a
@@ -355,7 +365,7 @@ export default function VocabularyPage({
           placement="bottom"
           startCollapsed
           autoCollapseAfterMs={3500}
-          skipLabel={isJa ? "スキップ" : "Skip"}
+          skipLabel={tutorialSkipLabel(appLang as Lang)}
           onSkip={skipVocabTutorial}
           onCta={goToProgressTutorial}
         />

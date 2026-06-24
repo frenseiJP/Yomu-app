@@ -24,6 +24,10 @@ function readAll(): VocabularyItem[] {
 function writeAll(items: VocabularyItem[]): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(KEY, JSON.stringify(items));
+  const userIds = [...new Set(items.map((i) => i.userId).filter(Boolean))];
+  for (const uid of userIds) {
+    void import("@/lib/vocabulary/cloudSync").then((m) => m.queueVocabularyCloudSync(uid));
+  }
 }
 
 export function listVocabularyByUser(userId: string): VocabularyItem[] {

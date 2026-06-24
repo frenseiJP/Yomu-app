@@ -1,4 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
+import { fetchAnalyticsSummaryFromBlob } from "@/lib/analytics/blobStore";
+import { fetchAnalyticsSummaryFromSheets } from "@/lib/analytics/sheetsQueries";
 
 export type AnalyticsRange = 7 | 14 | 30;
 
@@ -21,6 +23,7 @@ export type AnalyticsSummary = {
   rangeDays: AnalyticsRange;
   generatedAt: string;
   configured: boolean;
+  dataSource?: "supabase" | "sheets" | "blob";
   error?: string;
   totals: {
     events: number;
@@ -106,9 +109,20 @@ export async function fetchAnalyticsSummary(rangeDays: AnalyticsRange = 7): Prom
 
   const supabase = getAdminClient();
   if (!supabase) {
+    const sheetsSummary = await fetchAnalyticsSummaryFromSheets(rangeDays);
+    if (sheetsSummary?.configured) {
+      return { ...sheetsSummary, dataSource: "sheets" };
+    }
+
+    const blobSummary = await fetchAnalyticsSummaryFromBlob(rangeDays);
+    if (blobSummary?.configured) {
+      return blobSummary;
+    }
+
     return {
       ...empty,
-      error: "SUPABASE_SERVICE_ROLE_KEY が未設定です。Supabase → Settings → API の service_role key を Vercel に追加してください。",
+      error:
+        "SUPABASE_SERVICE_ROLE_KEY が未設定です。Vercel Blob 分析も未初期化です。再デプロイ後にイベントが溜まり始めます。",
     };
   }
 
@@ -197,6 +211,7 @@ export async function fetchAnalyticsSummary(rangeDays: AnalyticsRange = 7): Prom
     rangeDays,
     generatedAt: new Date().toISOString(),
     configured: true,
+    dataSource: "supabase",
     totals: {
       events: rawLogs.length || dailyRows.reduce((s, r) => s + Number(r.event_count), 0),
       uniqueUsers: uniqueUsers.size,

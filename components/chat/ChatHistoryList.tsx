@@ -4,20 +4,28 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/src/utils/supabase/client";
 import { getSessions, getMessages, removeSession } from "@/lib/chat/service";
 import { useVocabularyUserId } from "@/lib/vocabulary/useVocabularyUserId";
+import { getLangClient } from "@/src/utils/i18n/clientLang";
+import { t } from "@/src/utils/i18n/t";
+import type { Lang } from "@/src/utils/i18n/types";
 import { ChatHistoryItem } from "./ChatHistoryItem";
 
 function latestPreview(userId: string, sessionId: string): string {
   const msgs = getMessages(userId, sessionId);
   if (msgs.length === 0) return "";
   const last = msgs[msgs.length - 1];
-  const t = last.content.trim().replace(/\s+/g, " ");
-  return t.length > 140 ? `${t.slice(0, 140)}…` : t;
+  const text = last.content.trim().replace(/\s+/g, " ");
+  return text.length > 140 ? `${text.slice(0, 140)}…` : text;
 }
 
 export function ChatHistoryList() {
   const userId = useVocabularyUserId();
   const [tick, setTick] = useState(0);
   const [chatBase, setChatBase] = useState<"/chat" | "/app">("/app");
+  const [lang, setLang] = useState<Lang>("en");
+
+  useEffect(() => {
+    setLang(getLangClient());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,24 +54,22 @@ export function ChatHistoryList() {
 
   const handleDelete = useCallback(
     (sessionId: string) => {
-      if (typeof window !== "undefined" && !window.confirm("Delete this chat session?")) return;
+      if (typeof window !== "undefined" && !window.confirm(t(lang, "historyDeleteConfirm"))) return;
       removeSession(userId, sessionId);
       bump();
     },
-    [userId, bump],
+    [userId, bump, lang],
   );
 
   if (sessions.length === 0) {
     return (
       <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-8 text-center">
-        <p className="text-sm font-medium leading-relaxed text-slate-200">
-          No learning history yet. Start a chat to begin building your Japanese learning journey.
-        </p>
+        <p className="text-sm font-medium leading-relaxed text-slate-200">{t(lang, "historyEmpty")}</p>
         <a
           href={chatBase === "/chat" ? "/chat" : "/app"}
           className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#155EEF] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#1B6CFF]"
         >
-          Start chatting
+          {t(lang, "historyStartChat")}
         </a>
       </div>
     );

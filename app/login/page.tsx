@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/src/utils/supabase/client";
 import { logBetaEvent } from "@/lib/analytics/client";
+import { formatAuthErrorMessageForLang } from "@/lib/auth/errors";
+import { getLangClient } from "@/src/utils/i18n/clientLang";
+import type { Lang } from "@/src/utils/i18n/types";
 import { hasPendingGuestChat } from "@/lib/guest/pendingChat";
 import { Mail, Lock, BookOpen, Eye, EyeOff } from "lucide-react";
 
@@ -39,8 +42,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [continueGuest, setContinueGuest] = useState(false);
+  const [authServiceDown, setAuthServiceDown] = useState(false);
+  const [uiLang, setUiLang] = useState<Lang>("en");
 
   const supabase = createClient();
+
+  useEffect(() => {
+    setUiLang(getLangClient());
+  }, []);
 
   // App Store 等のリンク（/login?intent=signup など）で登録タブを開く（useSearchParams よりビルド都合で search を直接読む）
   useEffect(() => {
@@ -52,13 +61,28 @@ export default function LoginPage() {
     if (q.get("continue") === "guest" || hasPendingGuestChat()) {
       setContinueGuest(true);
     }
+    const authErr = q.get("error");
+    if (authErr === "oauth" || authErr === "auth_callback") {
+      setError(
+        authErr === "oauth"
+          ? "Google sign-in failed. Try email sign-in, or check Supabase Google provider settings."
+          : "Email verification link expired or invalid. Please sign in again or request a new link.",
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetch("/api/auth/health", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data: { ok?: boolean }) => setAuthServiceDown(data.ok === false))
+      .catch(() => setAuthServiceDown(true));
   }, []);
 
   const handleGoogleSignIn = async () => {
     setError(null);
     setLoading(true);
     try {
-      const redirectTo = `${window.location.origin}/auth/callback?next=/chat`;
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/chat")}`;
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo },
@@ -125,11 +149,7 @@ export default function LoginPage() {
           password,
         });
         if (signInError) {
-          if (signInError.message.includes("Invalid login")) {
-            setError("Invalid email or password.");
-          } else {
-            setError(signInError.message);
-          }
+          setError(formatAuthErrorMessageForLang(uiLang, signInError));
           return;
         }
         void logBetaEvent({
@@ -139,21 +159,29 @@ export default function LoginPage() {
           metadata: { mode: "login" },
         });
       } else {
-        const { error: signUpError } = await supabase.auth.signUp({
+        const origin = typeof window !== "undefined" ? window.location.origin : "";
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
-          options: { emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/onboarding` },
+          options: {
+            emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/onboarding")}`,
+          },
         });
         if (signUpError) {
-          if (signUpError.message.includes("already registered")) {
-            setError("This email is already registered. Please sign in.");
-          } else {
-            setError(signUpError.message);
-          }
+          setError(formatAuthErrorMessageForLang(uiLang, signUpError));
           return;
         }
         setInitialLangCookiesEn();
-        setError(null);
+        if (signUpData.session) {
+          void logBetaEvent({
+            eventType: "login_success",
+            userId: signUpData.user?.id,
+            route: "/login",
+            metadata: { mode: "signup" },
+          });
+          router.replace("/onboarding");
+          return;
+        }
         setMode("login");
         setError("We sent a confirmation email. Open the link in the message to verify your account.");
         setLoading(false);
@@ -161,7 +189,7 @@ export default function LoginPage() {
       }
       router.replace("/chat");
     } catch (err) {
-      setError("Something went wrong. Please try again in a moment.");
+      setError(formatAuthErrorMessageForLang(uiLang, err));
     } finally {
       setLoading(false);
     }
@@ -217,6 +245,12 @@ export default function LoginPage() {
             Sign up
           </button>
         </div>
+
+        {authServiceDown ? (
+          <div className="mb-4 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-100">
+            認証サービス（Supabase）に接続できません。プロジェクトの復旧が必要です。運営にお問い合わせください。
+          </div>
+        ) : null}
 
         {continueGuest ? (
           <div className="mb-4 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2.5 text-xs leading-relaxed text-sky-100">

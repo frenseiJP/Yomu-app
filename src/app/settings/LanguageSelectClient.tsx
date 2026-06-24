@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLanguage, type Language } from "@/app/contexts/LanguageContext";
 import type { Lang } from "@/src/utils/i18n/types";
 
@@ -19,6 +19,11 @@ export default function LanguageSelectClient({
 }: Props) {
   const { setLanguage } = useLanguage();
   const [selected, setSelected] = useState<Lang>(currentDisplayLang);
+
+  useEffect(() => {
+    setSelected(currentDisplayLang);
+    setLanguage(currentDisplayLang as Language);
+  }, [currentDisplayLang, setLanguage]);
 
   /** 各言語の自語名（表示言語に依らず統一） */
   const languages = useMemo(

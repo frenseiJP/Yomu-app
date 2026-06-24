@@ -1,5 +1,7 @@
+import { buildRetentionMissionChatOpener as buildLocalizedOpener } from "@/lib/i18n/missionCopy";
 import { readHabitJson, writeHabitJson } from "@/lib/habit/storage";
 import { todayYmd } from "@/lib/habit/date";
+import type { Lang } from "@/src/utils/i18n/types";
 
 const KIND = "retention_daily_v1";
 
@@ -459,14 +461,6 @@ export function markRetentionDailyMissionCompleted(userId: string): RetentionDai
   return updated;
 }
 
-export function buildRetentionMissionChatOpener(m: RetentionDailyMission): string {
-  return [
-    "Today's mission 🇯🇵",
-    "",
-    m.instruction,
-    "",
-    "How would you say this in Japanese?",
-    "",
-    `“${m.prompt_en}”`,
-  ].join("\n");
+export function buildRetentionMissionChatOpener(m: RetentionDailyMission, lang: Lang = "en"): string {
+  return buildLocalizedOpener(m, lang);
 }

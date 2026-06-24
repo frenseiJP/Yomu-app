@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/src/utils/supabase/server";
 import { isMissingTableError } from "@/src/utils/supabase/schema-errors";
-import { Activity, Mail, Sparkles } from "lucide-react";
+import { Activity, Mail, Sparkles, Crown, UserRound } from "lucide-react";
 import { t } from "@/src/utils/i18n/t";
 import type { Lang } from "@/src/utils/i18n/types";
 import { regionLabelForLang } from "@/src/utils/i18n/prototypeCopy";
@@ -13,11 +13,13 @@ import {
 } from "@/src/utils/region/region";
 import LanguageSelectClient from "./LanguageSelectClient";
 import GeneratePromptButton from "./GeneratePromptButton";
+import LearningStatsClient from "./LearningStatsClient";
+import PlanUsageClient from "./PlanUsageClient";
+import ProfileSettingsClient from "./ProfileSettingsClient";
+import { normalizeProfileIcon, PROFILE_ICON_DEFAULT } from "@/lib/profile/icon";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
-  /** Settings UI is English-first. */
-  const lang: Lang = "en";
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -26,30 +28,11 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  const { count: postCount } = await supabase
-    .from("posts")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id);
-
-  const { data: lastPosts } = await supabase
-    .from("posts")
-    .select("created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1);
-
-  const lastPostAt = lastPosts?.[0]?.created_at
-    ? new Date(lastPosts[0].created_at).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
-    : null;
-
-  // user_profiles: ユーザー固有のプロフィール情報（母国語など）
   const { data: profileRows, error: profileLoadErr } = await supabase
     .from("user_profiles")
-    .select("native_language, region, settings_language, first_language")
+    .select(
+      "native_language, region, settings_language, first_language, display_name, icon, kokuseki",
+    )
     .eq("user_id", user.id)
     .limit(1);
 
@@ -86,6 +69,52 @@ export default async function SettingsPage() {
       : "en";
 
   const currentDisplayLang: Lang = langCookieRaw ?? profileLangRaw;
+  const lang: Lang = currentDisplayLang;
+
+  const profileDisplayName =
+    profileRows?.[0]?.display_name?.trim() || user.email?.split("@")[0] || "Frensei";
+  const profileIcon = normalizeProfileIcon(profileRows?.[0]?.icon);
+  const profileKokuseki = profileRows?.[0]?.kokuseki?.trim() || "JP";
+
+  function countryLocaleFor(langCode: Lang): string {
+    if (langCode === "ja") return "ja";
+    if (langCode === "ko") return "ko";
+    if (langCode === "zh") return "zh";
+    return "en";
+  }
+
+  async function handleSaveProfile(formData: FormData) {
+    "use server";
+
+    const displayName = String(formData.get("display_name") ?? "").trim();
+    const icon = normalizeProfileIcon(String(formData.get("icon") ?? ""));
+    const kokuseki = String(formData.get("kokuseki") ?? "").trim();
+
+    if (!displayName || !kokuseki) redirect("/settings");
+
+    const supabaseForAction = await createClient();
+    const {
+      data: { user: actionUser },
+    } = await supabaseForAction.auth.getUser();
+    if (!actionUser) redirect("/login");
+
+    const { error } = await supabaseForAction.from("user_profiles").upsert(
+      [
+        {
+          user_id: actionUser.id,
+          display_name: displayName,
+          icon: icon || PROFILE_ICON_DEFAULT,
+          kokuseki,
+        },
+      ],
+      { onConflict: "user_id" },
+    );
+    if (error && !isMissingTableError(error, "user_profiles")) {
+      console.error("[settings] user_profiles upsert (profile):", error);
+    }
+
+    redirect("/settings");
+  }
 
   async function handleSaveLanguage(formData: FormData) {
     "use server";
@@ -285,38 +314,48 @@ export default async function SettingsPage() {
             </div>
           </section>
 
-          {/* 活動実績 */}
+          {/* プロフィール */}
+          <section className="glass-panel rounded-3xl border border-slate-800/70 bg-slate-950/90 p-4 backdrop-blur-xl sm:p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <UserRound className="h-4 w-4 text-pink-300" />
+              <span className="font-wa-serif text-[11px] font-semibold tracking-[0.18em] text-slate-400">
+                {t(lang, "onboardingTitle")}
+              </span>
+            </div>
+            <ProfileSettingsClient
+              lang={lang}
+              locale={countryLocaleFor(lang)}
+              initialDisplayName={profileDisplayName}
+              initialIcon={profileIcon}
+              initialKokuseki={profileKokuseki}
+              saveAction={handleSaveProfile}
+            />
+          </section>
+
+          {/* 学習データ */}
           <section className="glass-panel rounded-3xl border border-slate-800/70 bg-slate-950/90 p-4 backdrop-blur-xl sm:p-5">
             <div className="mb-3 flex items-center gap-2">
               <Activity className="h-4 w-4 text-wa-kinari" />
               <span className="font-wa-serif text-[11px] font-semibold tracking-[0.18em] text-slate-400">
-                {t(lang, "communityActivityTitle")}
-              </span>
-              <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-pink-500/20 bg-pink-500/10 px-2 py-0.5 text-[10px] text-pink-200">
-                <Sparkles className="h-3 w-3" />
-                {t(lang, "accentTag")}
+                {t(lang, "learningActivityTitle")}
               </span>
             </div>
+            <LearningStatsClient
+              lang={lang}
+              chatSessionsLabel={t(lang, "chatSessionsLabel")}
+              vocabularyItemsLabel={t(lang, "vocabularyItemsLabel")}
+            />
+          </section>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-900/45 p-3">
-                <p className="text-[11px] font-medium text-slate-400">
-                  {t(lang, "postsCountLabel")}
-                </p>
-                <p className="mt-1 text-[20px] font-semibold text-slate-50">
-                  {postCount ?? 0}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-900/45 p-3">
-                <p className="text-[11px] font-medium text-slate-400">
-                  {t(lang, "lastPostAtLabel")}
-                </p>
-                <p className="mt-1 text-[13px] text-slate-100">
-                  {lastPostAt ?? "—"}
-                </p>
-              </div>
+          {/* プラン */}
+          <section className="glass-panel rounded-3xl border border-slate-800/70 bg-slate-950/90 p-4 backdrop-blur-xl sm:p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <Crown className="h-4 w-4 text-violet-300" />
+              <span className="font-wa-serif text-[11px] font-semibold tracking-[0.18em] text-slate-400">
+                {t(lang, "planSectionTitle")}
+              </span>
             </div>
+            <PlanUsageClient lang={lang} />
           </section>
 
           {/* AI お題生成 */}

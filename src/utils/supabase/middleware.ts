@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getSupabaseCookieOptions } from "@/lib/supabase/cookieOptions";
 
 /** App Store / インストール広告などの URL から来た未ログインユーザーを先に /login へ誘導する */
 const INSTALL_FROM_VALUES = new Set([
@@ -38,6 +39,7 @@ function createClient(request: NextRequest) {
   }
 
   const supabase = createServerClient(url, anonKey, {
+    cookieOptions: getSupabaseCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();

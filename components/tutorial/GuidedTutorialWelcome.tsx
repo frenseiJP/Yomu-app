@@ -1,9 +1,12 @@
 "use client";
 
+import type { Lang } from "@/src/utils/i18n/types";
 import { getWelcomeCopy } from "@/lib/tutorial/copy";
 
 type GuidedTutorialWelcomeProps = {
   open: boolean;
+  lang?: Lang;
+  /** @deprecated use lang */
   isJa?: boolean;
   onStart: () => void;
   onSkip: () => void;
@@ -11,12 +14,14 @@ type GuidedTutorialWelcomeProps = {
 
 export default function GuidedTutorialWelcome({
   open,
+  lang,
   isJa = false,
   onStart,
   onSkip,
 }: GuidedTutorialWelcomeProps) {
   if (!open) return null;
-  const copy = getWelcomeCopy(isJa);
+  const resolvedLang: Lang = lang ?? (isJa ? "ja" : "en");
+  const copy = getWelcomeCopy(resolvedLang);
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
@@ -33,7 +38,7 @@ export default function GuidedTutorialWelcome({
         onClick={(e) => e.stopPropagation()}
       >
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-wa-ruri/90">
-          {isJa ? "はじめかた" : "Quick guide"}
+          {copy.badge}
         </p>
         <h2 className="mt-2 font-wa-serif text-xl font-semibold leading-snug text-slate-50">
           {copy.title}

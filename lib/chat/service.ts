@@ -5,6 +5,7 @@ import {
   createSession,
   deleteSession,
   getSessionMessages,
+  getSessionSummarySnippet,
   listSessions,
   patchMessageMeta,
 } from "@/lib/chat/storage";
@@ -56,3 +57,5 @@ export function updateMessageMeta(
 ): void {
   patchMessageMeta(userId, sessionId, messageId, patch);
 }
+
+export { getSessionSummarySnippet };

@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { getSupabaseCookieOptions } from "@/lib/supabase/cookieOptions";
 
 /**
  * クライアントコンポーネント用の Supabase クライアントを作成します。
@@ -14,5 +15,7 @@ export function createClient() {
     );
   }
 
-  return createBrowserClient(url, anonKey);
+  return createBrowserClient(url, anonKey, {
+    cookieOptions: getSupabaseCookieOptions(),
+  });
 }
