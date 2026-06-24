@@ -4,7 +4,25 @@ import { updateSession } from "@/src/utils/supabase/middleware";
 
 const LANG_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
-const APP_PATH_PREFIXES = ["/app", "/chat", "/vocabulary", "/progress", "/more", "/settings", "/onboarding", "/history"];
+const APP_PATH_PREFIXES = [
+  "/",
+  "/app",
+  "/chat",
+  "/vocabulary",
+  "/progress",
+  "/more",
+  "/settings",
+  "/onboarding",
+  "/history",
+  "/login",
+  "/terms",
+  "/privacy",
+  "/contact",
+  "/feedback",
+  "/learn",
+  "/report",
+  "/try",
+];
 
 function isAppShellPath(pathname: string): boolean {
   return APP_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));

@@ -27,6 +27,7 @@ import {
 import type { DueReviews } from "@/lib/habit";
 import type { RetentionDailyMissionDay } from "@/lib/mission/retentionDaily";
 import type { SeasonalProgressState } from "@/lib/progress/seasonal";
+import { seasonDisplayName } from "@/lib/progress/seasonal";
 
 type RecentChat = {
   id: string;
@@ -300,6 +301,7 @@ export default function HomeView({
           compact
           centered
           isLightTheme={isLightTheme}
+          seasonLabel={seasonDisplayName(seasonalState.season, lang)}
           onOpenProgress={() => {
             onCtaClick?.("open_progress");
             onOpenProgress();
@@ -315,6 +317,7 @@ export default function HomeView({
           <DailyUsefulPhraseCard
             phrase={dailyUsefulPhrase}
             isLightTheme={isLightTheme}
+            copy={progressCopy}
             onPractice={() => {
               onCtaClick?.("practice_phrase");
               onPracticePhrase();

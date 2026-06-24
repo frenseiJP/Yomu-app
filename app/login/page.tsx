@@ -6,31 +6,17 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/src/utils/supabase/client";
 import { logBetaEvent } from "@/lib/analytics/client";
 import { formatAuthErrorMessageForLang } from "@/lib/auth/errors";
-import { getLangClient } from "@/src/utils/i18n/clientLang";
-import type { Lang } from "@/src/utils/i18n/types";
+import { useLanguage } from "@/app/contexts/LanguageContext";
+import { getLoginCopy, validatePasswordForLang } from "@/lib/i18n/loginCopy";
 import { hasPendingGuestChat } from "@/lib/guest/pendingChat";
 import { Mail, Lock, BookOpen, Eye, EyeOff } from "lucide-react";
 
 type Mode = "login" | "signup";
 
-const LANG_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
-
-function setInitialLangCookiesEn() {
-  if (typeof document === "undefined") return;
-  document.cookie = `yomu_lang=${encodeURIComponent("en")}; path=/; max-age=${LANG_COOKIE_MAX_AGE}; SameSite=Lax`;
-  document.cookie = `yomu_first_lang=${encodeURIComponent("en")}; path=/; max-age=${LANG_COOKIE_MAX_AGE}; SameSite=Lax`;
-  window.dispatchEvent(new CustomEvent("yomu:lang-changed", { detail: { lang: "en" } }));
-}
-
-function validatePassword(p: string): string | null {
-  if (p.length < 8) return "Password must be at least 8 characters.";
-  if (!/[a-z]/.test(p)) return "Include at least one lowercase letter.";
-  if (!/[0-9]/.test(p)) return "Include at least one digit.";
-  return null;
-}
-
 export default function LoginPage() {
   const router = useRouter();
+  const { language: uiLang } = useLanguage();
+  const copy = getLoginCopy(uiLang);
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,15 +29,9 @@ export default function LoginPage() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [continueGuest, setContinueGuest] = useState(false);
   const [authServiceDown, setAuthServiceDown] = useState(false);
-  const [uiLang, setUiLang] = useState<Lang>("en");
 
   const supabase = createClient();
 
-  useEffect(() => {
-    setUiLang(getLangClient());
-  }, []);
-
-  // App Store 等のリンク（/login?intent=signup など）で登録タブを開く（useSearchParams よりビルド都合で search を直接読む）
   useEffect(() => {
     if (typeof window === "undefined") return;
     const q = new URLSearchParams(window.location.search);
@@ -63,13 +43,9 @@ export default function LoginPage() {
     }
     const authErr = q.get("error");
     if (authErr === "oauth" || authErr === "auth_callback") {
-      setError(
-        authErr === "oauth"
-          ? "Google sign-in failed. Try email sign-in, or check Supabase Google provider settings."
-          : "Email verification link expired or invalid. Please sign in again or request a new link.",
-      );
+      setError(authErr === "oauth" ? copy.oauthFailed : copy.authCallbackFailed);
     }
-  }, []);
+  }, [copy.oauthFailed, copy.authCallbackFailed]);
 
   useEffect(() => {
     void fetch("/api/auth/health", { cache: "no-store" })
@@ -89,7 +65,7 @@ export default function LoginPage() {
       });
       if (oauthError) setError(oauthError.message);
     } catch {
-      setError("Google sign-in failed. Please try email instead.");
+      setError(copy.googleFailed);
     } finally {
       setLoading(false);
     }
@@ -110,33 +86,24 @@ export default function LoginPage() {
       }
     };
     checkSession();
-  }, [router]);
-
-  useEffect(() => {
-    if (mode !== "signup" || typeof document === "undefined") return;
-    const hasLangCookie = document.cookie
-      .split(";")
-      .some((c) => c.trim().startsWith("yomu_lang="));
-    if (hasLangCookie) return;
-    setInitialLangCookiesEn();
-  }, [mode]);
+  }, [router, supabase.auth]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     if (mode === "signup") {
-      const pwdError = validatePassword(password);
+      const pwdError = validatePasswordForLang(password, uiLang);
       if (pwdError) {
         setError(pwdError);
         return;
       }
       if (!agreedToPolicies) {
-        setError("利用規約とプライバシーポリシーへの同意が必要です。");
+        setError(copy.agreeRequired);
         return;
       }
       if (password !== confirmPassword) {
-        setError("Passwords do not match.");
+        setError(copy.passwordsMismatch);
         return;
       }
     }
@@ -171,7 +138,6 @@ export default function LoginPage() {
           setError(formatAuthErrorMessageForLang(uiLang, signUpError));
           return;
         }
-        setInitialLangCookiesEn();
         if (signUpData.session) {
           void logBetaEvent({
             eventType: "login_success",
@@ -183,7 +149,7 @@ export default function LoginPage() {
           return;
         }
         setMode("login");
-        setError("We sent a confirmation email. Open the link in the message to verify your account.");
+        setError(copy.confirmationEmailSent);
         setLoading(false);
         return;
       }
@@ -212,9 +178,7 @@ export default function LoginPage() {
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-wa-ruri to-wa-asagi text-sm font-bold text-white shadow-lg">
           <BookOpen className="h-5 w-5" />
         </div>
-        <span className="font-wa-serif text-lg font-semibold text-slate-100">
-          Frensei
-        </span>
+        <span className="font-wa-serif text-lg font-semibold text-slate-100">Frensei</span>
       </Link>
 
       <div
@@ -231,7 +195,7 @@ export default function LoginPage() {
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            Sign in
+            {copy.signIn}
           </button>
           <button
             type="button"
@@ -242,19 +206,19 @@ export default function LoginPage() {
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            Sign up
+            {copy.signUp}
           </button>
         </div>
 
         {authServiceDown ? (
           <div className="mb-4 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-100">
-            認証サービス（Supabase）に接続できません。プロジェクトの復旧が必要です。運営にお問い合わせください。
+            {copy.authServiceDown}
           </div>
         ) : null}
 
         {continueGuest ? (
           <div className="mb-4 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2.5 text-xs leading-relaxed text-sky-100">
-            Your trial chat is saved. Sign up or sign in to continue where you left off.
+            {copy.continueGuest}
           </div>
         ) : null}
 
@@ -267,15 +231,15 @@ export default function LoginPage() {
           <span className="text-base" aria-hidden>
             G
           </span>
-          Continue with Google
+          {copy.continueGoogle}
         </button>
 
-        <p className="mb-4 text-center text-[11px] text-slate-500">or use email</p>
+        <p className="mb-4 text-center text-[11px] text-slate-500">{copy.orUseEmail}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="email" className="mb-1.5 block text-xs font-medium text-slate-400">
-              Email
+              {copy.email}
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -285,7 +249,7 @@ export default function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder={copy.emailPlaceholder}
                 required
                 className="w-full rounded-xl border border-slate-700/80 bg-slate-900/80 py-3 pl-10 pr-4 text-slate-100 placeholder-slate-500 focus:border-pink-500/40 focus:outline-none focus:ring-1 focus:ring-pink-500/30"
               />
@@ -294,7 +258,7 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="password" className="mb-1.5 block text-xs font-medium text-slate-400">
-              Password
+              {copy.password}
             </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -312,22 +276,20 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? copy.hidePassword : copy.showPassword}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             {mode === "signup" && (
-              <p className="mt-1 text-[11px] text-slate-500">
-                At least 8 characters, one lowercase letter, and one digit.
-              </p>
+              <p className="mt-1 text-[11px] text-slate-500">{copy.passwordHint}</p>
             )}
           </div>
 
           {mode === "signup" && (
             <div>
               <label htmlFor="confirmPassword" className="mb-1.5 block text-xs font-medium text-slate-400">
-                Confirm password
+                {copy.confirmPassword}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -345,7 +307,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setShowConfirmPassword((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
-                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  aria-label={showConfirmPassword ? copy.hidePassword : copy.showPassword}
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -362,24 +324,25 @@ export default function LoginPage() {
                 className="mt-0.5 h-4 w-4 rounded border-slate-600 bg-slate-900 text-pink-500 focus:ring-pink-500/40"
               />
               <span className="leading-5">
+                {copy.agreePrefix}
                 <Link
                   href="/terms"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-pink-200 underline hover:text-pink-100"
                 >
-                  利用規約
+                  {copy.termsLink}
                 </Link>
-                と
+                {copy.agreeMiddle}
                 <Link
                   href="/privacy"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-pink-200 underline hover:text-pink-100"
                 >
-                  プライバシーポリシー
+                  {copy.privacyLink}
                 </Link>
-                を確認し、同意します。
+                {copy.agreeSuffix}
               </span>
             </label>
           )}
@@ -387,7 +350,7 @@ export default function LoginPage() {
           {error && (
             <div
               className={`rounded-lg px-3 py-2.5 text-sm ${
-                error.includes("confirmation email")
+                error === copy.confirmationEmailSent
                   ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
                   : "bg-red-500/10 text-red-300 border border-red-500/20"
               }`}
@@ -401,14 +364,12 @@ export default function LoginPage() {
             disabled={loading || (mode === "signup" && !agreedToPolicies)}
             className="w-full rounded-xl bg-gradient-to-r from-pink-500/90 to-pink-600/90 py-3.5 font-medium text-white shadow-lg transition hover:from-pink-500 hover:to-pink-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Sending…" : mode === "login" ? "Sign in" : "Sign up"}
+            {loading ? copy.sending : mode === "login" ? copy.signIn : copy.signUp}
           </button>
         </form>
       </div>
 
-      <p className="mt-6 text-center text-xs text-slate-500">
-        Frensei — Japanese and culture, together.
-      </p>
+      <p className="mt-6 text-center text-xs text-slate-500">{copy.tagline}</p>
     </div>
   );
 }

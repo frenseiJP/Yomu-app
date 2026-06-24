@@ -233,7 +233,7 @@ export default function VocabularyPage({
                 onClick={() => setFiltersOpen((v) => !v)}
                 className="text-xs font-medium text-slate-300"
               >
-                {filtersOpen ? "Hide tag filters" : "More filters"}
+                {filtersOpen ? t(appLang, "vocabHideTagFilters") : t(appLang, "vocabMoreFilters")}
               </button>
               {filtersOpen ? (
                 <div className="mt-2">

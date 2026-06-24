@@ -2,30 +2,20 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { getLangClient } from "@/src/utils/i18n/clientLang";
 import { ArrowLeft, FileText, MessageCircle, Printer } from "lucide-react";
 import FeedbackSheetForm from "@/components/feedback/FeedbackSheetForm";
+import { formatReportDateForLang, getReportCopy } from "@/lib/i18n/reportCopy";
+import { useAppLang } from "@/lib/i18n/useAppLang";
 import { activeDaysToWeekDots, getProgressSnapshot, getUserStats } from "@/lib/habit/progress";
 import { buildSeasonalProgressState } from "@/lib/progress/seasonal";
 import { listTopicPracticeResultsByUser } from "@/lib/topic/service";
 import { listVocabularyByUser } from "@/lib/vocabulary/storage";
 import { useVocabularyUserId } from "@/lib/vocabulary/useVocabularyUserId";
 
-function formatReportDate(): string {
-  try {
-    return new Date().toLocaleDateString(undefined, {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  } catch {
-    return new Date().toISOString().slice(0, 10);
-  }
-}
-
 export default function LearningReportPage() {
   const userId = useVocabularyUserId();
+  const appLang = useAppLang();
+  const copy = getReportCopy(appLang);
 
   const snapshot = useMemo(() => getProgressSnapshot(userId), [userId]);
   const stats = useMemo(() => getUserStats(userId), [userId]);
@@ -33,7 +23,6 @@ export default function LearningReportPage() {
   const vocabSaved = useMemo(() => listVocabularyByUser(userId).length, [userId]);
   const recentTopics = useMemo(() => listTopicPracticeResultsByUser(userId).slice(0, 8), [userId]);
 
-  const appLang = getLangClient();
   const seasonal = useMemo(
     () =>
       buildSeasonalProgressState({
@@ -71,7 +60,7 @@ export default function LearningReportPage() {
           className="inline-flex items-center gap-2 rounded-xl border border-slate-700/80 px-3 py-2 text-sm text-slate-300 hover:bg-slate-900"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back
+          {copy.back}
         </Link>
         <button
           type="button"
@@ -79,17 +68,19 @@ export default function LearningReportPage() {
           className="inline-flex items-center gap-2 rounded-xl border border-wa-ruri/50 bg-wa-ruri/15 px-3 py-2 text-sm text-slate-100 hover:bg-wa-ruri/25"
         >
           <Printer className="h-4 w-4" />
-          Print / Save PDF
+          {copy.printPdf}
         </button>
       </div>
 
       <header className="mb-8 border-b border-slate-800/80 pb-6">
         <div className="flex items-center gap-2 text-wa-ruri">
           <FileText className="h-6 w-6" />
-          <span className="text-xs font-semibold uppercase tracking-[0.2em]">Learning report</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.2em]">{copy.eyebrow}</span>
         </div>
-        <h1 className="mt-3 font-wa-serif text-2xl font-semibold text-slate-50 sm:text-3xl">Your Frensei snapshot</h1>
-        <p className="mt-2 text-sm text-slate-400">Generated {formatReportDate()}</p>
+        <h1 className="mt-3 font-wa-serif text-2xl font-semibold text-slate-50 sm:text-3xl">{copy.title}</h1>
+        <p className="mt-2 text-sm text-slate-400">
+          {copy.generated} {formatReportDateForLang(appLang)}
+        </p>
         <p className="mt-4 rounded-xl border border-slate-800/60 bg-slate-900/50 px-4 py-3 text-sm leading-relaxed text-slate-300">
           <span className="font-medium text-slate-200">{seasonal.momentLine}</span>
           <span className="text-slate-500"> · </span>
@@ -102,48 +93,30 @@ export default function LearningReportPage() {
       >
         <div className="flex items-center gap-2 text-pink-300">
           <MessageCircle className="h-5 w-5 shrink-0" />
-          <span className="text-xs font-semibold uppercase tracking-[0.16em]">Beta</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.16em]">{copy.beta}</span>
         </div>
-        {appLang === "ja" ? (
-          <>
-            <h2 className="mt-2 font-wa-serif text-lg text-slate-50">ご意見・ご感想をお聞かせください</h2>
-            <p className="mt-2 text-sm leading-relaxed text-slate-300">
-              レポートを見ながら気づいたこと（使い心地、不具合、こうしてほしいことなど）をその場で送れます。内容はチームのスプレッドシートに届きます。
-            </p>
-          </>
-        ) : (
-          <>
-            <h2 className="mt-2 font-wa-serif text-lg text-slate-50">Share your feedback</h2>
-            <p className="mt-2 text-sm leading-relaxed text-slate-300">
-              Send impressions while you review this snapshot — bugs, ideas, what felt natural or confusing. Comments go straight to our team spreadsheet.
-            </p>
-          </>
-        )}
-        <FeedbackSheetForm
-          embedded
-          route="/report"
-          source="report"
-          reportContext={reportContext}
-        />
+        <h2 className="mt-2 font-wa-serif text-lg text-slate-50">{copy.feedbackTitle}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-slate-300">{copy.feedbackBody}</p>
+        <FeedbackSheetForm embedded route="/report" source="report" reportContext={reportContext} />
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
             href="/feedback"
             className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-600 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-900"
           >
-            {appLang === "ja" ? "フィードバック専用ページ" : "Full feedback page"}
+            {copy.fullFeedbackPage}
           </Link>
           <Link
             href="/app"
             className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-600 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-900"
           >
-            {appLang === "ja" ? "アプリに戻る" : "Back to app"}
+            {copy.backToApp}
           </Link>
         </div>
       </section>
 
       <section className={`${card} mb-5`}>
-        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">This week</h2>
-        <div className="mt-3 flex gap-1.5" aria-label="Active days this week">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{copy.thisWeek}</h2>
+        <div className="mt-3 flex gap-1.5" aria-label={copy.weekAria}>
           {weekDots.map((on, i) => (
             <span
               key={i}
@@ -151,47 +124,49 @@ export default function LearningReportPage() {
             />
           ))}
         </div>
-        <p className="mt-2 text-xs text-slate-500">Sun → Sat · lit days had chat, mission, or review activity</p>
+        <p className="mt-2 text-xs text-slate-500">{copy.weekHint}</p>
       </section>
 
       <section className={`${card} mb-5`}>
-        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Totals</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{copy.totals}</h2>
         <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="rounded-xl bg-slate-900/60 px-3 py-2.5">
-            <dt className="text-[11px] text-slate-500">Current streak</dt>
-            <dd className="mt-0.5 text-lg font-medium text-slate-100">{stats.streak} days</dd>
+            <dt className="text-[11px] text-slate-500">{copy.currentStreak}</dt>
+            <dd className="mt-0.5 text-lg font-medium text-slate-100">
+              {stats.streak} {copy.days}
+            </dd>
           </div>
           <div className="rounded-xl bg-slate-900/60 px-3 py-2.5">
-            <dt className="text-[11px] text-slate-500">Chat messages (all time)</dt>
+            <dt className="text-[11px] text-slate-500">{copy.chatMessages}</dt>
             <dd className="mt-0.5 text-lg font-medium text-slate-100">{snapshot.totalChatMessages}</dd>
           </div>
           <div className="rounded-xl bg-slate-900/60 px-3 py-2.5">
-            <dt className="text-[11px] text-slate-500">Missions completed</dt>
+            <dt className="text-[11px] text-slate-500">{copy.missionsCompleted}</dt>
             <dd className="mt-0.5 text-lg font-medium text-slate-100">{snapshot.missionsCompletedCount}</dd>
           </div>
           <div className="rounded-xl bg-slate-900/60 px-3 py-2.5">
-            <dt className="text-[11px] text-slate-500">Reviews completed</dt>
+            <dt className="text-[11px] text-slate-500">{copy.reviewsCompleted}</dt>
             <dd className="mt-0.5 text-lg font-medium text-slate-100">{snapshot.reviewsCompletedCount}</dd>
           </div>
           <div className="rounded-xl bg-slate-900/60 px-3 py-2.5">
-            <dt className="text-[11px] text-slate-500">Topic practices</dt>
+            <dt className="text-[11px] text-slate-500">{copy.topicPractices}</dt>
             <dd className="mt-0.5 text-lg font-medium text-slate-100">{stats.totalTopicPractices}</dd>
           </div>
           <div className="rounded-xl bg-slate-900/60 px-3 py-2.5">
-            <dt className="text-[11px] text-slate-500">Vocabulary saved (library)</dt>
+            <dt className="text-[11px] text-slate-500">{copy.vocabSaved}</dt>
             <dd className="mt-0.5 text-lg font-medium text-slate-100">{vocabSaved}</dd>
           </div>
           <div className="rounded-xl bg-slate-900/60 px-3 py-2.5 sm:col-span-2">
-            <dt className="text-[11px] text-slate-500">Learning days recorded</dt>
+            <dt className="text-[11px] text-slate-500">{copy.learningDays}</dt>
             <dd className="mt-0.5 text-lg font-medium text-slate-100">{snapshot.learningDays.length}</dd>
           </div>
         </dl>
       </section>
 
       <section className={`${card} mb-5`}>
-        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Recent topic practice</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{copy.recentTopics}</h2>
         {recentTopics.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">No topic sessions yet. Try the Topic tab in the app.</p>
+          <p className="mt-3 text-sm text-slate-500">{copy.noTopics}</p>
         ) : (
           <ul className="mt-3 space-y-2">
             {recentTopics.map((r) => (
@@ -205,9 +180,7 @@ export default function LearningReportPage() {
         )}
       </section>
 
-      <p className="text-center text-[11px] text-slate-600 print:hidden">
-        Data is stored on this device (local). Sign in on the same account on other devices to align IDs.
-      </p>
+      <p className="text-center text-[11px] text-slate-600 print:hidden">{copy.footerNote}</p>
     </div>
   );
 }

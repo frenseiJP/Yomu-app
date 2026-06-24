@@ -55,7 +55,7 @@ import {
   type UiTheme,
 } from "@/src/utils/theme/theme";
 import { isAffiliateBarVisibleForPath } from "@/lib/affiliateVisibility";
-import { buildSeasonalProgressState } from "@/lib/progress/seasonal";
+import { buildSeasonalProgressState, seasonDisplayName } from "@/lib/progress/seasonal";
 import SeasonalProgressCard from "@/components/progress/SeasonalProgressCard";
 import {
   buildCoachContext,
@@ -998,7 +998,9 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     const reviewLinked = buildReviewLinkedQuestion(cat, dueReviews);
     const questions = (reviewLinked ? [reviewLinked, ...base] : base).slice(0, 3);
     setWeakDrill({ category: cat, level, questions, index: 0, points: 0 });
-    const intro = `Weak-point drill (${mistakeCategoryLabel(cat) ?? "Other"} / ${level}) 1/3\n${questions[0]?.prompt ?? ""}`;
+    const drillCopy = getChatActionsCopy(appLang as Lang);
+    const catLabel = mistakeCategoryLabel(cat) ?? drillCopy.weakDrillOther;
+    const intro = drillCopy.weakDrillIntro(catLabel, level, 1, questions.length, questions[0]?.prompt ?? "");
     setMessages((prev) => [
       ...prev,
       {
@@ -1012,7 +1014,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     setActiveView("chat");
     setTopicSelectorMode("hidden");
     chatInputRef.current?.focus();
-  }, [habitUserId, dueReviews]);
+  }, [habitUserId, dueReviews, appLang]);
 
   const refreshHabitData = useCallback((userId: string) => {
     const rDay = getOrCreateRetentionDailyMission(userId, jlptLevel);
@@ -2224,7 +2226,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       if (nextIndex >= weakDrill.questions.length) {
         const totalPoints = weakDrill.points + judged.score;
         const maxPoints = weakDrill.questions.length * 2;
-        const catLabel = mistakeCategoryLabel(weakDrill.category) ?? "Other";
+        const catLabel = mistakeCategoryLabel(weakDrill.category) ?? chatActionsCopy.weakDrillOther;
         recordWeakDrillResult(habitUserId, {
           category: catLabel,
           score: totalPoints,
@@ -2237,7 +2239,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           {
             id: Date.now() + 91,
             role: "assistant",
-            baseText: `Weak-point drill complete: ${totalPoints}/${maxPoints}\n${judged.note}\nGreat work — keep this category as your session goal for a few turns.`,
+            baseText: chatActionsCopy.weakDrillComplete(totalPoints, maxPoints, judged.note),
             createdAt: new Date().toISOString(),
           },
         ]);
@@ -2254,7 +2256,12 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         {
           id: Date.now() + 92,
           role: "assistant",
-          baseText: `Weak-point drill ${nextIndex + 1}/${weakDrill.questions.length}\n${judged.note}\n${q.prompt}`,
+          baseText: chatActionsCopy.weakDrillNext(
+            nextIndex + 1,
+            weakDrill.questions.length,
+            judged.note,
+            q.prompt,
+          ),
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -3081,6 +3088,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               <SeasonalProgressCard
                 state={seasonalState}
                 isLightTheme={isLightTheme}
+                seasonLabel={seasonDisplayName(seasonalState.season, appLang as Lang)}
                 thisWeekLabel={progressCopy.seasonalThisWeek}
                 rhythmLabel={progressCopy.seasonalRhythm}
               />
@@ -3514,7 +3522,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                       </div>
                       <span className={`flex max-w-[45%] flex-shrink-0 items-center gap-1 text-xs ${isLightTheme ? "text-neutral-700" : "text-slate-200"}`}>
                         <span className="truncate">
-                          {regionLabelForLang(draftRegion, "en")}
+                          {regionLabelForLang(draftRegion, appLang)}
                         </span>
                         <ChevronRight className={`h-4 w-4 flex-shrink-0 ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`} aria-hidden />
                       </span>
@@ -3895,11 +3903,22 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     ))}
                   </div>
                 }
-                importSheet={<ChatContentImportSheet userId={habitUserId} sessionId={currentSessionId} />}
+                importSheet={
+                  <ChatContentImportSheet
+                    userId={habitUserId}
+                    sessionId={currentSessionId}
+                    lang={appLang as Lang}
+                    copy={chatActionsCopy}
+                  />
+                }
                 weakDrillChip={
                   weakDrill ? (
                     <span className="inline-flex rounded-full border border-sky-500/35 bg-sky-500/10 px-2.5 py-1 text-[12px] text-sky-100">
-                      Drill {weakDrill.index + 1}/{weakDrill.questions.length} ({weakDrill.level})
+                      {chatActionsCopy.drillChip(
+                        weakDrill.index + 1,
+                        weakDrill.questions.length,
+                        weakDrill.level,
+                      )}
                     </span>
                   ) : weakPointDrill.prompt ? (
                     <button
@@ -3909,7 +3928,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                       }}
                       className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[12px] font-medium text-amber-100 hover:bg-amber-500/15"
                     >
-                      Weak-point drill
+                      {chatActionsCopy.weakPointDrill}
                       {weakPointDrill.category
                         ? ` · ${mistakeCategoryLabel(weakPointDrill.category) ?? "Other"}`
                         : ""}
@@ -4283,7 +4302,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 source="chat"
                 sessionId={currentSessionId}
                 appVersion={process.env.NEXT_PUBLIC_APP_VERSION}
-                isJa={appLang === "ja"}
+                appLang={appLang as Lang}
                 onSubmitted={() => setBetaFeedbackVisible(false)}
                 onSkipped={() => setBetaFeedbackVisible(false)}
               />
@@ -4492,14 +4511,14 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           role="status"
           className="fixed bottom-24 left-1/2 z-50 max-w-sm -translate-x-1/2 rounded-xl border border-sky-500/35 bg-slate-950/95 px-4 py-3 text-center text-sm text-sky-100 shadow-lg backdrop-blur-sm"
         >
-          <p className="font-medium">Your trial chat is ready</p>
-          <p className="mt-1 text-[12px] text-slate-400">Keep the conversation going — ask a follow-up below.</p>
+          <p className="font-medium">{homeCopy.guestTrialReady}</p>
+          <p className="mt-1 text-[12px] text-slate-400">{homeCopy.guestTrialHint}</p>
           <button
             type="button"
             onClick={() => setGuestImportBanner(false)}
             className="mt-2 text-[11px] text-slate-500 hover:text-slate-300"
           >
-            Dismiss
+            {chatActionsCopy.dismiss}
           </button>
         </div>
       ) : null}
@@ -4512,14 +4531,14 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           <p>{planLimitMessage}</p>
           <div className="mt-2 flex items-center justify-center gap-3">
             <Link href="/pricing" className="text-[11px] font-medium text-wa-ruri hover:text-sky-300">
-              View plans
+              {homeCopy.viewPlans}
             </Link>
             <button
               type="button"
               onClick={() => setPlanLimitMessage(null)}
               className="text-[11px] text-slate-500 hover:text-slate-300"
             >
-              OK
+              {homeCopy.ok}
             </button>
           </div>
         </div>

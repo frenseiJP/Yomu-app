@@ -1,11 +1,13 @@
 "use client";
 
 import type { DailyUsefulPhrase } from "@/lib/dailyPhrase/phrases";
+import type { ProgressCopy } from "@/lib/i18n/progressCopy";
 
 type Props = {
   phrase: DailyUsefulPhrase;
   isLightTheme: boolean;
   onPractice: () => void;
+  copy?: Pick<ProgressCopy, "usefulPhraseTitle" | "phraseMeaningLabel" | "phraseWhenLabel" | "phrasePractice">;
   /** Inside collapsible — no outer card chrome */
   compact?: boolean;
 };
@@ -14,6 +16,7 @@ export default function DailyUsefulPhraseCard({
   phrase,
   isLightTheme,
   onPractice,
+  copy,
   compact = false,
 }: Props) {
   const card = compact
@@ -33,7 +36,7 @@ export default function DailyUsefulPhraseCard({
     <section className={`w-full ${card} ${compact ? "" : "sm:p-5"}`}>
       {!compact ? (
         <p className={`text-[11px] font-semibold tracking-wide ${label}`}>
-          Today&apos;s useful phrase 🌸
+          {copy?.usefulPhraseTitle ? `${copy.usefulPhraseTitle} 🌸` : "Today's useful phrase 🌸"}
         </p>
       ) : null}
       <p
@@ -50,13 +53,13 @@ export default function DailyUsefulPhraseCard({
       >
         <div>
           <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${sectionLabel}`}>
-            Meaning
+            {copy?.phraseMeaningLabel ?? "Meaning"}
           </p>
           <p className={`mt-1 text-sm leading-relaxed ${meaning}`}>{phrase.meaning}</p>
         </div>
         <div>
           <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${sectionLabel}`}>
-            When to use
+            {copy?.phraseWhenLabel ?? "When to use"}
           </p>
           <p className={`mt-1 text-sm leading-relaxed ${when}`}>{phrase.whenToUse}</p>
         </div>
@@ -69,7 +72,7 @@ export default function DailyUsefulPhraseCard({
           isLightTheme ? "text-neutral-900" : "text-slate-50"
         }`}
       >
-        Practice
+        {copy?.phrasePractice ?? "Practice"}
       </button>
     </section>
   );

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveRequestUiLang } from "@/lib/i18n/resolveUiLang";
 import { consumeRateLimit, getClientIp } from "@/lib/security/rateLimit";
 import { logBetaEventServer } from "@/lib/analytics/server";
 
@@ -129,7 +130,7 @@ export async function POST(req: Request): Promise<Response> {
     typeof body.userText === "string"
       ? body.userText.trim().slice(0, MAX_USER_TEXT_CHARS)
       : "";
-  const uiLang: UiLang = normalizeUiLang(body.language) ?? "en";
+  const uiLang = resolveRequestUiLang(body.language);
   const recentTurns = parseRecentTurns(body.recentTurns);
 
   if (!assistantText) {

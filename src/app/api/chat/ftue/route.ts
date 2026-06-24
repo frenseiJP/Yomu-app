@@ -3,6 +3,7 @@ import {
   SENSEI_CHAT_TEMPERATURE,
 } from "@/lib/chat/openAiChatSystem";
 import { parseFtueCoachPayload } from "@/lib/ftue/format";
+import { resolveRequestUiLang } from "@/lib/i18n/resolveUiLang";
 import { consumeRateLimit, getClientIp } from "@/lib/security/rateLimit";
 import { logBetaEventServer } from "@/lib/analytics/server";
 
@@ -14,11 +15,6 @@ const MAX_HISTORY_CONTENT_CHARS = 400;
 const MAX_REQUEST_BODY_BYTES = 20_000;
 
 type UiLang = "ja" | "en" | "zh" | "ko";
-
-function normalizeUiLang(raw: unknown): UiLang {
-  if (raw === "ja" || raw === "en" || raw === "zh" || raw === "ko") return raw;
-  return "en";
-}
 
 export async function POST(req: Request): Promise<Response> {
   const ip = getClientIp(req);
@@ -75,7 +71,7 @@ export async function POST(req: Request): Promise<Response> {
     typeof (body as { promptEnglish?: unknown }).promptEnglish === "string"
       ? (body as { promptEnglish: string }).promptEnglish.trim().slice(0, MAX_PROMPT_EN_CHARS)
       : "";
-  const uiLang = normalizeUiLang((body as { language?: unknown }).language) ?? "en";
+  const uiLang: UiLang = resolveRequestUiLang((body as { language?: unknown }).language);
   const history = Array.isArray((body as { history?: unknown }).history)
     ? (body as { history: unknown[] }).history
     : [];

@@ -51,6 +51,9 @@ export type ProgressCopy = {
   moreSettingsDesc: string;
   seasonalThisWeek: string;
   seasonalRhythm: string;
+  phraseMeaningLabel: string;
+  phraseWhenLabel: string;
+  phrasePractice: string;
 };
 
 const COPY: Record<Lang, ProgressCopy> = {
@@ -106,6 +109,9 @@ const COPY: Record<Lang, ProgressCopy> = {
     moreSettingsDesc: "Language, tone, region and app preferences",
     seasonalThisWeek: "This week",
     seasonalRhythm: "Rhythm",
+    phraseMeaningLabel: "Meaning",
+    phraseWhenLabel: "When to use",
+    phrasePractice: "Practice",
   },
   ja: {
     title: "進捗",
@@ -159,6 +165,9 @@ const COPY: Record<Lang, ProgressCopy> = {
     moreSettingsDesc: "言語・トーン・地域などの設定",
     seasonalThisWeek: "今週",
     seasonalRhythm: "リズム",
+    phraseMeaningLabel: "意味",
+    phraseWhenLabel: "使う場面",
+    phrasePractice: "練習する",
   },
   ko: {
     title: "진행 상황",
@@ -212,6 +221,9 @@ const COPY: Record<Lang, ProgressCopy> = {
     moreSettingsDesc: "언어, 톤, 지역 등 앱 설정",
     seasonalThisWeek: "이번 주",
     seasonalRhythm: "리듬",
+    phraseMeaningLabel: "의미",
+    phraseWhenLabel: "사용 상황",
+    phrasePractice: "연습하기",
   },
   zh: {
     title: "进度",
@@ -264,6 +276,9 @@ const COPY: Record<Lang, ProgressCopy> = {
     moreSettingsDesc: "语言、语气、地区等应用偏好",
     seasonalThisWeek: "本周",
     seasonalRhythm: "节奏",
+    phraseMeaningLabel: "含义",
+    phraseWhenLabel: "使用场景",
+    phrasePractice: "练习",
   },
 };
 

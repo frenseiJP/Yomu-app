@@ -44,6 +44,18 @@ export type ChatActionsCopy = ReplySectionLabels & {
   goalCheckPoliteAdd: string;
   goalCheckConciseDone: string;
   goalCheckConciseShorter: string;
+  badgeWord: string;
+  badgePhrase: string;
+  badgeCorrection: string;
+  pasteJapaneseToSave: string;
+  saveCoachPicks: string;
+  savedPhrasesToVocab: (n: number) => string;
+  weakPointDrill: string;
+  weakDrillOther: string;
+  weakDrillIntro: (category: string, level: string, step: number, total: number, prompt: string) => string;
+  weakDrillNext: (step: number, total: number, note: string, prompt: string) => string;
+  weakDrillComplete: (points: number, max: number, note: string) => string;
+  drillChip: (step: number, total: number, level: string) => string;
 };
 
 const COPY: Record<Lang, ChatActionsCopy> = {
@@ -88,6 +100,21 @@ const COPY: Record<Lang, ChatActionsCopy> = {
     goalCheckPoliteAdd: "Goal check: add polite endings for this goal.",
     goalCheckConciseDone: "Goal check: concise sentence achieved.",
     goalCheckConciseShorter: "Goal check: try one shorter version next.",
+    badgeWord: "Word",
+    badgePhrase: "Phrase",
+    badgeCorrection: "Correction",
+    pasteJapaneseToSave: "Paste Japanese to save",
+    saveCoachPicks: "Save coach picks",
+    savedPhrasesToVocab: (n) => `Saved ${n} phrase(s) to vocabulary.`,
+    weakPointDrill: "Weak-point drill",
+    weakDrillOther: "Other",
+    weakDrillIntro: (category, level, step, total, prompt) =>
+      `Weak-point drill (${category} / ${level}) ${step}/${total}\n${prompt}`,
+    weakDrillNext: (step, total, note, prompt) =>
+      `Weak-point drill ${step}/${total}\n${note}\n${prompt}`,
+    weakDrillComplete: (points, max, note) =>
+      `Weak-point drill complete: ${points}/${max}\n${note}\nGreat work — keep this category as your session goal for a few turns.`,
+    drillChip: (step, total, level) => `Drill ${step}/${total} (${level})`,
   },
   ja: {
     youWrote: "あなたの文",
@@ -130,6 +157,21 @@ const COPY: Record<Lang, ChatActionsCopy> = {
     goalCheckPoliteAdd: "目標チェック：丁寧な語尾を意識してみましょう。",
     goalCheckConciseDone: "目標チェック：簡潔な文になりました。",
     goalCheckConciseShorter: "目標チェック：もう少し短い文も試してみましょう。",
+    badgeWord: "単語",
+    badgePhrase: "フレーズ",
+    badgeCorrection: "添削",
+    pasteJapaneseToSave: "日本語を貼り付けて保存",
+    saveCoachPicks: "コーチ候補を保存",
+    savedPhrasesToVocab: (n) => `語彙に ${n} 件のフレーズを保存しました。`,
+    weakPointDrill: "弱点ドリル",
+    weakDrillOther: "その他",
+    weakDrillIntro: (category, level, step, total, prompt) =>
+      `弱点ドリル（${category} / ${level}）${step}/${total}\n${prompt}`,
+    weakDrillNext: (step, total, note, prompt) =>
+      `弱点ドリル ${step}/${total}\n${note}\n${prompt}`,
+    weakDrillComplete: (points, max, note) =>
+      `弱点ドリル完了: ${points}/${max}\n${note}\nよくできました — このカテゴリをセッション目標に数ターン続けましょう。`,
+    drillChip: (step, total, level) => `ドリル ${step}/${total}（${level}）`,
   },
   ko: {
     youWrote: "내가 쓴 문장",
@@ -172,6 +214,21 @@ const COPY: Record<Lang, ChatActionsCopy> = {
     goalCheckPoliteAdd: "목표 확인: 정중한 어미를 추가해 보세요.",
     goalCheckConciseDone: "목표 확인: 간결한 문장이 됐어요.",
     goalCheckConciseShorter: "목표 확인: 더 짧은 버전도 시도해 보세요.",
+    badgeWord: "단어",
+    badgePhrase: "표현",
+    badgeCorrection: "교정",
+    pasteJapaneseToSave: "일본어 붙여넣어 저장",
+    saveCoachPicks: "코치 추천 저장",
+    savedPhrasesToVocab: (n) => `어휘에 ${n}개 표현을 저장했습니다.`,
+    weakPointDrill: "약점 드릴",
+    weakDrillOther: "기타",
+    weakDrillIntro: (category, level, step, total, prompt) =>
+      `약점 드릴 (${category} / ${level}) ${step}/${total}\n${prompt}`,
+    weakDrillNext: (step, total, note, prompt) =>
+      `약점 드릴 ${step}/${total}\n${note}\n${prompt}`,
+    weakDrillComplete: (points, max, note) =>
+      `약점 드릴 완료: ${points}/${max}\n${note}\n잘했어요 — 이 카테고리를 세션 목표로 몇 턴 더 유지해 보세요.`,
+    drillChip: (step, total, level) => `드릴 ${step}/${total} (${level})`,
   },
   zh: {
     youWrote: "你写的",
@@ -214,6 +271,21 @@ const COPY: Record<Lang, ChatActionsCopy> = {
     goalCheckPoliteAdd: "目标检查：请加上礼貌语尾。",
     goalCheckConciseDone: "目标检查：句子更简洁了。",
     goalCheckConciseShorter: "目标检查：试试更短的版本。",
+    badgeWord: "单词",
+    badgePhrase: "表达",
+    badgeCorrection: "订正",
+    pasteJapaneseToSave: "粘贴日语保存",
+    saveCoachPicks: "保存教练推荐",
+    savedPhrasesToVocab: (n) => `已保存 ${n} 条表达到词汇库。`,
+    weakPointDrill: "薄弱点练习",
+    weakDrillOther: "其他",
+    weakDrillIntro: (category, level, step, total, prompt) =>
+      `薄弱点练习（${category} / ${level}）${step}/${total}\n${prompt}`,
+    weakDrillNext: (step, total, note, prompt) =>
+      `薄弱点练习 ${step}/${total}\n${note}\n${prompt}`,
+    weakDrillComplete: (points, max, note) =>
+      `薄弱点练习完成：${points}/${max}\n${note}\n做得好 — 请把这个类别作为会话目标再练几轮。`,
+    drillChip: (step, total, level) => `练习 ${step}/${total}（${level}）`,
   },
 };
 

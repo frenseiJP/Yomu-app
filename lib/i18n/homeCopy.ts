@@ -25,6 +25,9 @@ export type HomeCopy = {
   starterPrompts: string;
   niceWork: string;
   viewPlans: string;
+  ok: string;
+  guestTrialReady: string;
+  guestTrialHint: string;
 };
 
 const COPY: Record<Lang, HomeCopy> = {
@@ -53,6 +56,9 @@ const COPY: Record<Lang, HomeCopy> = {
     starterPrompts: "Try asking",
     niceWork: "Nice work 🌸",
     viewPlans: "View plans",
+    ok: "OK",
+    guestTrialReady: "Your trial chat is ready",
+    guestTrialHint: "Keep the conversation going — ask a follow-up below.",
   },
   ja: {
     nextStepLabel: "次のステップ",
@@ -79,6 +85,9 @@ const COPY: Record<Lang, HomeCopy> = {
     starterPrompts: "こんな質問から",
     niceWork: "お疲れさま 🌸",
     viewPlans: "プランを見る",
+    ok: "OK",
+    guestTrialReady: "体験チャットの準備ができました",
+    guestTrialHint: "会話を続けましょう — 下から質問してみてください。",
   },
   ko: {
     nextStepLabel: "다음 단계",
@@ -105,6 +114,9 @@ const COPY: Record<Lang, HomeCopy> = {
     starterPrompts: "이런 질문으로 시작",
     niceWork: "수고했어요 🌸",
     viewPlans: "플랜 보기",
+    ok: "확인",
+    guestTrialReady: "체험 채팅이 준비되었습니다",
+    guestTrialHint: "대화를 이어가 보세요 — 아래에서 이어서 질문해 보세요.",
   },
   zh: {
     nextStepLabel: "下一步",
@@ -131,6 +143,9 @@ const COPY: Record<Lang, HomeCopy> = {
     starterPrompts: "可以这样问",
     niceWork: "做得好 🌸",
     viewPlans: "查看方案",
+    ok: "确定",
+    guestTrialReady: "体验聊天已就绪",
+    guestTrialHint: "继续对话吧 — 在下方追问即可。",
   },
 };
 

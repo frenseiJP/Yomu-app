@@ -521,3 +521,14 @@ export function buildSeasonalProgressState(params: {
     homePreviewLine: block.home,
   };
 }
+
+const SEASON_LABELS: Record<SeasonalUiLang, Record<Season, string>> = {
+  en: { spring: "Spring", summer: "Summer", autumn: "Autumn", winter: "Winter" },
+  ja: { spring: "春", summer: "夏", autumn: "秋", winter: "冬" },
+  ko: { spring: "봄", summer: "여름", autumn: "가을", winter: "겨울" },
+  zh: { spring: "春", summer: "夏", autumn: "秋", winter: "冬" },
+};
+
+export function seasonDisplayName(season: Season, lang: SeasonalUiLang): string {
+  return SEASON_LABELS[lang][season];
+}

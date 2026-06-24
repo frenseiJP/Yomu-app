@@ -8,6 +8,7 @@ import {
   senseiStructuredTemperature,
 } from "@/lib/chat/openAiChatSystem";
 import { parseSenseiChatPayload } from "@/lib/ftue/format";
+import { resolveRequestUiLang } from "@/lib/i18n/resolveUiLang";
 import { consumeRateLimit, getClientIp } from "@/lib/security/rateLimit";
 import { logBetaEventServer } from "@/lib/analytics/server";
 
@@ -79,7 +80,7 @@ export async function POST(req: Request): Promise<Response> {
   const lastUserText = lastUser?.content ?? "";
 
   const { systemPrompt } = buildOpenAiChatSystemPrompt({
-    languageFromClient,
+    languageFromClient: resolveRequestUiLang(languageFromClient),
     tone,
     coachContext,
     messages,

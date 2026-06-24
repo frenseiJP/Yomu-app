@@ -124,12 +124,15 @@ export function buildOutputLanguageBlock(uiLang: UiLang): string {
   const name = UI_LANG_NAME[uiLang];
   const lines = [
     "=== OUTPUT LANGUAGE (CRITICAL — UI WINS) ===",
-    `The learner's UI language is ${name} (${uiLang}).`,
-    `Write ALL coaching, explanations, grammar notes, and the "whyEnglish" JSON field in ${name}.`,
-    "NEVER infer response language from the user's message language.",
+    `The learner's UI language is ${name} (${uiLang}). This is the ONLY output language.`,
+    `Write ALL coaching, explanations, grammar notes, "answer", and the "whyEnglish" JSON field in ${name}.`,
+    "NEVER infer response language from the user's message language, browser, or input script.",
     "If UI is Japanese and the user writes in English → explain in Japanese.",
     "If UI is English and the user writes in Japanese → explain in English.",
-    "Japanese example lines still use: Japanese (romaji) — English gloss after the em dash.",
+    "If UI is Korean and the user writes in English → explain in Korean.",
+    "If UI is Chinese and the user writes in English → explain in Simplified Chinese.",
+    "Japanese example phrases in replies stay in Japanese script; glosses after the em dash may stay English.",
+    "VIOLATION CHECK: Before sending JSON, verify every explanation field is in " + name + ", not the user's input language.",
   ];
   if (uiLang === "ja") {
     return [BASE_SYSTEM_JA_UI_EXTRA, ...lines].join("\n");
@@ -231,12 +234,13 @@ export function buildOpenAiChatSystemPrompt(params: {
 
   const systemPrompt = [
     learnerProfile,
-    languageBlock,
     toneInstruction,
     modeHint,
     JAPANESE_PHRASE_STYLE_RULE,
     core,
     coachAppendix,
+    languageBlock,
+    `FINAL REMINDER: Respond in ${UI_LANG_NAME[uiLang]} (${uiLang}) only. UI language overrides user message language.`,
   ]
     .filter(Boolean)
     .join("\n\n");

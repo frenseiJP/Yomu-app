@@ -26,6 +26,12 @@ function saveLabelFor(cand: SaveCandidate, saved: boolean, copy: ChatActionsCopy
   return copy.saveWord;
 }
 
+function typeBadgeLabel(type: SaveCandidate["type"], copy: ChatActionsCopy): string {
+  if (type === "word") return copy.badgeWord;
+  if (type === "correction") return copy.badgeCorrection;
+  return copy.badgePhrase;
+}
+
 export function SaveCandidateList({
   candidates,
   onSave,
@@ -76,7 +82,7 @@ export function SaveCandidateList({
                 <span
                   className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${badgeClass(cand.type)}`}
                 >
-                  {cand.label}
+                  {typeBadgeLabel(cand.type, copy)}
                 </span>
                 <span className="text-[13px] font-medium leading-snug text-slate-50">{term}</span>
               </div>
@@ -125,7 +131,7 @@ export function SaveCandidateList({
                       <span
                         className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${badgeClass(cand.type)}`}
                       >
-                        {cand.label}
+                        {typeBadgeLabel(cand.type, copy)}
                       </span>
                       <span className="text-[13px] font-medium leading-snug text-slate-50">{term}</span>
                     </div>

@@ -24,8 +24,7 @@ import {
   savePendingGuestChat,
 } from "@/lib/guest/pendingChat";
 import { getGuestCopy } from "@/lib/i18n/guestCopy";
-import { getLangClient } from "@/src/utils/i18n/clientLang";
-import type { Lang } from "@/src/utils/i18n/types";
+import { useLanguage } from "@/app/contexts/LanguageContext";
 
 type ChatLine = {
   id: number;
@@ -45,7 +44,7 @@ export default function GuestTryChat({
   compact = false,
   source = "landing",
 }: Props) {
-  const [lang, setLang] = useState<Lang>("en");
+  const { language: lang } = useLanguage();
   const copy = getGuestCopy(lang);
   const [lines, setLines] = useState<ChatLine[]>([
     {
@@ -63,9 +62,15 @@ export default function GuestTryChat({
   const presetSentRef = useRef(false);
 
   useEffect(() => {
-    const l = getLangClient();
-    setLang(l);
-    setLines([{ id: 1, role: "assistant", text: getGuestCopy(l).welcome }]);
+    setLines((prev) => {
+      if (prev.length === 1 && prev[0]?.role === "assistant" && !loading) {
+        return [{ id: 1, role: "assistant", text: getGuestCopy(lang).welcome }];
+      }
+      return prev;
+    });
+  }, [lang, loading]);
+
+  useEffect(() => {
     setTurnsLeft(guestTurnsRemaining());
   }, []);
 
@@ -115,7 +120,7 @@ export default function GuestTryChat({
       });
 
       try {
-        const guestBody = { messages: history, language: "en" };
+        const guestBody = { messages: history, language: lang };
 
         const res = await fetch("/api/chat/guest", {
           method: "POST",

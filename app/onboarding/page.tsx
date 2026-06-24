@@ -8,6 +8,7 @@ import ProfileAvatarField from "@/components/profile/ProfileAvatarField";
 import CountrySelect from "@/components/profile/CountrySelect";
 import { normalizeProfileIcon, PROFILE_ICON_DEFAULT } from "@/lib/profile/icon";
 import { normalizeOnboardingResponse } from "@/lib/onboarding/schema";
+import { getOnboardingGoalCopy } from "@/lib/i18n/onboardingCopy";
 
 type UserProfile = {
   user_id: string;
@@ -33,6 +34,8 @@ function countryLocale(lang: string): string {
 export default async function OnboardingPage() {
   const supabase = await createClient();
   const lang = getLangServer();
+  const goalCopy = getOnboardingGoalCopy(lang);
+  const defaultFirstLang = lang === "ja" ? "ja" : "en";
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -196,11 +199,11 @@ export default async function OnboardingPage() {
                 <select
                   name="first_language"
                   required
-                  defaultValue="en"
+                  defaultValue={defaultFirstLang}
                   className="w-full appearance-none rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2.5 text-[13px] text-slate-100 focus:border-wa-ruri focus:outline-none focus:ring-1 focus:ring-wa-ruri/60"
                 >
-                  <option value="ja">Japanese</option>
-                  <option value="en">English (UI)</option>
+                  <option value="ja">{goalCopy.firstLanguageJa}</option>
+                  <option value="en">{goalCopy.firstLanguageEn}</option>
                 </select>
               </div>
 
@@ -211,52 +214,53 @@ export default async function OnboardingPage() {
                 <select
                   name="settings_language"
                   required
-                  defaultValue="en"
+                  defaultValue={lang}
                   className="w-full appearance-none rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2.5 text-[13px] text-slate-100 focus:border-wa-ruri focus:outline-none focus:ring-1 focus:ring-wa-ruri/60"
                 >
-                  <option value="en">English</option>
-                  <option value="ja">日本語</option>
-                  <option value="ko">한국어</option>
-                  <option value="zh">中文</option>
+                  <option value="en">{goalCopy.displayLanguage.en}</option>
+                  <option value="ja">{goalCopy.displayLanguage.ja}</option>
+                  <option value="ko">{goalCopy.displayLanguage.ko}</option>
+                  <option value="zh">{goalCopy.displayLanguage.zh}</option>
                 </select>
               </div>
             </div>
 
             <div className="space-y-3 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4">
               <p className="font-wa-serif text-[12px] font-semibold text-slate-200">
-                {lang === "ja" ? "学習の目的" : "Why are you learning Japanese?"}
+                {goalCopy.goalSectionTitle}
               </p>
               <select
                 name="goal_why"
                 defaultValue="travel"
                 className="w-full rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2.5 text-[13px]"
               >
-                <option value="travel">{lang === "ja" ? "旅行" : "Travel"}</option>
-                <option value="anime">{lang === "ja" ? "アニメ" : "Anime"}</option>
-                <option value="work">{lang === "ja" ? "仕事" : "Work"}</option>
-                <option value="living">{lang === "ja" ? "日本での生活" : "Living in Japan"}</option>
-                <option value="friends">{lang === "ja" ? "友人・家族" : "Friends & Family"}</option>
+                {Object.entries(goalCopy.goalWhy).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
               </select>
               <select
                 name="goal_hardest"
                 defaultValue="speaking"
                 className="w-full rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2.5 text-[13px]"
               >
-                <option value="speaking">{lang === "ja" ? "話すこと" : "Speaking"}</option>
-                <option value="listening">{lang === "ja" ? "聞くこと" : "Listening"}</option>
-                <option value="grammar">{lang === "ja" ? "文法" : "Grammar"}</option>
-                <option value="vocabulary">{lang === "ja" ? "語彙" : "Vocabulary"}</option>
-                <option value="confidence">{lang === "ja" ? "自信" : "Confidence"}</option>
+                {Object.entries(goalCopy.goalHardest).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
               </select>
               <select
                 name="goal_minutes"
                 defaultValue="5"
                 className="w-full rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2.5 text-[13px]"
               >
-                <option value="2">2 min / day</option>
-                <option value="5">5 min / day</option>
-                <option value="10">10 min / day</option>
-                <option value="20+">20+ min / day</option>
+                {Object.entries(goalCopy.goalMinutes).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
               </select>
             </div>
 

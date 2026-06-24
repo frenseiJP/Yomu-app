@@ -6,10 +6,14 @@ import { useSearchParams } from "next/navigation";
 import { BookOpen } from "lucide-react";
 import GuestTryChat from "@/components/marketing/GuestTryChat";
 import { logBetaEvent } from "@/lib/analytics/client";
+import { useLanguage } from "@/app/contexts/LanguageContext";
+import { getMarketingCopy } from "@/lib/i18n/marketingCopy";
 
 function TryPageInner() {
   const searchParams = useSearchParams();
   const preset = useMemo(() => searchParams.get("q") ?? undefined, [searchParams]);
+  const { language: appLang } = useLanguage();
+  const m = getMarketingCopy(appLang);
 
   useEffect(() => {
     void logBetaEvent({ eventType: "guest_chat_start", route: "/try" });
@@ -22,12 +26,8 @@ function TryPageInner() {
           <BookOpen className="h-4 w-4" />
           <span className="text-sm">Frensei</span>
         </Link>
-        <h1 className="font-wa-serif text-2xl font-semibold text-slate-50">
-          Try Frensei free
-        </h1>
-        <p className="mt-2 text-sm text-slate-400">
-          3 messages, no sign-up. Ask about any phrase or paste your Japanese.
-        </p>
+        <h1 className="font-wa-serif text-2xl font-semibold text-slate-50">{m.tryPageTitle}</h1>
+        <p className="mt-2 text-sm text-slate-400">{m.tryPageBody}</p>
         <div className="mt-6">
           <GuestTryChat presetPrompt={preset} source="try_page" />
         </div>
@@ -37,11 +37,14 @@ function TryPageInner() {
 }
 
 export default function TryPage() {
+  const { language: appLang } = useLanguage();
+  const m = getMarketingCopy(appLang);
+
   return (
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-[#020617] text-slate-400">
-          Loading…
+          {m.loading}
         </div>
       }
     >

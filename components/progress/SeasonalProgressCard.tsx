@@ -11,6 +11,7 @@ type Props = {
   isLightTheme?: boolean;
   thisWeekLabel?: string;
   rhythmLabel?: string;
+  seasonLabel?: string;
   onOpenProgress?: () => void;
 };
 
@@ -91,6 +92,7 @@ export default function SeasonalProgressCard({
   isLightTheme = false,
   thisWeekLabel = "This week",
   rhythmLabel = "Rhythm",
+  seasonLabel,
   onOpenProgress,
 }: Props) {
   const shell = isLightTheme
@@ -157,7 +159,7 @@ export default function SeasonalProgressCard({
         <p
           className={`text-[10px] font-medium uppercase tracking-[0.2em] ${isLightTheme ? "text-neutral-600/90" : "text-slate-400/90"}`}
         >
-          {state.season}
+          {seasonLabel ?? state.season}
         </p>
         <h2
           className={`mt-2 font-wa-serif text-xl leading-tight sm:text-2xl ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}

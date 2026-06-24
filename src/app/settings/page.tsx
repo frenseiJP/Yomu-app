@@ -17,6 +17,7 @@ import LearningStatsClient from "./LearningStatsClient";
 import PlanUsageClient from "./PlanUsageClient";
 import ProfileSettingsClient from "./ProfileSettingsClient";
 import { normalizeProfileIcon, PROFILE_ICON_DEFAULT } from "@/lib/profile/icon";
+import { saveLanguageAction } from "./actions";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -111,49 +112,6 @@ export default async function SettingsPage() {
     );
     if (error && !isMissingTableError(error, "user_profiles")) {
       console.error("[settings] user_profiles upsert (profile):", error);
-    }
-
-    redirect("/settings");
-  }
-
-  async function handleSaveLanguage(formData: FormData) {
-    "use server";
-
-    const value = String(formData.get("lang") ?? "");
-    const nextLang: Lang = allowedDisplayLang.includes(value as Lang)
-      ? (value as Lang)
-      : "en";
-
-    cookies().set("yomu_lang", nextLang, {
-      path: "/",
-      sameSite: "lax",
-      httpOnly: false,
-      // 1年保持（必要なら調整してください）
-      maxAge: 60 * 60 * 24 * 365,
-    });
-
-    // 言語選択をSupabaseにも保存（次回以降も維持しやすくする）
-    const supabaseForAction = await createClient();
-    const {
-      data: { user: actionUser },
-    } = await supabaseForAction.auth.getUser();
-    if (!actionUser) redirect("/login");
-    const { error: langUpsertErr } = await supabaseForAction
-      .from("user_profiles")
-      .upsert(
-        [
-          {
-            user_id: actionUser.id,
-            settings_language: nextLang,
-          },
-        ],
-        { onConflict: "user_id" },
-      );
-    if (
-      langUpsertErr &&
-      !isMissingTableError(langUpsertErr, "user_profiles")
-    ) {
-      console.error("[settings] user_profiles upsert (lang):", langUpsertErr);
     }
 
     redirect("/settings");
@@ -396,7 +354,7 @@ export default async function SettingsPage() {
               currentDisplayLang={currentDisplayLang}
               displayLanguageLabel={t(lang, "displayLanguageLabel")}
               saveLanguageButtonLabel={t(lang, "saveLanguageButton")}
-              saveAction={handleSaveLanguage}
+              saveAction={saveLanguageAction}
             />
           </section>
 

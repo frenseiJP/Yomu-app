@@ -8,12 +8,19 @@ import { saveCandidateToVocabulary } from "@/lib/save-candidates/service";
 import type { SaveCandidate } from "@/lib/save-candidates/types";
 import { logBetaEvent } from "@/lib/analytics/client";
 
+import type { ChatActionsCopy } from "@/lib/i18n/chatActionsCopy";
+import { getChatActionsCopy } from "@/lib/i18n/chatActionsCopy";
+import type { Lang } from "@/src/utils/i18n/types";
+
 type Props = {
   userId: string;
   sessionId?: string | null;
+  lang?: Lang;
+  copy?: ChatActionsCopy;
 };
 
-export default function ChatContentImportSheet({ userId, sessionId }: Props) {
+export default function ChatContentImportSheet({ userId, sessionId, lang = "en", copy: copyProp }: Props) {
+  const copy = copyProp ?? getChatActionsCopy(lang);
   const [open, setOpen] = useState(false);
   const [raw, setRaw] = useState("");
   const [savedCount, setSavedCount] = useState(0);
@@ -46,7 +53,7 @@ export default function ChatContentImportSheet({ userId, sessionId }: Props) {
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between rounded-lg border border-slate-700/60 bg-slate-900/50 px-3 py-2 text-left text-[12px] font-medium text-slate-300"
       >
-        <span>Paste Japanese to save</span>
+        <span>{copy.pasteJapaneseToSave}</span>
         {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
       </button>
       {open ? (
@@ -64,10 +71,10 @@ export default function ChatContentImportSheet({ userId, sessionId }: Props) {
             onClick={runImport}
             className="rounded-lg border border-wa-ruri/40 bg-wa-ruri/15 px-2.5 py-1.5 text-[11px] font-medium text-sky-100 disabled:opacity-50"
           >
-            Save coach picks
+            {copy.saveCoachPicks}
           </button>
           {savedCount > 0 ? (
-            <p className="text-[11px] text-emerald-300/90">Saved {savedCount} phrase(s) to vocabulary.</p>
+            <p className="text-[11px] text-emerald-300/90">{copy.savedPhrasesToVocab(savedCount)}</p>
           ) : null}
         </div>
       ) : null}

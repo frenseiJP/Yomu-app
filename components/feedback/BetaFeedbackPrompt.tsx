@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { skipBetaFeedbackPrompt, submitBetaFeedback } from "@/lib/feedback/service";
 import type { BetaFeedbackSource } from "@/lib/feedback/types";
+import { getBetaFeedbackCopy } from "@/lib/i18n/betaFeedbackCopy";
+import type { Lang } from "@/src/utils/i18n/types";
 
 type Props = {
   visible: boolean;
@@ -10,7 +12,7 @@ type Props = {
   source: BetaFeedbackSource;
   sessionId?: string | null;
   appVersion?: string;
-  isJa?: boolean;
+  appLang?: Lang;
   onSubmitted?: () => void;
   onSkipped?: () => void;
 };
@@ -21,7 +23,7 @@ export default function BetaFeedbackPrompt({
   source,
   sessionId,
   appVersion,
-  isJa = false,
+  appLang = "en",
   onSubmitted,
   onSkipped,
 }: Props) {
@@ -30,31 +32,7 @@ export default function BetaFeedbackPrompt({
   const [sent, setSent] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  const copy = useMemo(
-    () =>
-      isJa
-        ? {
-            ask: "フィードバックをお願いできますか？",
-            yes: "👍 はい",
-            no: "👎 いいえ",
-            note: "ひとこと（任意）",
-            placeholder: "使い心地など…",
-            send: "送信",
-            skip: "あとで",
-            thanks: "ありがとうございます 🙏",
-          }
-        : {
-            ask: "Quick feedback?",
-            yes: "👍 Yes",
-            no: "👎 No",
-            note: "Optional note",
-            placeholder: "What felt helpful or confusing?",
-            send: "Send",
-            skip: "Later",
-            thanks: "Thank you — this helps improve Frensei 🙏",
-          },
-    [isJa],
-  );
+  const copy = useMemo(() => getBetaFeedbackCopy(appLang), [appLang]);
 
   const canSend = helpful !== null;
 
