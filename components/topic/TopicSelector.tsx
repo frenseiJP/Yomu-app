@@ -1,5 +1,6 @@
 "use client";
 
+import type { PrototypeUiText } from "@/src/utils/i18n/prototypeCopy";
 import type { TopicPrompt } from "@/lib/topic/types";
 
 type Mode = "entry" | "topic_list";
@@ -7,6 +8,16 @@ type Mode = "entry" | "topic_list";
 type Props = {
   mode: Mode;
   topics: TopicPrompt[];
+  copy: Pick<
+    PrototypeUiText,
+    | "topicReadyTitle"
+    | "topicReadySubtitle"
+    | "startChatButton"
+    | "todaysScenarioButton"
+    | "moreScenariosButton"
+    | "dailyMissionButton"
+    | "topicListTitle"
+  >;
   isLightTheme?: boolean;
   onDailyMission: () => void;
   onTopicPractice: () => void;
@@ -15,11 +26,13 @@ type Props = {
   onSelectTopic: (topic: TopicPrompt) => void;
   onContinueLast: () => void;
   showContinueLast?: boolean;
+  continueChatLabel?: string;
 };
 
 export default function TopicSelector({
   mode,
   topics,
+  copy,
   isLightTheme = false,
   onDailyMission,
   onTopicPractice,
@@ -28,6 +41,7 @@ export default function TopicSelector({
   onSelectTopic,
   onContinueLast,
   showContinueLast = false,
+  continueChatLabel,
 }: Props) {
   const panel = isLightTheme
     ? "border-neutral-200/90 bg-neutral-50/95"
@@ -44,10 +58,8 @@ export default function TopicSelector({
   if (mode === "entry") {
     return (
       <div className={`mb-3 rounded-xl border p-3 ${panel}`}>
-        <p className={`mb-1 text-xs font-medium ${title}`}>Ready to practice?</p>
-        <p className={`mb-2 text-[11px] ${muted}`}>
-          One best next step: continue your conversation with Sensei.
-        </p>
+        <p className={`mb-1 text-xs font-medium ${title}`}>{copy.topicReadyTitle}</p>
+        <p className={`mb-2 text-[11px] ${muted}`}>{copy.topicReadySubtitle}</p>
         <div className="flex flex-wrap gap-2">
           {showContinueLast ? (
             <button
@@ -55,7 +67,7 @@ export default function TopicSelector({
               onClick={onContinueLast}
               className="min-h-[40px] rounded-full bg-wa-ruri px-3.5 py-2 text-xs font-medium text-white"
             >
-              Continue chat
+              {continueChatLabel ?? copy.startChatButton}
             </button>
           ) : (
             <button
@@ -63,7 +75,7 @@ export default function TopicSelector({
               onClick={onFreeChat}
               className="min-h-[40px] rounded-full bg-wa-ruri px-3.5 py-2 text-xs font-medium text-white"
             >
-              Start chat
+              {copy.startChatButton}
             </button>
           )}
           {onPracticeTodaysScenario ? (
@@ -72,7 +84,7 @@ export default function TopicSelector({
               onClick={onPracticeTodaysScenario}
               className={`min-h-[40px] rounded-full border px-3 py-2 text-xs font-medium ${chip}`}
             >
-              Today&apos;s scenario
+              {copy.todaysScenarioButton}
             </button>
           ) : null}
           <button
@@ -80,14 +92,14 @@ export default function TopicSelector({
             onClick={onTopicPractice}
             className={`min-h-[40px] rounded-full border px-3 py-2 text-xs ${chipMuted}`}
           >
-            More scenarios
+            {copy.moreScenariosButton}
           </button>
           <button
             type="button"
             onClick={onDailyMission}
             className={`min-h-[40px] rounded-full border px-3 py-2 text-xs ${chipMuted}`}
           >
-            Daily mission
+            {copy.dailyMissionButton}
           </button>
         </div>
       </div>
@@ -96,7 +108,7 @@ export default function TopicSelector({
 
   return (
     <div className={`mb-3 rounded-xl border p-3 ${panel}`}>
-      <p className={`mb-2 text-xs font-medium ${title}`}>What do you want to practice today?</p>
+      <p className={`mb-2 text-xs font-medium ${title}`}>{copy.topicListTitle}</p>
       <div className="flex flex-wrap gap-2">
         {topics.map((t) => (
           <button

@@ -906,12 +906,11 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const messagesScrollRef = useRef<HTMLDivElement | null>(null);
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const politenessRef = useRef<Politeness>("casual");
-  const { uiText } = useMemo(() => getPrototypeCopy(appLang as Lang), [appLang]);
-  /** Settings UI is English-first regardless of display language. */
-  const { settingsText: settingsUiText, uiText: settingsUiTextLabels } = useMemo(
-    () => getPrototypeCopy("en"),
-    [],
+  const { uiText, settingsText: settingsUiText } = useMemo(
+    () => getPrototypeCopy(appLang as Lang),
+    [appLang],
   );
+  const settingsUiTextLabels = uiText;
   const weakPointDrill = useMemo(() => {
     const all = getVocabularyLibrary(habitUserId);
     const latestCorrection = all.find((x) => x.type === "correction" && x.mistakeCategory);
@@ -3256,36 +3255,36 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               href="/history"
               className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
             >
-              <p className="text-sm text-slate-100">Learning history</p>
-              <p className="mt-0.5 text-xs text-slate-400">Continue past chat sessions</p>
+              <p className="text-sm text-slate-100">{progressCopy.moreHistoryTitle}</p>
+              <p className="mt-0.5 text-xs text-slate-400">{progressCopy.moreHistoryDesc}</p>
             </Link>
             <Link
               href="/vocabulary"
               className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
             >
-              <p className="text-sm text-slate-100">Vocabulary</p>
-              <p className="mt-0.5 text-xs text-slate-400">Your personal learning library</p>
+              <p className="text-sm text-slate-100">{uiText.vocabLibPageTitle}</p>
+              <p className="mt-0.5 text-xs text-slate-400">{uiText.vocabLibPageSubtitle}</p>
             </Link>
             <Link
               href="/report"
               className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
             >
-              <p className="text-sm text-slate-100">Report</p>
-              <p className="mt-0.5 text-xs text-slate-400">Learning summary and beta feedback links.</p>
+              <p className="text-sm text-slate-100">{progressCopy.moreReportTitle}</p>
+              <p className="mt-0.5 text-xs text-slate-400">{progressCopy.moreReportDesc}</p>
             </Link>
             <Link
               href="/feedback"
               className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-slate-700"
             >
-              <p className="text-sm text-slate-100">Feedback (beta)</p>
-              <p className="mt-0.5 text-xs text-slate-400">Report bugs, requests, or what you liked.</p>
+              <p className="text-sm text-slate-100">{progressCopy.moreFeedbackTitle}</p>
+              <p className="mt-0.5 text-xs text-slate-400">{progressCopy.moreFeedbackDesc}</p>
             </Link>
             <Link
               href="/pricing"
               className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-wa-ruri/40"
             >
-              <p className="text-sm text-slate-100">Pricing</p>
-              <p className="mt-0.5 text-xs text-slate-400">Free, Pro, and Founder plans (beta)</p>
+              <p className="text-sm text-slate-100">{progressCopy.morePricingTitle}</p>
+              <p className="mt-0.5 text-xs text-slate-400">{progressCopy.morePricingDesc}</p>
             </Link>
             <button
               type="button"
@@ -3297,16 +3296,16 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               }}
               className="block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left hover:border-wa-ruri/40"
             >
-              <p className="text-sm text-slate-100">How to use Frensei</p>
-              <p className="mt-0.5 text-xs text-slate-400">60-second quick guide</p>
+              <p className="text-sm text-slate-100">{progressCopy.moreTutorialTitle}</p>
+              <p className="mt-0.5 text-xs text-slate-400">{progressCopy.moreTutorialDesc}</p>
             </button>
             <button
               type="button"
               onClick={() => setActiveView("settings")}
               className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-left md:col-span-2"
             >
-              <p className="text-sm text-slate-100">Settings</p>
-              <p className="mt-0.5 text-xs text-slate-400">Language, tone, region and app preferences</p>
+              <p className="text-sm text-slate-100">{settingsUiText.title}</p>
+              <p className="mt-0.5 text-xs text-slate-400">{progressCopy.moreSettingsDesc}</p>
             </button>
             </div>
           </div>
@@ -4203,12 +4202,35 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 })()
               ) : null}
               {ftueShowPicker ? <FtuePracticePicker onPick={beginFtue} /> : null}
+              {followUpsToShow &&
+              !isTyping &&
+              !ftueShowPicker &&
+              messages.filter((m) => m.role === "user").length === 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-medium text-slate-400">{homeCopy.starterPrompts}</p>
+                  <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap">
+                    {followUpsToShow.map((prompt, idx) => (
+                      <button
+                        key={`starter-${prompt}-${idx}`}
+                        type="button"
+                        disabled={isLoading}
+                        onClick={() => handleQuickSend(prompt, idx)}
+                        className="btn-wa-hover min-h-[44px] touch-manipulation rounded-xl border border-pink-500/25 bg-pink-500/8 px-3 py-2.5 text-left text-[12px] leading-snug text-slate-100 transition hover:border-pink-500/45 hover:bg-pink-500/15 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:min-w-[9rem]"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {topicSelectorMode !== "hidden" && !ftueShowPicker ? (
                 <TopicSelector
                   isLightTheme={isLightTheme}
+                  copy={uiText}
                   mode={topicSelectorMode === "topic_list" ? "topic_list" : "entry"}
                   topics={TOPIC_PROMPTS}
                   showContinueLast={chatSessions.length > 1}
+                  continueChatLabel={homeCopy.continueChat}
                   onDailyMission={() => setActiveView("home")}
                   onTopicPractice={() => setTopicSelectorMode("topic_list")}
                   onPracticeTodaysScenario={() => startTopicScenario(todaysScenario, "chat_today")}
@@ -4242,7 +4264,11 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   {uiText.chatContextLoadingHint}
                 </p>
               ) : null}
-              {followUpsToShow && !isTyping && !ftueShowPicker && topicSelectorMode === "hidden" ? (
+              {followUpsToShow &&
+              !isTyping &&
+              !ftueShowPicker &&
+              topicSelectorMode === "hidden" &&
+              messages.filter((m) => m.role === "user").length > 0 ? (
                 <div className="space-y-1.5">
                   <p className="text-[11px] font-medium text-slate-400">
                     {messages.filter((m) => m.role === "user").length === 0
@@ -4677,7 +4703,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
           >
             <MoreHorizontal className="h-5 w-5 sm:h-5 sm:w-5 pointer-events-none" />
-            <span className="pointer-events-none">More</span>
+            <span className="pointer-events-none">{uiText.moreTab}</span>
           </motion.button>
         </div>
       </nav>

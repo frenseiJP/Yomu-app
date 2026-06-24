@@ -75,7 +75,7 @@ export async function POST(req: Request): Promise<Response> {
     typeof (body as { promptEnglish?: unknown }).promptEnglish === "string"
       ? (body as { promptEnglish: string }).promptEnglish.trim().slice(0, MAX_PROMPT_EN_CHARS)
       : "";
-  const uiLang = normalizeUiLang((body as { language?: unknown }).language);
+  const uiLang = normalizeUiLang((body as { language?: unknown }).language) ?? "en";
   const history = Array.isArray((body as { history?: unknown }).history)
     ? (body as { history: unknown[] }).history
     : [];

@@ -1,9 +1,10 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { detectBrowserLang } from "@/src/utils/i18n/clientLang";
+import { htmlLangAttribute, resolveLanguage } from "@/lib/i18n/resolveLanguage";
+import type { Lang } from "@/src/utils/i18n/types";
 
-export type Language = "ja" | "en" | "zh" | "ko";
+export type Language = Lang;
 
 type LanguageContextType = {
   language: Language;
@@ -22,9 +23,25 @@ function readCookie(name: string): string | null {
 }
 
 function writeCookie(name: string, value: string) {
-  // 1年保持
   const maxAge = 60 * 60 * 24 * 365;
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+}
+
+function readLocalPreference(): string | null {
+  try {
+    return localStorage.getItem("yomu-language");
+  } catch {
+    return null;
+  }
+}
+
+function resolveClientLanguage(): Language {
+  if (typeof window === "undefined") return "en";
+  return resolveLanguage({
+    savedPreference: readCookie("yomu_lang"),
+    localPreference: readLocalPreference(),
+    browserLanguages: navigator.languages?.length ? navigator.languages : [navigator.language],
+  });
 }
 
 const LanguageContext = createContext<LanguageContextType>({
@@ -32,52 +49,32 @@ const LanguageContext = createContext<LanguageContextType>({
   setLanguage: () => {},
 });
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("en");
+export function LanguageProvider({
+  children,
+  initialLang = "en",
+}: {
+  children: React.ReactNode;
+  initialLang?: Language;
+}) {
+  const [language, setLanguageState] = useState<Language>(initialLang);
 
-  const syncFromCookie = () => {
-    const cookieLang = readCookie("yomu_lang");
-    const cookieFirstLang = readCookie("yomu_first_lang");
-    const fromCookie = (cookieLang ?? cookieFirstLang ?? null) as Language | null;
-    if (fromCookie && ["ja", "en", "zh", "ko"].includes(fromCookie)) {
-      setLanguageState(fromCookie);
+  useEffect(() => {
+    const resolved = resolveClientLanguage();
+    setLanguageState(resolved);
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = htmlLangAttribute(resolved);
+    }
+    // Persist auto-detected language once when no saved cookie exists
+    if (!readCookie("yomu_lang") && !readLocalPreference()) {
+      writeCookie("yomu_lang", resolved);
       try {
-        localStorage.setItem("yomu-language", fromCookie);
+        localStorage.setItem("yomu-language", resolved);
       } catch {
-        // ignore
+        /* ignore */
       }
-      return;
     }
-
-    const local = localStorage.getItem("yomu-language") as Language | null;
-    if (local && ["ja", "en", "zh", "ko"].includes(local)) {
-      setLanguageState(local);
-      return;
-    }
-
-    const browser = detectBrowserLang();
-    setLanguageState(browser);
-    writeCookie("yomu_lang", browser);
-  };
-
-  useEffect(() => {
-    // サーバー（設定保存など）がセットした cookie を最優先。古い localStorage より優先する。
-    syncFromCookie();
   }, []);
 
-  useEffect(() => {
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") syncFromCookie();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("focus", syncFromCookie);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("focus", syncFromCookie);
-    };
-  }, []);
-
-  // ホーム（プロトタイプ）などが cookie を更新して dispatch したとき、Context も追従する
   useEffect(() => {
     const onLangChanged = (event: Event) => {
       const custom = event as CustomEvent<{ lang?: Language }>;
@@ -87,7 +84,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         try {
           localStorage.setItem("yomu-language", next);
         } catch {
-          // ignore
+          /* ignore */
+        }
+        if (typeof document !== "undefined") {
+          document.documentElement.lang = htmlLangAttribute(next);
         }
       }
     };
@@ -100,24 +100,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem("yomu-language", lang);
     } catch {
-      // ignore
+      /* ignore */
     }
-
-    // 表示言語は yomu_lang のみ更新（first_language はオンボーディング等で別管理）
     writeCookie("yomu_lang", lang);
-
+    writeCookie("yomu_lang_user", "1");
     window.dispatchEvent(new CustomEvent("yomu:lang-changed", { detail: { lang } }));
-
     if (typeof document !== "undefined") {
-      document.documentElement.lang = lang === "zh" ? "zh-Hans" : lang;
+      document.documentElement.lang = htmlLangAttribute(lang);
     }
   };
-
-  useEffect(() => {
-    if (typeof document !== "undefined") {
-      document.documentElement.lang = language === "zh" ? "zh-Hans" : language;
-    }
-  }, [language]);
 
   const value = useMemo(() => ({ language, setLanguage }), [language]);
 
@@ -125,4 +116,3 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 }
 
 export const useLanguage = () => useContext(LanguageContext);
-

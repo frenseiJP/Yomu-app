@@ -197,8 +197,7 @@ export function buildOpenAiChatSystemPrompt(params: {
       ? String((lastUserMessage as { content: string }).content)
       : "";
 
-  const uiLang: UiLang =
-    normalizeUiLang(params.languageFromClient) ?? detectLanguageFromText(lastUserText);
+  const uiLang: UiLang = normalizeUiLang(params.languageFromClient) ?? "en";
 
   const coach = parseCoachContextPayload(params.coachContext);
   const jlptLevel = coach?.jlptLevel ?? "N3";

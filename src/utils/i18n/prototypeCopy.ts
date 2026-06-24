@@ -23,6 +23,7 @@ export type PrototypeSettingsText = {
 
 export type PrototypeUiText = {
   home: string;
+  moreTab: string;
   community: string;
   chat: string;
   record: string;
@@ -214,6 +215,13 @@ export type PrototypeUiText = {
   vocabActionClose: string;
   vocabDeleteConfirm: string;
   vocabCloseAria: string;
+  topicReadyTitle: string;
+  topicReadySubtitle: string;
+  startChatButton: string;
+  todaysScenarioButton: string;
+  moreScenariosButton: string;
+  dailyMissionButton: string;
+  topicListTitle: string;
 };
 
 const SETTINGS_EN: PrototypeSettingsText = {
@@ -236,6 +244,7 @@ const SETTINGS_EN: PrototypeSettingsText = {
 
 const UI_EN: PrototypeUiText = {
   home: "Home",
+  moreTab: "More",
   community: "Community",
   chat: "Chat",
   record: "Record",
@@ -444,6 +453,13 @@ const UI_EN: PrototypeUiText = {
   vocabActionClose: "Close",
   vocabDeleteConfirm: "Remove this entry from your library?",
   vocabCloseAria: "Close",
+  topicReadyTitle: "Ready to practice?",
+  topicReadySubtitle: "One best next step: continue your conversation with Sensei.",
+  startChatButton: "Start chat",
+  todaysScenarioButton: "Today's scenario",
+  moreScenariosButton: "More scenarios",
+  dailyMissionButton: "Daily mission",
+  topicListTitle: "What do you want to practice today?",
 };
 
 const SETTINGS_JA: PrototypeSettingsText = {
@@ -466,6 +482,7 @@ const SETTINGS_JA: PrototypeSettingsText = {
 
 const UI_JA: PrototypeUiText = {
   home: "ホーム",
+  moreTab: "その他",
   community: "コミュニティ",
   chat: "チャット",
   record: "記録",
@@ -669,6 +686,13 @@ const UI_JA: PrototypeUiText = {
   vocabActionClose: "閉じる",
   vocabDeleteConfirm: "この項目をライブラリから削除しますか？",
   vocabCloseAria: "閉じる",
+  topicReadyTitle: "練習の準備はできましたか？",
+  topicReadySubtitle: "次の一歩：Sensei と会話を続けましょう。",
+  startChatButton: "チャットを始める",
+  todaysScenarioButton: "今日のシナリオ",
+  moreScenariosButton: "ほかのシナリオ",
+  dailyMissionButton: "デイリーミッション",
+  topicListTitle: "今日は何を練習しますか？",
 };
 
 const SETTINGS_KO: PrototypeSettingsText = {
@@ -691,6 +715,7 @@ const SETTINGS_KO: PrototypeSettingsText = {
 
 const UI_KO: PrototypeUiText = {
   home: "홈",
+  moreTab: "더보기",
   community: "커뮤니티",
   chat: "채팅",
   record: "기록",
@@ -894,6 +919,13 @@ const UI_KO: PrototypeUiText = {
   vocabActionClose: "닫기",
   vocabDeleteConfirm: "이 항목을 라이브러리에서 제거할까요?",
   vocabCloseAria: "닫기",
+  topicReadyTitle: "연습할 준비가 되셨나요?",
+  topicReadySubtitle: "다음 한 걸음: Sensei와 대화를 이어가 보세요.",
+  startChatButton: "채팅 시작",
+  todaysScenarioButton: "오늘의 시나리오",
+  moreScenariosButton: "더 많은 시나리오",
+  dailyMissionButton: "오늘의 미션",
+  topicListTitle: "오늘 무엇을 연습할까요?",
 };
 
 const SETTINGS_ZH: PrototypeSettingsText = {
@@ -916,6 +948,7 @@ const SETTINGS_ZH: PrototypeSettingsText = {
 
 const UI_ZH: PrototypeUiText = {
   home: "首页",
+  moreTab: "更多",
   community: "社区",
   chat: "聊天",
   record: "记录",
@@ -1113,6 +1146,13 @@ const UI_ZH: PrototypeUiText = {
   vocabActionClose: "关闭",
   vocabDeleteConfirm: "要从库中移除此条吗？",
   vocabCloseAria: "关闭",
+  topicReadyTitle: "准备好练习了吗？",
+  topicReadySubtitle: "下一步：继续与 Sensei 对话。",
+  startChatButton: "开始聊天",
+  todaysScenarioButton: "今日情景",
+  moreScenariosButton: "更多情景",
+  dailyMissionButton: "每日任务",
+  topicListTitle: "今天想练习什么？",
 };
 
 const SETTINGS_BY_LANG: Record<Lang, PrototypeSettingsText> = {

@@ -1,31 +1,43 @@
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
+import { parseAcceptLanguage } from "@/lib/i18n/resolveLanguage";
 import { updateSession } from "@/src/utils/supabase/middleware";
 
-/**
- * Supabase Auth のセッションをリフレッシュするため、
- * 該当するルートで updateSession を実行します。
- */
 const LANG_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
+const APP_PATH_PREFIXES = ["/app", "/chat", "/vocabulary", "/progress", "/more", "/settings", "/onboarding", "/history"];
+
+function isAppShellPath(pathname: string): boolean {
+  return APP_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+/**
+ * Set yomu_lang once from Accept-Language when the user has no saved preference.
+ * Does not overwrite an existing cookie (user or prior resolution).
+ */
+function ensureLanguageCookie(request: NextRequest, response: NextResponse): void {
+  if (!isAppShellPath(request.nextUrl.pathname)) return;
+  if (request.cookies.get("yomu_lang")?.value) return;
+
+  const lang = parseAcceptLanguage(request.headers.get("accept-language"));
+  response.cookies.set("yomu_lang", lang, {
+    path: "/",
+    maxAge: LANG_COOKIE_MAX_AGE,
+    sameSite: "lax",
+  });
+}
 
 export async function middleware(request: NextRequest) {
   const response = await updateSession(request);
+  ensureLanguageCookie(request, response);
 
-  // 新規登録後のオンボーディング: 言語クッキーが無い場合は英語を既定にする
-  if (request.nextUrl.pathname === "/onboarding") {
-    if (!request.cookies.get("yomu_lang")?.value) {
-      response.cookies.set("yomu_lang", "en", {
-        path: "/",
-        maxAge: LANG_COOKIE_MAX_AGE,
-        sameSite: "lax",
-      });
-    }
-    if (!request.cookies.get("yomu_first_lang")?.value) {
-      response.cookies.set("yomu_first_lang", "en", {
-        path: "/",
-        maxAge: LANG_COOKIE_MAX_AGE,
-        sameSite: "lax",
-      });
-    }
+  if (request.nextUrl.pathname === "/home") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/app";
+    const redirectResponse = NextResponse.redirect(url, 301);
+    response.cookies.getAll().forEach((c) => {
+      redirectResponse.cookies.set(c.name, c.value);
+    });
+    return redirectResponse;
   }
 
   return response;
@@ -33,13 +45,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * 以下のパスを除くすべてのリクエストでミドルウェアを実行します。
-     * - _next/static (静的ファイル)
-     * - _next/image (画像最適化)
-     * - favicon.ico
-     * - 画像などの静的アセット
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

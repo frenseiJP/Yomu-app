@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useLanguage } from "@/app/contexts/LanguageContext";
+import { getPwaCopy } from "@/lib/i18n/pwaCopy";
+import type { Lang } from "@/src/utils/i18n/types";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -28,6 +31,8 @@ function isAppShellPath(pathname: string): boolean {
 
 export default function MobileAppBridge() {
   const pathname = usePathname() || "";
+  const { language } = useLanguage();
+  const copy = useMemo(() => getPwaCopy(language as Lang), [language]);
   const [isLine, setIsLine] = useState(false);
   const [isIosLine, setIsIosLine] = useState(false);
   const [lineDismissed, setLineDismissed] = useState(false);
@@ -59,13 +64,7 @@ export default function MobileAppBridge() {
     };
   }, []);
 
-  const lineHint = useMemo(() => {
-    if (isIosLine) {
-      return "LINE内ブラウザだと操作しづらいです。右上メニューから Safari で開くと使いやすくなります。";
-    }
-    return "LINE内ブラウザで開いています。右上メニューから Chrome / Safari で開くと快適です。";
-  }, [isIosLine]);
-
+  const lineHint = isIosLine ? copy.lineHintIos : copy.lineHintAndroid;
   const showLineHint = isLine && !lineDismissed;
   const showInstall =
     isAppShellPath(pathname) && installPrompt && !installDismissed && !showLineHint;
@@ -98,9 +97,7 @@ export default function MobileAppBridge() {
       {showLineHint ? (
         <p className="text-xs leading-relaxed text-slate-200">{lineHint}</p>
       ) : (
-        <p className="text-xs leading-relaxed text-slate-200">
-          Add Frensei to your home screen for faster access.
-        </p>
+        <p className="text-xs leading-relaxed text-slate-200">{copy.installBody}</p>
       )}
       <div className="mt-2 flex flex-wrap gap-2">
         {showLineHint ? (
@@ -109,7 +106,7 @@ export default function MobileAppBridge() {
             onClick={tryOpenExternal}
             className="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white"
           >
-            外部ブラウザで開く
+            {copy.openExternal}
           </button>
         ) : null}
         {showInstall ? (
@@ -118,7 +115,7 @@ export default function MobileAppBridge() {
             onClick={() => void runInstall()}
             className="rounded-lg bg-pink-500 px-3 py-1.5 text-xs font-semibold text-white"
           >
-            Install app
+            {copy.installButton}
           </button>
         ) : null}
         <button
@@ -134,7 +131,7 @@ export default function MobileAppBridge() {
           }}
           className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs text-slate-300"
         >
-          閉じる
+          {copy.dismiss}
         </button>
       </div>
     </div>

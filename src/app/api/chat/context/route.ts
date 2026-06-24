@@ -129,7 +129,7 @@ export async function POST(req: Request): Promise<Response> {
     typeof body.userText === "string"
       ? body.userText.trim().slice(0, MAX_USER_TEXT_CHARS)
       : "";
-  const uiLang = normalizeUiLang(body.language);
+  const uiLang: UiLang = normalizeUiLang(body.language) ?? "en";
   const recentTurns = parseRecentTurns(body.recentTurns);
 
   if (!assistantText) {

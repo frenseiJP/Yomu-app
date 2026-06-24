@@ -9,6 +9,8 @@ import MobileAppBridge from "@/components/MobileAppBridge";
 import PageViewLogger from "@/components/analytics/PageViewLogger";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import { getSiteUrl } from "@/lib/siteUrl";
+import { getLangServer } from "@/src/utils/i18n/serverLang";
+import { htmlLangAttribute } from "@/lib/i18n/resolveLanguage";
 
 const SITE_URL = getSiteUrl();
 
@@ -67,12 +69,14 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const initialLang = getLangServer();
+
   return (
-    <html lang="en" className="touch-manipulation">
+    <html lang={htmlLangAttribute(initialLang)} className="touch-manipulation" suppressHydrationWarning>
       <body className="bg-[#020617] pb-[env(safe-area-inset-bottom,0px)] text-slate-100 overscroll-behavior-none">
         <Suspense fallback={null}>
           <AuthProvider>
-            <LanguageProvider>
+            <LanguageProvider initialLang={initialLang}>
               <GoogleAnalytics />
               <PageViewLogger />
               {children}

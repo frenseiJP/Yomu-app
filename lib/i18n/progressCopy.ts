@@ -38,6 +38,17 @@ export type ProgressCopy = {
   weeklyGoalPractice: (label: string) => string;
   usefulPhraseTitle: string;
   usefulPhraseSubtitle: (phrase: string) => string;
+  moreHistoryTitle: string;
+  moreHistoryDesc: string;
+  moreReportTitle: string;
+  moreReportDesc: string;
+  moreFeedbackTitle: string;
+  moreFeedbackDesc: string;
+  morePricingTitle: string;
+  morePricingDesc: string;
+  moreTutorialTitle: string;
+  moreTutorialDesc: string;
+  moreSettingsDesc: string;
 };
 
 const COPY: Record<Lang, ProgressCopy> = {
@@ -80,6 +91,17 @@ const COPY: Record<Lang, ProgressCopy> = {
     weeklyGoalPractice: (label) => `Practice ${label} with Sensei →`,
     usefulPhraseTitle: "Today's useful phrase",
     usefulPhraseSubtitle: (phrase) => `${phrase} · tap to expand`,
+    moreHistoryTitle: "Learning history",
+    moreHistoryDesc: "Continue past chat sessions",
+    moreReportTitle: "Report",
+    moreReportDesc: "Learning summary and beta feedback links",
+    moreFeedbackTitle: "Feedback (beta)",
+    moreFeedbackDesc: "Report bugs, requests, or what you liked",
+    morePricingTitle: "Pricing",
+    morePricingDesc: "Free, Pro, and Founder plans (beta)",
+    moreTutorialTitle: "How to use Frensei",
+    moreTutorialDesc: "60-second quick guide",
+    moreSettingsDesc: "Language, tone, region and app preferences",
   },
   ja: {
     title: "進捗",
@@ -120,6 +142,17 @@ const COPY: Record<Lang, ProgressCopy> = {
     weeklyGoalPractice: (label) => `「${label}」を Sensei と練習 →`,
     usefulPhraseTitle: "今日の便利フレーズ",
     usefulPhraseSubtitle: (phrase) => `${phrase} · タップで展開`,
+    moreHistoryTitle: "学習履歴",
+    moreHistoryDesc: "過去のチャットを続ける",
+    moreReportTitle: "レポート",
+    moreReportDesc: "学習サマリーとベータフィードバック",
+    moreFeedbackTitle: "フィードバック（ベータ）",
+    moreFeedbackDesc: "バグ・要望・感想を送る",
+    morePricingTitle: "プラン",
+    morePricingDesc: "Free / Pro / Founder（ベータ）",
+    moreTutorialTitle: "Frensei の使い方",
+    moreTutorialDesc: "60秒クイックガイド",
+    moreSettingsDesc: "言語・トーン・地域などの設定",
   },
   ko: {
     title: "진행 상황",
@@ -160,6 +193,17 @@ const COPY: Record<Lang, ProgressCopy> = {
     weeklyGoalPractice: (label) => `${label} Sensei와 연습 →`,
     usefulPhraseTitle: "오늘의 유용한 표현",
     usefulPhraseSubtitle: (phrase) => `${phrase} · 탭하여 펼치기`,
+    moreHistoryTitle: "학습 기록",
+    moreHistoryDesc: "이전 채팅을 이어가기",
+    moreReportTitle: "리포트",
+    moreReportDesc: "학습 요약 및 베타 피드백",
+    moreFeedbackTitle: "피드백 (베타)",
+    moreFeedbackDesc: "버그, 요청, 의견 보내기",
+    morePricingTitle: "플랜",
+    morePricingDesc: "Free / Pro / Founder (베타)",
+    moreTutorialTitle: "Frensei 사용법",
+    moreTutorialDesc: "60초 빠른 가이드",
+    moreSettingsDesc: "언어, 톤, 지역 등 앱 설정",
   },
   zh: {
     title: "进度",
@@ -199,6 +243,17 @@ const COPY: Record<Lang, ProgressCopy> = {
     weeklyGoalPractice: (label) => `与 Sensei 练习${label} →`,
     usefulPhraseTitle: "今日实用短语",
     usefulPhraseSubtitle: (phrase) => `${phrase} · 点击展开`,
+    moreHistoryTitle: "学习记录",
+    moreHistoryDesc: "继续之前的聊天",
+    moreReportTitle: "报告",
+    moreReportDesc: "学习摘要与测试反馈",
+    moreFeedbackTitle: "反馈（测试版）",
+    moreFeedbackDesc: "报告问题、建议或好评",
+    morePricingTitle: "方案",
+    morePricingDesc: "Free / Pro / Founder（测试版）",
+    moreTutorialTitle: "如何使用 Frensei",
+    moreTutorialDesc: "60 秒快速指南",
+    moreSettingsDesc: "语言、语气、地区等应用偏好",
   },
 };
 
