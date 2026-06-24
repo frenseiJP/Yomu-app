@@ -4,9 +4,13 @@ import { useState } from "react";
 import SpeakingLoopPanel from "@/components/coach/SpeakingLoopPanel";
 import ClozeDrillInline from "@/components/coach/ClozeDrillInline";
 import type { CorrectionPracticeFields } from "@/lib/coach/correctionPractice";
+import type { ChatActionsCopy } from "@/lib/i18n/chatActionsCopy";
 import { inferMistakeCategory, mistakeCategoryLabel } from "@/lib/vocabulary/mistakeCategory";
+import type { Lang } from "@/src/utils/i18n/types";
 
 type Props = {
+  copy: ChatActionsCopy;
+  lang: Lang;
   fields: CorrectionPracticeFields;
   userId: string;
   onSpeakingCheck?: (score: number) => void;
@@ -14,6 +18,8 @@ type Props = {
 };
 
 export default function CorrectionPracticeBlock({
+  copy,
+  lang,
   fields,
   userId,
   onSpeakingCheck,
@@ -27,6 +33,7 @@ export default function CorrectionPracticeBlock({
         correctedSentence: fields.corrected,
         note: fields.categoryHint,
       }),
+      lang,
     ) ?? "Particle";
 
   return (
@@ -37,8 +44,8 @@ export default function CorrectionPracticeBlock({
         className="inline-flex min-h-[38px] w-full items-center justify-between rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-left text-[12px] font-medium text-violet-100"
         aria-expanded={open}
       >
-        <span>Practice this correction</span>
-        <span className="text-[11px] text-violet-300/80">{open ? "Hide" : "Say & cloze"}</span>
+        <span>{copy.practiceCorrection}</span>
+        <span className="text-[11px] text-violet-300/80">{open ? copy.hide : copy.sayAndCloze}</span>
       </button>
       {open ? (
         <div className="mt-2 space-y-2">

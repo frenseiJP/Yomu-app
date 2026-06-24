@@ -1,65 +1,27 @@
 import Link from "next/link";
 import { getLangServer } from "@/src/utils/i18n/serverLang";
-import { t } from "@/src/utils/i18n/t";
+import { getPricingCopy } from "@/lib/i18n/pricingCopy";
 
 export default function PricingPage() {
   const lang = getLangServer();
-
-  const copy =
-    lang === "ja"
-      ? {
-          title: "プラン",
-          free: "無料",
-          pro: "Pro",
-          founder: "Founder（ベータ）",
-          freeBullets: ["1日30メッセージ", "語彙保存", "デイリーミッション", "基本コーチ"],
-          proBullets: [
-            "チャット無制限",
-            "語彙無制限",
-            "パーソナルコーチ",
-            "詳細な進捗",
-          ],
-          founderBullets: ["ベータ参加者向け", "早期アクセス", "フィードバック優先"],
-          cta: "近日公開",
-          back: "アプリに戻る",
-        }
-      : {
-          title: "Pricing",
-          free: "Free",
-          pro: "Pro",
-          founder: "Founder (beta)",
-          freeBullets: [
-            "30 chat messages / day",
-            "Vocabulary saves",
-            "Daily missions",
-            "Basic coaching",
-          ],
-          proBullets: [
-            "Unlimited chat",
-            "Unlimited vocabulary",
-            "Personalized coaching",
-            "Advanced progress",
-          ],
-          founderBullets: ["Beta participants", "Early access", "Priority feedback"],
-          cta: "Coming soon",
-          back: "Back to app",
-        };
+  const copy = getPricingCopy(lang);
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
       <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
         <h1 className="font-wa-serif text-2xl font-semibold">{copy.title}</h1>
-        <p className="mt-2 text-sm text-slate-400">
-          {lang === "ja"
-            ? "決済はまだ有効化されていません。ベータ中のプラン設計です。"
-            : "Payments are not active yet. This is beta pricing infrastructure."}
-        </p>
+        <p className="mt-2 text-sm text-slate-400">{copy.betaDisclaimer}</p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           {[
-            { name: copy.free, bullets: copy.freeBullets, highlight: false },
-            { name: copy.pro, bullets: copy.proBullets, highlight: true },
-            { name: copy.founder, bullets: copy.founderBullets, highlight: false },
+            { name: copy.free, bullets: copy.freeBullets, highlight: false, tag: null },
+            { name: copy.pro, bullets: copy.proBullets, highlight: true, tag: null },
+            {
+              name: copy.founder,
+              bullets: copy.founderBullets,
+              highlight: false,
+              tag: copy.betaPreview,
+            },
           ].map((plan) => (
             <section
               key={plan.name}
@@ -69,7 +31,14 @@ export default function PricingPage() {
                   : "border-slate-800 bg-slate-950/80"
               }`}
             >
-              <h2 className="text-lg font-semibold">{plan.name}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold">{plan.name}</h2>
+                {plan.tag ? (
+                  <span className="rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 text-[10px] text-slate-400">
+                    {plan.tag}
+                  </span>
+                ) : null}
+              </div>
               <ul className="mt-4 space-y-2 text-[13px] text-slate-300">
                 {plan.bullets.map((b) => (
                   <li key={b}>• {b}</li>

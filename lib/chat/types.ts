@@ -16,6 +16,7 @@ export interface ChatMessageMeta {
   senseiPayload?: unknown;
   chatContext?: unknown;
   goalFeedback?: string;
+  coachInlineNote?: string;
 }
 
 export interface ChatMessage {

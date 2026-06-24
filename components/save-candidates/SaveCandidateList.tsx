@@ -1,6 +1,9 @@
 "use client";
 
 import type { SaveCandidate } from "@/lib/save-candidates/types";
+import type { ChatActionsCopy } from "@/lib/i18n/chatActionsCopy";
+import { getChatActionsCopy } from "@/lib/i18n/chatActionsCopy";
+import type { Lang } from "@/src/utils/i18n/types";
 
 function badgeClass(type: SaveCandidate["type"]): string {
   if (type === "word") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-200";
@@ -16,30 +19,38 @@ function displayMeaning(cand: SaveCandidate): string {
   return cand.meaning || cand.secondaryText || "";
 }
 
-function saveLabelFor(cand: SaveCandidate, saved: boolean): string {
-  if (saved) return "Saved";
-  if (cand.type === "correction") return "Save this correction";
-  if (cand.type === "phrase") return "Save this phrase";
-  return "Save this word";
+function saveLabelFor(cand: SaveCandidate, saved: boolean, copy: ChatActionsCopy): string {
+  if (saved) return copy.saved;
+  if (cand.type === "correction") return copy.saveCorrection;
+  if (cand.type === "phrase") return copy.savePhrase;
+  return copy.saveWord;
 }
 
 export function SaveCandidateList({
   candidates,
   onSave,
-  title = "Keep for review",
+  lang = "en",
+  copy: copyProp,
+  title,
   highlight,
   saveButtonLabel,
-  savedButtonLabel = "Saved",
+  savedButtonLabel,
   saveDataAttr,
 }: {
   candidates: SaveCandidate[];
   onSave: (cand: SaveCandidate) => void;
+  lang?: Lang;
+  copy?: ChatActionsCopy;
   title?: string;
   highlight?: boolean;
   saveButtonLabel?: string;
   savedButtonLabel?: string;
   saveDataAttr?: string;
 }) {
+  const copy = copyProp ?? getChatActionsCopy(lang);
+  const listTitle = title ?? copy.keepForReview;
+  const savedLabel = savedButtonLabel ?? copy.saved;
+
   if (candidates.length === 0) return null;
   const [first, ...rest] = candidates;
 
@@ -49,9 +60,9 @@ export function SaveCandidateList({
         highlight ? "rounded-xl ring-2 ring-pink-400/40 ring-offset-2 ring-offset-slate-950" : ""
       }`}
     >
-      <p className="text-[11px] font-medium text-slate-300">{title}</p>
+      <p className="text-[11px] font-medium text-slate-300">{listTitle}</p>
       {[first].map((cand) => {
-        const primarySaveLabel = saveButtonLabel ?? saveLabelFor(cand, cand.alreadySaved);
+        const primarySaveLabel = saveButtonLabel ?? saveLabelFor(cand, cand.alreadySaved, copy);
         const term = displayTerm(cand);
         const meaning = displayMeaning(cand);
         const isPhrase = cand.type === "phrase";
@@ -71,13 +82,13 @@ export function SaveCandidateList({
               </div>
               {isPhrase && cand.exampleSentence ? (
                 <p className="text-[10px] leading-snug text-slate-400">
-                  <span className="font-medium text-slate-500">Example: </span>
+                  <span className="font-medium text-slate-500">{copy.example} </span>
                   <span className="text-slate-300">{cand.exampleSentence}</span>
                 </p>
               ) : null}
               {meaning ? (
                 <p className="text-[10px] leading-snug text-slate-400">
-                  <span className="font-medium text-slate-500">Meaning: </span>
+                  <span className="font-medium text-slate-500">{copy.meaning} </span>
                   {meaning}
                 </p>
               ) : null}
@@ -89,7 +100,7 @@ export function SaveCandidateList({
               onClick={() => onSave(cand)}
               className="mt-0.5 shrink-0 rounded-md border border-wa-ruri/45 bg-wa-ruri/20 px-2.5 py-1.5 text-[11px] font-semibold text-slate-100 disabled:border-slate-700/80 disabled:bg-slate-800/60 disabled:text-slate-500"
             >
-              {cand.alreadySaved ? savedButtonLabel : primarySaveLabel}
+              {cand.alreadySaved ? savedLabel : primarySaveLabel}
             </button>
           </div>
         );
@@ -97,7 +108,7 @@ export function SaveCandidateList({
       {rest.length > 0 ? (
         <details className="rounded-lg border border-slate-800/50 bg-slate-900/35 px-2 py-1.5">
           <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-            More saves ({rest.length})
+            {copy.moreSaves(rest.length)}
           </summary>
           <div className="mt-1.5 space-y-1.5">
             {rest.map((cand) => {
@@ -120,13 +131,13 @@ export function SaveCandidateList({
                     </div>
                     {isPhrase && cand.exampleSentence ? (
                       <p className="text-[10px] leading-snug text-slate-400">
-                        <span className="font-medium text-slate-500">Example: </span>
+                        <span className="font-medium text-slate-500">{copy.example} </span>
                         <span className="text-slate-300">{cand.exampleSentence}</span>
                       </p>
                     ) : null}
                     {meaning ? (
                       <p className="text-[10px] leading-snug text-slate-400">
-                        <span className="font-medium text-slate-500">Meaning: </span>
+                        <span className="font-medium text-slate-500">{copy.meaning} </span>
                         {meaning}
                       </p>
                     ) : null}
@@ -137,7 +148,7 @@ export function SaveCandidateList({
                     onClick={() => onSave(cand)}
                     className="mt-0.5 shrink-0 rounded-md border border-wa-ruri/45 bg-wa-ruri/15 px-2 py-1 text-[10px] font-semibold text-slate-100 disabled:border-slate-700/80 disabled:bg-slate-800/60 disabled:text-slate-500"
                   >
-                    {cand.alreadySaved ? savedButtonLabel : saveLabelFor(cand, false)}
+                    {cand.alreadySaved ? savedLabel : saveLabelFor(cand, false, copy)}
                   </button>
                 </div>
               );

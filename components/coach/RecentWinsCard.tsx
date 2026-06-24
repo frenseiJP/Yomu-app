@@ -8,6 +8,11 @@ type Props = {
   isLightTheme: boolean;
 };
 
+function withBlossom(body: string): string {
+  if (body.includes("🌸")) return body;
+  return `🌸 ${body}`;
+}
+
 export default function RecentWinsCard({ title, wins, isLightTheme }: Props) {
   if (wins.length === 0) return null;
 
@@ -34,7 +39,7 @@ export default function RecentWinsCard({ title, wins, isLightTheme }: Props) {
               isLightTheme ? "text-emerald-950" : "text-emerald-100"
             }`}
           >
-            {win.body}
+            {withBlossom(win.body)}
           </li>
         ))}
       </ul>

@@ -1,8 +1,14 @@
 import type { Lang } from "@/src/utils/i18n/types";
-import { readHabitJson, writeHabitJson } from "@/lib/habit/storage";
+import { writeHabitJson } from "@/lib/habit/storage";
+import {
+  EMPTY_ONBOARDING_RESPONSE,
+  type OnboardingResponse,
+} from "@/lib/onboarding/schema";
+import { readOnboardingResponse, writeOnboardingResponse } from "@/lib/onboarding/persistence";
 
 const KIND = "onboarding_goals_v1";
 
+/** @deprecated Use OnboardingResponse from schema */
 export type OnboardingGoals = {
   why: string;
   hardest: string;
@@ -12,10 +18,12 @@ export type OnboardingGoals = {
 const EMPTY: OnboardingGoals = { why: "", hardest: "", minutes: "" };
 
 export function readOnboardingGoals(userId: string): OnboardingGoals {
-  return readHabitJson<OnboardingGoals>(KIND, userId, EMPTY);
+  const r = readOnboardingResponse(userId);
+  return { why: r.why, hardest: r.hardest, minutes: r.minutes };
 }
 
 export function writeOnboardingGoals(userId: string, goals: OnboardingGoals): void {
+  writeOnboardingResponse(userId, goals as OnboardingResponse);
   writeHabitJson(KIND, userId, goals);
 }
 
@@ -71,6 +79,9 @@ export function starterPromptsForGoals(goals: OnboardingGoals, lang: Lang): stri
     work: work,
     living: work,
     friends: travel,
+    other: travel,
   };
   return map[goals.why]?.[lang] ?? null;
 }
+
+export { EMPTY_ONBOARDING_RESPONSE };

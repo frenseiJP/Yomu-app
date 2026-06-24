@@ -2,8 +2,10 @@
 
 import type { ReactNode } from "react";
 import CollapsibleSection from "@/components/ui/CollapsibleSection";
+import type { ChatActionsCopy } from "@/lib/i18n/chatActionsCopy";
 
 type Props = {
+  copy: ChatActionsCopy;
   sessionGoalRow: ReactNode;
   importSheet: ReactNode;
   speakPanel?: ReactNode | null;
@@ -12,6 +14,7 @@ type Props = {
 };
 
 export default function ChatCoachToolsBar({
+  copy,
   sessionGoalRow,
   importSheet,
   speakPanel,
@@ -19,12 +22,12 @@ export default function ChatCoachToolsBar({
   defaultOpen = false,
 }: Props) {
   const hasSpeak = Boolean(speakPanel);
-  const badge = hasSpeak ? "Speaking" : undefined;
+  const badge = hasSpeak ? copy.speaking : undefined;
 
   return (
     <CollapsibleSection
-      title="Coach tools"
-      subtitle="Goals, paste-to-save, drills — optional extras"
+      title={copy.coachToolsTitle}
+      subtitle={copy.coachToolsSubtitle}
       defaultOpen={defaultOpen || hasSpeak}
       badge={badge}
       tone="muted"

@@ -7,6 +7,7 @@ import PendingGuestNote from "@/components/onboarding/PendingGuestNote";
 import ProfileAvatarField from "@/components/profile/ProfileAvatarField";
 import CountrySelect from "@/components/profile/CountrySelect";
 import { normalizeProfileIcon, PROFILE_ICON_DEFAULT } from "@/lib/profile/icon";
+import { normalizeOnboardingResponse } from "@/lib/onboarding/schema";
 
 type UserProfile = {
   user_id: string;
@@ -114,6 +115,24 @@ export default async function OnboardingPage() {
       ],
       { onConflict: "user_id" },
     );
+
+    const onboarding = normalizeOnboardingResponse({
+      why: goalWhy,
+      hardest: goalHardest,
+      minutes: goalMinutes,
+    });
+    if (onboarding.why || onboarding.hardest || onboarding.minutes) {
+      await supabaseForAction.from("user_onboarding_responses").upsert(
+        {
+          user_id: currentUser.id,
+          why_learning: onboarding.why || null,
+          hardest_area: onboarding.hardest || null,
+          minutes_per_day: onboarding.minutes || null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      );
+    }
 
     redirect("/chat");
   }
@@ -237,7 +256,7 @@ export default async function OnboardingPage() {
                 <option value="2">2 min / day</option>
                 <option value="5">5 min / day</option>
                 <option value="10">10 min / day</option>
-                <option value="20">20+ min / day</option>
+                <option value="20+">20+ min / day</option>
               </select>
             </div>
 

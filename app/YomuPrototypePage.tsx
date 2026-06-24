@@ -145,14 +145,19 @@ import {
 } from "@/lib/coach/categoryMastery";
 import { buildCoachNotes } from "@/lib/coach/notes";
 import { buildRecentWins } from "@/lib/coach/recentWins";
+import { maybeInlineCoachNote } from "@/lib/coach/inlineNote";
+import { buildWeeklyCoachSummary } from "@/lib/coach/weeklySummary";
 import { getHomeCopy } from "@/lib/i18n/homeCopy";
 import { getProgressCopy } from "@/lib/i18n/progressCopy";
+import { getChatActionsCopy } from "@/lib/i18n/chatActionsCopy";
+import { getSettingsPlanCopy } from "@/lib/i18n/settingsPlanCopy";
 import { buildRetentionMissionChatOpener, localizeRetentionMission } from "@/lib/i18n/missionCopy";
 import { getSkillTreeLabel, getSkillTreeHint } from "@/lib/i18n/skillTree";
 import { getDailyReflectionPrompt, markDailyReflectionCompleted } from "@/lib/mission/dailyReflection";
 import { readOnboardingGoals, starterPromptsForGoals, writeOnboardingGoals } from "@/lib/onboarding/goals";
 import CoachNotesCard from "@/components/coach/CoachNotesCard";
 import RecentWinsCard from "@/components/coach/RecentWinsCard";
+import WeeklyCoachSummaryCard from "@/components/coach/WeeklyCoachSummaryCard";
 import type { MistakeCategoryKey } from "@/lib/habit/types";
 import FtuePracticePicker from "@/components/chat/FtuePracticePicker";
 import AssistantMessageBody from "@/components/chat/AssistantMessageBody";
@@ -232,11 +237,49 @@ type WeakDrillQuestion = {
   expectedAny: string[];
 };
 
-const SESSION_GOAL_OPTIONS: { id: SessionGoalId; label: string; coachHint: string }[] = [
-  { id: "natural", label: "Natural", coachHint: "Prioritize natural phrasing and collocations." },
-  { id: "particles", label: "Particles", coachHint: "Prioritize particle usage and case marking corrections." },
-  { id: "polite", label: "Politeness", coachHint: "Prioritize level of politeness and register choices." },
-  { id: "concise", label: "Concise", coachHint: "Prioritize short, practical sentences for daily conversation." },
+function countAssistantTurns(messages: Message[]): number {
+  return messages.filter((m) => m.role === "assistant").length;
+}
+
+function computeCoachInlineNote(
+  habitUserId: string,
+  sessionId: string,
+  lang: Lang,
+  turnIndex: number,
+  priorUserText: string,
+  opts: { payload?: FtueCoachPayload; topicId?: string },
+): string | undefined {
+  return (
+    maybeInlineCoachNote({
+      userId: habitUserId,
+      lang,
+      sessionId,
+      assistantTurnIndex: turnIndex,
+      priorUserText,
+      payload: opts.payload,
+      topicId: opts.topicId,
+    }) ?? undefined
+  );
+}
+
+const SESSION_GOAL_COACH_HINTS: Record<SessionGoalId, string> = {
+  natural: "Prioritize natural phrasing and collocations.",
+  particles: "Prioritize particle usage and case marking corrections.",
+  polite: "Prioritize level of politeness and register choices.",
+  concise: "Prioritize short, practical sentences for daily conversation.",
+};
+
+type SessionGoalLabelKey =
+  | "sessionGoalNatural"
+  | "sessionGoalParticles"
+  | "sessionGoalPolite"
+  | "sessionGoalConcise";
+
+const SESSION_GOAL_OPTIONS: { id: SessionGoalId; labelKey: SessionGoalLabelKey }[] = [
+  { id: "natural", labelKey: "sessionGoalNatural" },
+  { id: "particles", labelKey: "sessionGoalParticles" },
+  { id: "polite", labelKey: "sessionGoalPolite" },
+  { id: "concise", labelKey: "sessionGoalConcise" },
 ];
 
 function buildGoalFeedback(goal: SessionGoalId, payload?: FtueCoachPayload): string | undefined {
@@ -484,6 +527,7 @@ type Message = {
   /** 構造化 Sensei 返信（モバイル向けセクション表示用） */
   senseiPayload?: FtueCoachPayload;
   goalFeedback?: string;
+  coachInlineNote?: string;
   createdAt: string;
   chatContext?: ChatTurnContext;
   topicLabel?: string;
@@ -500,13 +544,14 @@ type Message = {
 
 function metaFromStored(
   meta: StoredChatMessage["meta"],
-): Pick<Message, "replyTone" | "senseiPayload" | "chatContext" | "goalFeedback"> {
+): Pick<Message, "replyTone" | "senseiPayload" | "chatContext" | "goalFeedback" | "coachInlineNote"> {
   if (!meta) return {};
   return {
     replyTone: meta.replyTone as Politeness | undefined,
     senseiPayload: meta.senseiPayload as FtueCoachPayload | undefined,
     chatContext: meta.chatContext as ChatTurnContext | undefined,
     goalFeedback: meta.goalFeedback,
+    coachInlineNote: meta.coachInlineNote,
   };
 }
 
@@ -2247,11 +2292,18 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           : core;
         const storedFtue = addAssistantMessage(habitUserId, sessionId, body);
         const goalFbFtue = showMicro ? undefined : buildGoalFeedback(sessionGoal, payload);
+        const turnIndexFtue = countAssistantTurns(messages);
+        const coachInlineNoteFtue = showMicro
+          ? undefined
+          : computeCoachInlineNote(habitUserId, sessionId, appLang as Lang, turnIndexFtue, text, {
+              payload,
+            });
         if (!showMicro) {
           updateMessageMeta(habitUserId, sessionId, storedFtue.id, {
             replyTone: toneAtSend,
             senseiPayload: payload,
             goalFeedback: goalFbFtue,
+            coachInlineNote: coachInlineNoteFtue,
           });
         }
         setChatSessions(getSessions(habitUserId));
@@ -2266,6 +2318,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   ftueAnchored: true,
                   senseiPayload: showMicro ? undefined : payload,
                   goalFeedback: goalFbFtue,
+                  coachInlineNote: coachInlineNoteFtue,
                 }
               : m,
           ),
@@ -2288,11 +2341,18 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           : core;
         const storedFtueFb = addAssistantMessage(habitUserId, sessionId, body);
         const goalFbFtueFb = showMicro ? undefined : buildGoalFeedback(sessionGoal, payload);
+        const turnIndexFtueFb = countAssistantTurns(messages);
+        const coachInlineNoteFtueFb = showMicro
+          ? undefined
+          : computeCoachInlineNote(habitUserId, sessionId, appLang as Lang, turnIndexFtueFb, text, {
+              payload,
+            });
         if (!showMicro) {
           updateMessageMeta(habitUserId, sessionId, storedFtueFb.id, {
             replyTone: toneAtSend,
             senseiPayload: payload,
             goalFeedback: goalFbFtueFb,
+            coachInlineNote: coachInlineNoteFtueFb,
           });
         }
         setChatSessions(getSessions(habitUserId));
@@ -2307,6 +2367,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   ftueAnchored: true,
                   senseiPayload: showMicro ? undefined : payload,
                   goalFeedback: goalFbFtueFb,
+                  coachInlineNote: coachInlineNoteFtueFb,
                 }
               : m,
           ),
@@ -2337,15 +2398,27 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           appLang as "ja" | "en" | "ko" | "zh",
         );
         const topicMessage = buildTopicFeedbackMessage(feedback);
-        addAssistantMessage(habitUserId, sessionId, topicMessage);
+        const storedTopic = addAssistantMessage(habitUserId, sessionId, topicMessage);
+        const turnIndexTopic = countAssistantTurns(messages);
+        const coachInlineNoteTopic = computeCoachInlineNote(
+          habitUserId,
+          sessionId,
+          appLang as Lang,
+          turnIndexTopic,
+          text,
+          { topicId: activeTopicPrompt.id },
+        );
+        updateMessageMeta(habitUserId, sessionId, storedTopic.id, { coachInlineNote: coachInlineNoteTopic });
         setChatSessions(getSessions(habitUserId));
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
               ? {
                   ...m,
+                  storedId: storedTopic.id,
                   baseText: topicMessage,
                   topicLabel: "Topic Practice",
+                  coachInlineNote: coachInlineNoteTopic,
                   topicFeedback: {
                     topicId: activeTopicPrompt.id,
                     userAnswer: text,
@@ -2372,7 +2445,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     try {
       const coachContext = buildCoachContext(
         habitUserId,
-        SESSION_GOAL_OPTIONS.find((g) => g.id === sessionGoal)?.coachHint,
+        SESSION_GOAL_COACH_HINTS[sessionGoal],
         jlptLevel,
         {
           region: draftRegion,
@@ -2406,10 +2479,20 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       accumulated = body;
       const stored = addAssistantMessage(habitUserId, sessionId, body);
       const goalFb = buildGoalFeedback(sessionGoal, payload);
+      const turnIndex = countAssistantTurns(messages);
+      const coachInlineNote = computeCoachInlineNote(
+        habitUserId,
+        sessionId,
+        appLang as Lang,
+        turnIndex,
+        text,
+        { payload },
+      );
       updateMessageMeta(habitUserId, sessionId, stored.id, {
         replyTone: toneAtSend,
         senseiPayload: payload,
         goalFeedback: goalFb,
+        coachInlineNote,
       });
       setChatSessions(getSessions(habitUserId));
       setMessages((prev) =>
@@ -2422,6 +2505,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 replyTone: toneAtSend,
                 senseiPayload: payload,
                 goalFeedback: goalFb,
+                coachInlineNote,
               }
             : m,
         ),
@@ -2785,9 +2869,15 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
   const homeCopy = useMemo(() => getHomeCopy(appLang as Lang), [appLang]);
   const progressCopy = useMemo(() => getProgressCopy(appLang as Lang), [appLang]);
+  const chatActionsCopy = useMemo(() => getChatActionsCopy(appLang as Lang), [appLang]);
+  const settingsPlanCopy = useMemo(() => getSettingsPlanCopy(appLang as Lang), [appLang]);
   const coachNotes = useMemo(
     () => buildCoachNotes(habitUserId, appLang as Lang, jlptLevel),
     [habitUserId, appLang, jlptLevel, stats.totalMistakes, stats.totalWords],
+  );
+  const weeklySummary = useMemo(
+    () => buildWeeklyCoachSummary(habitUserId, appLang as Lang),
+    [habitUserId, appLang, stats.totalTopicPractices, stats.totalWords],
   );
   const recentWins = useMemo(
     () => buildRecentWins(habitUserId, appLang as Lang, jlptLevel),
@@ -2905,6 +2995,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             isLightTheme={isLightTheme}
             coachNotes={coachNotes}
             recentWins={recentWins}
+            weeklySummary={weeklySummary}
             dailyReflection={dailyReflection}
             onPracticePhrase={() => startDailyPhrasePractice()}
             onStartMission={() => startRetentionDailyMissionChat()}
@@ -3431,7 +3522,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
             <section className={`space-y-2 rounded-2xl p-3 backdrop-blur-xl sm:p-4 ${isLightTheme ? "border border-neutral-200 bg-white shadow-sm" : "border border-slate-800/70 bg-slate-950/80 shadow-glass"}`}>
               <p className={`px-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>
-                Plan
+                {settingsPlanCopy.sectionTitle}
               </p>
               <Link
                 href="/pricing"
@@ -3447,9 +3538,11 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   <Sparkles className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>Pricing</p>
+                  <p className={`text-sm font-medium ${isLightTheme ? "text-neutral-900" : "text-slate-50"}`}>
+                    {settingsPlanCopy.pricingTitle}
+                  </p>
                   <p className={`text-[11px] ${isLightTheme ? "text-neutral-600" : "text-slate-400"}`}>
-                    Free, Pro, and Founder (beta preview)
+                    {settingsPlanCopy.pricingDesc}
                   </p>
                 </div>
                 <ChevronRight className={`h-4 w-4 flex-shrink-0 ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`} aria-hidden />
@@ -3750,18 +3843,19 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 isLightTheme={isLightTheme}
               />
               <ChatCoachToolsBar
+                copy={chatActionsCopy}
                 defaultOpen={Boolean(speakPracticeLine)}
                 speakPanel={
                   speakPracticeLine ? (
                     <div className="space-y-1">
-                      <p className="text-[11px] font-medium text-violet-200/90">Say it out loud</p>
+                      <p className="text-[11px] font-medium text-violet-200/90">{chatActionsCopy.sayOutLoud}</p>
                       <SpeakingLoopPanel sentence={speakPracticeLine} compact />
                       <button
                         type="button"
                         onClick={() => setSpeakPracticeLine(null)}
                         className="text-[11px] text-slate-500 hover:text-slate-300"
                       >
-                        Dismiss
+                        {chatActionsCopy.dismiss}
                       </button>
                     </div>
                   ) : null
@@ -3769,7 +3863,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 sessionGoalRow={
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="w-full text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                      Session goal
+                      {chatActionsCopy.sessionGoal}
                     </span>
                     {SESSION_GOAL_OPTIONS.map((goal) => (
                       <button
@@ -3782,7 +3876,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                             : "border-slate-700/70 bg-slate-900/60 text-slate-400 hover:text-slate-200"
                         }`}
                       >
-                        {goal.label}
+                        {chatActionsCopy[goal.labelKey]}
                       </button>
                     ))}
                   </div>
@@ -3986,6 +4080,12 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                             {msg.goalFeedback}
                           </p>
                         ) : null}
+                        {msg.coachInlineNote ? (
+                          <div className="mt-2 rounded-lg border border-pink-500/30 bg-pink-500/10 px-2.5 py-1.5 text-[11px] text-pink-50">
+                            <p className="font-semibold text-pink-100">{chatActionsCopy.coachNoteLabel}</p>
+                            <p className="mt-0.5 leading-relaxed">{msg.coachInlineNote}</p>
+                          </div>
+                        ) : null}
                         {(() => {
                           const priorUser = messages
                             .slice(0, messages.findIndex((m) => m.id === msg.id))
@@ -4009,9 +4109,11 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                                 }}
                                 className="inline-flex min-h-[38px] items-center rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-100 hover:bg-emerald-500/15"
                               >
-                                Reuse corrected sentence
+                                {chatActionsCopy.reuseCorrected}
                               </button>
                               <CorrectionPracticeBlock
+                                copy={chatActionsCopy}
+                                lang={appLang as Lang}
                                 fields={practice}
                                 userId={habitUserId}
                                 onSpeakingCheck={(score) => {
@@ -4041,6 +4143,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                           (
                           <SaveCandidateList
                             candidates={saveList}
+                            copy={chatActionsCopy}
+                            lang={appLang as Lang}
                             highlight={guidedStep === "save_prompt"}
                             saveDataAttr={guidedStep === "save_prompt" ? "1" : undefined}
                             onSave={(cand) => {

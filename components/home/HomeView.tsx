@@ -7,6 +7,7 @@ import { localizeRetentionMission } from "@/lib/i18n/missionCopy";
 import type { Lang } from "@/src/utils/i18n/types";
 import type { CoachNote } from "@/lib/coach/notes";
 import type { RecentWin } from "@/lib/coach/recentWins";
+import type { WeeklySummaryItem } from "@/lib/coach/weeklySummary";
 import { MessageCircle, BookOpen, Target, Compass, Sparkles } from "lucide-react";
 import type { TopicPrompt } from "@/lib/topic/types";
 import DailyUsefulPhraseCard from "@/components/habit/DailyUsefulPhraseCard";
@@ -14,6 +15,7 @@ import SeasonalProgressCard from "@/components/progress/SeasonalProgressCard";
 import CollapsibleSection from "@/components/ui/CollapsibleSection";
 import CoachNotesCard from "@/components/coach/CoachNotesCard";
 import RecentWinsCard from "@/components/coach/RecentWinsCard";
+import WeeklyCoachSummaryCard from "@/components/coach/WeeklyCoachSummaryCard";
 import type { DailyUsefulPhrase } from "@/lib/dailyPhrase/phrases";
 import {
   homeCard,
@@ -44,6 +46,7 @@ type Props = {
   isLightTheme: boolean;
   coachNotes: CoachNote[];
   recentWins: RecentWin[];
+  weeklySummary: WeeklySummaryItem[];
   dailyReflection?: string | null;
   onPracticePhrase: () => void;
   onStartMission: () => void;
@@ -79,6 +82,7 @@ export default function HomeView({
   isLightTheme,
   coachNotes,
   recentWins,
+  weeklySummary,
   dailyReflection,
   onPracticePhrase,
   onStartMission,
@@ -164,6 +168,11 @@ export default function HomeView({
         ) : null}
 
         <CoachNotesCard title={copy.coachNotes} notes={coachNotes} isLightTheme={isLightTheme} />
+        <WeeklyCoachSummaryCard
+          title={copy.weeklyCoachSummary}
+          items={weeklySummary}
+          isLightTheme={isLightTheme}
+        />
         <RecentWinsCard title={copy.recentWins} wins={recentWins} isLightTheme={isLightTheme} />
 
         {reviewCount > 0 ? (

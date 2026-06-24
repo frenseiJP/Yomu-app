@@ -18,6 +18,7 @@ export type HomeCopy = {
   openChatHint: string;
   coachNotes: string;
   recentWins: string;
+  weeklyCoachSummary: string;
   dailyReflection: string;
   startReflection: string;
   starterPrompts: string;
@@ -44,6 +45,7 @@ const COPY: Record<Lang, HomeCopy> = {
     openChatHint: "Open chat to start today's practice.",
     coachNotes: "Coach notes",
     recentWins: "Recent wins",
+    weeklyCoachSummary: "Your coach noticed…",
     dailyReflection: "Daily reflection",
     startReflection: "Try in chat →",
     starterPrompts: "Try asking",
@@ -68,6 +70,7 @@ const COPY: Record<Lang, HomeCopy> = {
     openChatHint: "チャットを開いて今日の練習を始めましょう。",
     coachNotes: "コーチメモ",
     recentWins: "最近の成果",
+    weeklyCoachSummary: "コーチが気づいたこと…",
     dailyReflection: "今日の振り返り",
     startReflection: "チャットで試す →",
     starterPrompts: "こんな質問から",
@@ -92,6 +95,7 @@ const COPY: Record<Lang, HomeCopy> = {
     openChatHint: "채팅을 열어 오늘의 연습을 시작하세요.",
     coachNotes: "코치 노트",
     recentWins: "최근 성과",
+    weeklyCoachSummary: "코치가 알아챈 점…",
     dailyReflection: "오늘의 회고",
     startReflection: "채팅에서 시도 →",
     starterPrompts: "이런 질문으로 시작",
@@ -116,6 +120,7 @@ const COPY: Record<Lang, HomeCopy> = {
     openChatHint: "打开聊天开始今日练习。",
     coachNotes: "教练笔记",
     recentWins: "最近成果",
+    weeklyCoachSummary: "教练注意到…",
     dailyReflection: "每日反思",
     startReflection: "在聊天中试试 →",
     starterPrompts: "可以这样问",
