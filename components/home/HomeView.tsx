@@ -173,7 +173,12 @@ export default function HomeView({
           items={weeklySummary}
           isLightTheme={isLightTheme}
         />
-        <RecentWinsCard title={copy.recentWins} wins={recentWins} isLightTheme={isLightTheme} />
+        <RecentWinsCard
+          title={copy.recentWins}
+          wins={recentWins}
+          emptyMessage={copy.recentWinsEmpty}
+          isLightTheme={isLightTheme}
+        />
 
         {reviewCount > 0 ? (
           <button

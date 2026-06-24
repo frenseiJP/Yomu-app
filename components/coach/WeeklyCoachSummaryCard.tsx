@@ -9,8 +9,6 @@ type Props = {
 };
 
 export default function WeeklyCoachSummaryCard({ title, items, isLightTheme }: Props) {
-  if (items.length === 0) return null;
-
   return (
     <section
       className={`rounded-2xl border p-4 ${
@@ -31,7 +29,13 @@ export default function WeeklyCoachSummaryCard({ title, items, isLightTheme }: P
           <li
             key={item.id}
             className={`text-[13px] leading-snug ${
-              isLightTheme ? "text-violet-950" : "text-violet-100"
+              item.placeholder
+                ? isLightTheme
+                  ? "text-violet-700/80 italic"
+                  : "text-violet-200/70 italic"
+                : isLightTheme
+                  ? "text-violet-950"
+                  : "text-violet-100"
             }`}
           >
             • {item.body}

@@ -4,11 +4,13 @@ import type { FtueCoachPayload } from "@/lib/ftue/types";
 import { inferMistakeCategory } from "@/lib/vocabulary/mistakeCategory";
 import type { Lang } from "@/src/utils/i18n/types";
 
-const STATE_KIND = "inline_coach_note_state_v1";
+const STATE_KIND = "inline_coach_note_state_v2";
 
 type InlineNoteState = {
   sessionId: string;
   lastAtTurn: number;
+  correctionCount: number;
+  notesShown: number;
 };
 
 export type InlineNoteContext = {
@@ -22,7 +24,12 @@ export type InlineNoteContext = {
 };
 
 function readState(userId: string): InlineNoteState {
-  return readHabitJson<InlineNoteState>(STATE_KIND, userId, { sessionId: "", lastAtTurn: 0 });
+  return readHabitJson<InlineNoteState>(STATE_KIND, userId, {
+    sessionId: "",
+    lastAtTurn: 0,
+    correctionCount: 0,
+    notesShown: 0,
+  });
 }
 
 function writeState(userId: string, state: InlineNoteState): void {
@@ -44,10 +51,10 @@ function noteCopy(lang: Lang, key: string): string {
       zh: "你经常在练习餐厅场景的日语。",
     },
     particles: {
-      en: "You are improving your use of particles.",
-      ja: "助詞の使い方が少しずつ上達しています。",
-      ko: "조사 사용이 점점 나아지고 있어요.",
-      zh: "你的助词用法正在进步。",
+      en: "You are getting more comfortable using particles.",
+      ja: "助詞の使い方がだんだん自然になってきています。",
+      ko: "조사 사용이 점점 편해지고 있어요.",
+      zh: "你的助词用法越来越自然了。",
     },
     translation: {
       en: "You tend to use direct English translations. Try shorter Japanese chunks.",
@@ -57,7 +64,7 @@ function noteCopy(lang: Lang, key: string): string {
     },
     directions: {
       en: "Nice work practicing how to ask for directions.",
-      ja: "道を尋ねる練習、いい感じです。",
+      ja: "道の尋ね方を練習しましたね。いい感じです。",
       ko: "길 묻기 연습을 잘하고 있어요.",
       zh: "问路练习做得不错。",
     },
@@ -67,20 +74,45 @@ function noteCopy(lang: Lang, key: string): string {
       ko: "표현이 점점 자연스러워지고 있어요.",
       zh: "你的表达越来越自然了。",
     },
+    encouragement: {
+      en: "You're building a steady learning rhythm — keep going.",
+      ja: "学習のリズムができてきています。この調子で続けましょう。",
+      ko: "학습 리듬이 잡히고 있어요. 계속해 보세요.",
+      zh: "你的学习节奏很好，继续保持。",
+    },
+    explain: {
+      en: "Good question — you're exploring useful real-life Japanese.",
+      ja: "いい質問です。実生活で使える日本語を学んでいますね。",
+      ko: "좋은 질문이에요. 실생활 일본어를 익히고 있어요.",
+      zh: "问得好——你在学习实用的日语。",
+    },
   };
   return map[key]?.[lang] ?? map[key]?.en ?? "";
 }
 
+function isLearningMoment(ctx: InlineNoteContext): boolean {
+  if (ctx.topicId) return true;
+  if (!ctx.payload) return false;
+  if (ctx.payload.replyMode === "correction" || ctx.payload.replyMode === "explain") return true;
+  return ctx.payload.replyMode === "reading";
+}
+
 /**
  * Returns a short coach note for meaningful assistant turns only (not every message).
+ * Targets visibility within the first 3–5 learning interactions.
  */
 export function maybeInlineCoachNote(ctx: InlineNoteContext): string | null {
-  if (ctx.assistantTurnIndex < 2) return null;
+  if (!isLearningMoment(ctx)) return null;
 
   const state = readState(ctx.userId);
-  if (state.sessionId === ctx.sessionId && ctx.assistantTurnIndex - state.lastAtTurn < 3) {
-    return null;
-  }
+  const isCorrection = ctx.payload?.replyMode === "correction";
+  const correctionCount = isCorrection ? state.correctionCount + 1 : state.correctionCount;
+
+  const sameSession = state.sessionId === ctx.sessionId;
+  const turnsSinceLast = sameSession ? ctx.assistantTurnIndex - state.lastAtTurn : 999;
+  const shouldRateLimit = state.notesShown > 0 && sameSession && turnsSinceLast < 2;
+
+  if (shouldRateLimit) return null;
 
   const candidates: string[] = [];
 
@@ -109,8 +141,29 @@ export function maybeInlineCoachNote(ctx: InlineNoteContext): string | null {
     }
   }
 
+  if (ctx.payload?.replyMode === "explain" || ctx.payload?.replyMode === "reading") {
+    const q = (ctx.priorUserText ?? "").toLowerCase();
+    if (/restaurant|order|food|travel|particle|は|が|を/.test(q)) {
+      candidates.push(noteCopy(ctx.lang, "explain"));
+    }
+  }
+
+  const withinEarlyWindow = correctionCount <= 5 || state.notesShown < 3;
+  if (candidates.length === 0 && withinEarlyWindow) {
+    if (isCorrection && [1, 2, 3, 4, 5].includes(correctionCount)) {
+      candidates.push(noteCopy(ctx.lang, "encouragement"));
+    } else if (ctx.payload?.replyMode === "explain" && state.notesShown < 2) {
+      candidates.push(noteCopy(ctx.lang, "explain"));
+    }
+  }
+
   if (candidates.length === 0) return null;
 
-  writeState(ctx.userId, { sessionId: ctx.sessionId, lastAtTurn: ctx.assistantTurnIndex });
+  writeState(ctx.userId, {
+    sessionId: ctx.sessionId,
+    lastAtTurn: ctx.assistantTurnIndex,
+    correctionCount,
+    notesShown: state.notesShown + 1,
+  });
   return candidates[0];
 }

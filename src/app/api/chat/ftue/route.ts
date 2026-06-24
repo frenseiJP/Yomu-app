@@ -112,7 +112,7 @@ export async function POST(req: Request): Promise<Response> {
     `\n\n=== FTUE DRILL ===\nThe learner is translating this English into natural Japanese:\n${promptBlock}`;
 
   const userContent = [
-    `UI language (for minor tone only): ${uiLang}`,
+    `UI language (ALL explanations must be in this language): ${uiLang}`,
     historyLines ? `Recent turns:\n${historyLines}\n` : "",
     `Latest learner Japanese:\n${userSentence}`,
   ]

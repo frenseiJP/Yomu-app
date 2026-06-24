@@ -9,6 +9,8 @@ type Props = {
   /** Home column: center tree preview and copy. */
   centered?: boolean;
   isLightTheme?: boolean;
+  thisWeekLabel?: string;
+  rhythmLabel?: string;
   onOpenProgress?: () => void;
 };
 
@@ -87,6 +89,8 @@ export default function SeasonalProgressCard({
   compact = false,
   centered = false,
   isLightTheme = false,
+  thisWeekLabel = "This week",
+  rhythmLabel = "Rhythm",
   onOpenProgress,
 }: Props) {
   const shell = isLightTheme
@@ -177,13 +181,13 @@ export default function SeasonalProgressCard({
       <div className={`space-y-4 px-5 py-4 sm:px-7 ${isLightTheme ? "bg-neutral-50/80" : "bg-slate-950/90"}`}>
         <div>
           <p className={`mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>
-            This week
+            {thisWeekLabel}
           </p>
           <ActivityMarks season={state.season} activityCount={state.activityCount} compact={false} isLightTheme={isLightTheme} />
         </div>
         <div>
           <p className={`mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] ${isLightTheme ? "text-neutral-500" : "text-slate-500"}`}>
-            Rhythm
+            {rhythmLabel}
           </p>
           <StreakWarmth streakCount={state.streakCount} compact={false} isLightTheme={isLightTheme} />
         </div>

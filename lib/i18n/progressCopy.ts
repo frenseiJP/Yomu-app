@@ -49,6 +49,8 @@ export type ProgressCopy = {
   moreTutorialTitle: string;
   moreTutorialDesc: string;
   moreSettingsDesc: string;
+  seasonalThisWeek: string;
+  seasonalRhythm: string;
 };
 
 const COPY: Record<Lang, ProgressCopy> = {
@@ -102,6 +104,8 @@ const COPY: Record<Lang, ProgressCopy> = {
     moreTutorialTitle: "How to use Frensei",
     moreTutorialDesc: "60-second quick guide",
     moreSettingsDesc: "Language, tone, region and app preferences",
+    seasonalThisWeek: "This week",
+    seasonalRhythm: "Rhythm",
   },
   ja: {
     title: "進捗",
@@ -153,6 +157,8 @@ const COPY: Record<Lang, ProgressCopy> = {
     moreTutorialTitle: "Frensei の使い方",
     moreTutorialDesc: "60秒クイックガイド",
     moreSettingsDesc: "言語・トーン・地域などの設定",
+    seasonalThisWeek: "今週",
+    seasonalRhythm: "リズム",
   },
   ko: {
     title: "진행 상황",
@@ -204,6 +210,8 @@ const COPY: Record<Lang, ProgressCopy> = {
     moreTutorialTitle: "Frensei 사용법",
     moreTutorialDesc: "60초 빠른 가이드",
     moreSettingsDesc: "언어, 톤, 지역 등 앱 설정",
+    seasonalThisWeek: "이번 주",
+    seasonalRhythm: "리듬",
   },
   zh: {
     title: "进度",
@@ -254,6 +262,8 @@ const COPY: Record<Lang, ProgressCopy> = {
     moreTutorialTitle: "如何使用 Frensei",
     moreTutorialDesc: "60 秒快速指南",
     moreSettingsDesc: "语言、语气、地区等应用偏好",
+    seasonalThisWeek: "本周",
+    seasonalRhythm: "节奏",
   },
 };
 

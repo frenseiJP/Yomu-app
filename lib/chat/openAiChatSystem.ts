@@ -121,16 +121,20 @@ export function normalizeUiLang(raw: unknown): UiLang | null {
 }
 
 export function buildOutputLanguageBlock(uiLang: UiLang): string {
-  if (uiLang === "ja") {
-    return BASE_SYSTEM_JA_UI_EXTRA;
-  }
   const name = UI_LANG_NAME[uiLang];
-  return [
-    "=== OUTPUT LANGUAGE ===",
-    `Write all explanations and coaching in ${name}.`,
-    "Japanese appears only in examples using: Japanese (romaji) — English meaning.",
-    "Even if the user writes in Japanese, keep explanations in " + name + ".",
-  ].join("\n");
+  const lines = [
+    "=== OUTPUT LANGUAGE (CRITICAL — UI WINS) ===",
+    `The learner's UI language is ${name} (${uiLang}).`,
+    `Write ALL coaching, explanations, grammar notes, and the "whyEnglish" JSON field in ${name}.`,
+    "NEVER infer response language from the user's message language.",
+    "If UI is Japanese and the user writes in English → explain in Japanese.",
+    "If UI is English and the user writes in Japanese → explain in English.",
+    "Japanese example lines still use: Japanese (romaji) — English gloss after the em dash.",
+  ];
+  if (uiLang === "ja") {
+    return [BASE_SYSTEM_JA_UI_EXTRA, ...lines].join("\n");
+  }
+  return lines.join("\n");
 }
 
 const STRUCTURED_JSON_BLOCK = `
@@ -161,8 +165,11 @@ If replyMode is "explain" OR "reading":
 
 If replyMode is "correction":
   Required: "replyMode", "niceLine", "studentSentence", "studentRomaji", "correctedSentence", "correctedRomaji", "correctedEnglish", "whyEnglish", "otherWay1", "otherWay1Romaji", "otherWay1English", "otherWay2", "otherWay2Romaji", "otherWay2English"
+  NOTE: "whyEnglish" is a legacy field name — its content MUST be in the UI language (not English unless UI is English).
 
 Plain string values only — no markdown fences inside JSON values.
+
+LANGUAGE REMINDER: The "answer" and "whyEnglish" fields must match the UI language block above — never mirror the user's input language.
 
 CONTEXT: Prior assistant messages may include compact tags like [correction ...] or [explain ...]. Use them to stay consistent — do not contradict earlier corrections.
 

@@ -7,7 +7,10 @@ export type PlanId = typeof PLAN_FREE | typeof PLAN_PRO;
 export const GUEST_CHAT_MAX_TURNS = 3;
 
 /** Logged-in free plan: chat messages per calendar day (UTC). */
-export const FREE_DAILY_CHAT_MESSAGES = 30;
+export const FREE_DAILY_CHAT_MESSAGES = 15;
+
+/** Logged-in free plan: phrase/word saves per calendar day (UTC). */
+export const FREE_DAILY_SAVE_ITEMS = 10;
 
 /** Pro plan: generous daily cap (pre-Stripe placeholder). */
 export const PRO_DAILY_CHAT_MESSAGES = 500;

@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 import { buildReplySections, chunkProse, type ReplySection } from "@/lib/chat/replySections";
+import { getReplySectionLabels, type ReplySectionLabels } from "@/lib/i18n/chatActionsCopy";
+import type { Lang } from "@/src/utils/i18n/types";
 import type { FtueCoachPayload } from "@/lib/ftue/types";
 
 type PhrasePair = [string, string, string?];
@@ -9,6 +11,7 @@ type PhrasePair = [string, string, string?];
 type Props = {
   text: string;
   payload?: FtueCoachPayload | null;
+  lang?: Lang;
   renderInline: (line: string) => ReactNode;
 };
 
@@ -29,11 +32,13 @@ function LabelSection({
   label,
   body,
   hideLabel,
+  readFullLabel,
   renderInline,
 }: {
   label: string;
   body: string;
   hideLabel?: boolean;
+  readFullLabel: string;
   renderInline: (line: string) => ReactNode;
 }) {
   if (hideLabel || !label) {
@@ -58,7 +63,7 @@ function LabelSection({
       <SectionLabel>{hideLabel ? "" : label}</SectionLabel>
       <BodyBlock>{renderInline(preview)}{body.length > preview.length ? "…" : ""}</BodyBlock>
       <details className="mt-1 rounded-lg border border-slate-800/50 bg-slate-900/30 px-2 py-1.5">
-        <summary className="cursor-pointer text-[11px] font-medium text-slate-400">Read full explanation</summary>
+        <summary className="cursor-pointer text-[11px] font-medium text-slate-400">{readFullLabel}</summary>
         <div className="mt-2">
           <BodyBlock>{renderInline(body)}</BodyBlock>
         </div>
@@ -75,7 +80,11 @@ function BodyBlock({ children }: { children: ReactNode }) {
   );
 }
 
-function renderSections(sections: ReplySection[], renderInline: (line: string) => ReactNode) {
+function renderSections(
+  sections: ReplySection[],
+  labels: ReplySectionLabels,
+  renderInline: (line: string) => ReactNode,
+) {
   return (
     <div className="flex flex-col gap-4">
       {sections.map((s, i) => {
@@ -93,6 +102,7 @@ function renderSections(sections: ReplySection[], renderInline: (line: string) =
               label={s.label}
               body={s.body}
               hideLabel={s.hideLabel}
+              readFullLabel={labels.readFullExplanation}
               renderInline={renderInline}
             />
           );
@@ -135,7 +145,7 @@ function renderSections(sections: ReplySection[], renderInline: (line: string) =
 }
 
 /** Parse legacy plain-text coach messages still in history. */
-function legacySectionsFromText(text: string): ReplySection[] | null {
+function legacySectionsFromText(text: string, labels: ReplySectionLabels): ReplySection[] | null {
   const t = text.trim();
   if (!t) return null;
 
@@ -176,9 +186,9 @@ function legacySectionsFromText(text: string): ReplySection[] | null {
     }
   };
 
-  pullBlock(/What you wrote:|You wrote:/i, "You wrote");
-  pullBlock(/Corrected version:|Better:/i, "Better");
-  pullBlock(/What to adjust:|Why:/i, "Why");
+  pullBlock(/What you wrote:|You wrote:/i, labels.youWrote);
+  pullBlock(/Corrected version:|Better:/i, labels.better);
+  pullBlock(/What to adjust:|Why:/i, labels.why);
 
   const otherIdx = lines.findIndex((l) => /Alternative ways:|Other ways:/i.test(l));
   if (otherIdx >= 0) {
@@ -190,29 +200,30 @@ function legacySectionsFromText(text: string): ReplySection[] | null {
       i++;
     }
     if (items.length) {
-      sections.push({ kind: "bullets", label: "Other ways", items });
+      sections.push({ kind: "bullets", label: labels.otherWays, items });
     }
   }
 
   if (lines.some((l) => /Try again/i.test(l))) {
-    sections.push({ kind: "cta", text: "Try again 👇" });
+    sections.push({ kind: "cta", text: labels.tryAgain });
   }
 
   return sections.length ? sections : null;
 }
 
-export default function AssistantMessageBody({ text, payload, renderInline }: Props) {
+export default function AssistantMessageBody({ text, payload, lang = "en", renderInline }: Props) {
+  const labels = getReplySectionLabels(lang);
   const sections = payload
-    ? buildReplySections(payload)
-    : legacySectionsFromText(text);
+    ? buildReplySections(payload, undefined, labels)
+    : legacySectionsFromText(text, labels);
 
   if (sections?.length) {
-    return renderSections(sections, renderInline);
+    return renderSections(sections, labels, renderInline);
   }
 
   const blocks = chunkProse(text, 2);
   if (blocks.length > 1) {
-    return renderSections([{ kind: "paragraphs", blocks }], renderInline);
+    return renderSections([{ kind: "paragraphs", blocks }], labels, renderInline);
   }
 
   return <BodyBlock>{renderInline(text)}</BodyBlock>;

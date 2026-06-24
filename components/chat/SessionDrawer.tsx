@@ -6,6 +6,8 @@ type Props = {
   open: boolean;
   sessions: ChatSession[];
   activeId: string | null;
+  newChatLabel: string;
+  deleteLabel: string;
   onClose: () => void;
   onNewChat: () => void;
   onOpenSession: (id: string) => void;
@@ -21,6 +23,8 @@ export default function SessionDrawer({
   open,
   sessions,
   activeId,
+  newChatLabel,
+  deleteLabel,
   onClose,
   onNewChat,
   onOpenSession,
@@ -41,7 +45,7 @@ export default function SessionDrawer({
           onClick={onNewChat}
           className="mb-3 w-full rounded-xl bg-wa-ruri px-3 py-2 text-sm font-medium text-white"
         >
-          New Chat
+          {newChatLabel}
         </button>
         <ul className="space-y-2 overflow-y-auto pb-6">
           {sessions.map((s) => (
@@ -57,7 +61,7 @@ export default function SessionDrawer({
                 onClick={() => onDeleteSession(s.id)}
                 className="mt-2 text-[11px] text-slate-500 hover:text-red-400"
               >
-                Delete
+                {deleteLabel}
               </button>
             </li>
           ))}

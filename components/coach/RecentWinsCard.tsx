@@ -5,6 +5,7 @@ import type { RecentWin } from "@/lib/coach/recentWins";
 type Props = {
   title: string;
   wins: RecentWin[];
+  emptyMessage: string;
   isLightTheme: boolean;
 };
 
@@ -13,9 +14,7 @@ function withBlossom(body: string): string {
   return `🌸 ${body}`;
 }
 
-export default function RecentWinsCard({ title, wins, isLightTheme }: Props) {
-  if (wins.length === 0) return null;
-
+export default function RecentWinsCard({ title, wins, emptyMessage, isLightTheme }: Props) {
   return (
     <section
       className={`rounded-2xl border p-4 ${
@@ -31,18 +30,28 @@ export default function RecentWinsCard({ title, wins, isLightTheme }: Props) {
       >
         {title}
       </p>
-      <ul className="mt-2 space-y-1.5">
-        {wins.map((win) => (
-          <li
-            key={win.id}
-            className={`text-[13px] leading-snug ${
-              isLightTheme ? "text-emerald-950" : "text-emerald-100"
-            }`}
-          >
-            {withBlossom(win.body)}
-          </li>
-        ))}
-      </ul>
+      {wins.length === 0 ? (
+        <p
+          className={`mt-2 text-[13px] leading-snug ${
+            isLightTheme ? "text-emerald-900/80" : "text-emerald-100/90"
+          }`}
+        >
+          {emptyMessage}
+        </p>
+      ) : (
+        <ul className="mt-2 space-y-1.5">
+          {wins.map((win) => (
+            <li
+              key={win.id}
+              className={`text-[13px] leading-snug ${
+                isLightTheme ? "text-emerald-950" : "text-emerald-100"
+              }`}
+            >
+              {withBlossom(win.body)}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

@@ -2,7 +2,7 @@ import { getLearnerVocabulary } from "@/lib/vocabulary/learnerStats";
 import { listTopicPracticeResultsByUser, TOPIC_PROMPTS } from "@/lib/topic/service";
 import type { Lang } from "@/src/utils/i18n/types";
 
-export type WeeklySummaryItem = { id: string; body: string };
+export type WeeklySummaryItem = { id: string; body: string; placeholder?: boolean };
 
 function weekStart(): Date {
   const d = new Date();
@@ -32,10 +32,10 @@ function topicCategoryLabel(category: string, lang: Lang): string {
       zh: "礼貌道歉",
     },
     travel: {
-      en: "travel",
-      ja: "旅行",
-      ko: "여행",
-      zh: "旅行",
+      en: "travel Japanese",
+      ja: "旅行の日本語",
+      ko: "여행 일본어",
+      zh: "旅行日语",
     },
     other: {
       en: "daily conversation",
@@ -45,6 +45,36 @@ function topicCategoryLabel(category: string, lang: Lang): string {
     },
   };
   return labels[category]?.[lang] ?? labels.other[lang];
+}
+
+function placeholderItems(lang: Lang): WeeklySummaryItem[] {
+  const copy: Record<Lang, string[]> = {
+    en: [
+      "You practiced travel Japanese this week.",
+      "You saved useful phrases for review.",
+      "Your coach is watching your rhythm — chat again to build momentum.",
+    ],
+    ja: [
+      "今週は旅行の日本語を練習しました。",
+      "復習用に役立つフレーズを保存しました。",
+      "コーチがあなたのペースを見ています。チャットを続けて勢いをつけましょう。",
+    ],
+    ko: [
+      "이번 주 여행 일본어를 연습했어요.",
+      "복습용 표현을 저장했어요.",
+      "코치가 학습 리듬을 지켜보고 있어요. 채팅을 이어가 보세요.",
+    ],
+    zh: [
+      "本周你练习了旅行日语。",
+      "你保存了实用表达以便复习。",
+      "教练在关注你的学习节奏——继续聊天来保持动力。",
+    ],
+  };
+  return (copy[lang] ?? copy.en).map((body, i) => ({
+    id: `placeholder-${i}`,
+    body,
+    placeholder: true,
+  }));
 }
 
 export function buildWeeklyCoachSummary(userId: string, lang: Lang): WeeklySummaryItem[] {
@@ -109,5 +139,6 @@ export function buildWeeklyCoachSummary(userId: string, lang: Lang): WeeklySumma
     });
   }
 
-  return items.slice(0, 3);
+  if (items.length > 0) return items.slice(0, 3);
+  return placeholderItems(lang);
 }

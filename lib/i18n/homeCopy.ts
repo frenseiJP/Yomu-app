@@ -18,6 +18,7 @@ export type HomeCopy = {
   openChatHint: string;
   coachNotes: string;
   recentWins: string;
+  recentWinsEmpty: string;
   weeklyCoachSummary: string;
   dailyReflection: string;
   startReflection: string;
@@ -45,6 +46,7 @@ const COPY: Record<Lang, HomeCopy> = {
     openChatHint: "Open chat to start today's practice.",
     coachNotes: "Coach notes",
     recentWins: "Recent wins",
+    recentWinsEmpty: "No wins yet. Complete a mission to start building momentum.",
     weeklyCoachSummary: "Your coach noticed…",
     dailyReflection: "Daily reflection",
     startReflection: "Try in chat →",
@@ -70,6 +72,7 @@ const COPY: Record<Lang, HomeCopy> = {
     openChatHint: "チャットを開いて今日の練習を始めましょう。",
     coachNotes: "コーチメモ",
     recentWins: "最近の成果",
+    recentWinsEmpty: "まだ成果がありません。ミッションを完了して勢いをつけましょう。",
     weeklyCoachSummary: "コーチが気づいたこと…",
     dailyReflection: "今日の振り返り",
     startReflection: "チャットで試す →",
@@ -95,6 +98,7 @@ const COPY: Record<Lang, HomeCopy> = {
     openChatHint: "채팅을 열어 오늘의 연습을 시작하세요.",
     coachNotes: "코치 노트",
     recentWins: "최근 성과",
+    recentWinsEmpty: "아직 성과가 없어요. 미션을 완료해 리듬을 만들어 보세요.",
     weeklyCoachSummary: "코치가 알아챈 점…",
     dailyReflection: "오늘의 회고",
     startReflection: "채팅에서 시도 →",
@@ -120,6 +124,7 @@ const COPY: Record<Lang, HomeCopy> = {
     openChatHint: "打开聊天开始今日练习。",
     coachNotes: "教练笔记",
     recentWins: "最近成果",
+    recentWinsEmpty: "还没有成果。完成任务来建立学习动力吧。",
     weeklyCoachSummary: "教练注意到…",
     dailyReflection: "每日反思",
     startReflection: "在聊天中试试 →",

@@ -149,7 +149,7 @@ import { maybeInlineCoachNote } from "@/lib/coach/inlineNote";
 import { buildWeeklyCoachSummary } from "@/lib/coach/weeklySummary";
 import { getHomeCopy } from "@/lib/i18n/homeCopy";
 import { getProgressCopy } from "@/lib/i18n/progressCopy";
-import { getChatActionsCopy } from "@/lib/i18n/chatActionsCopy";
+import { getChatActionsCopy, type ChatActionsCopy } from "@/lib/i18n/chatActionsCopy";
 import { getSettingsPlanCopy } from "@/lib/i18n/settingsPlanCopy";
 import { buildRetentionMissionChatOpener, localizeRetentionMission } from "@/lib/i18n/missionCopy";
 import { getSkillTreeLabel, getSkillTreeHint } from "@/lib/i18n/skillTree";
@@ -282,20 +282,24 @@ const SESSION_GOAL_OPTIONS: { id: SessionGoalId; labelKey: SessionGoalLabelKey }
   { id: "concise", labelKey: "sessionGoalConcise" },
 ];
 
-function buildGoalFeedback(goal: SessionGoalId, payload?: FtueCoachPayload): string | undefined {
+function buildGoalFeedback(
+  goal: SessionGoalId,
+  copy: ChatActionsCopy,
+  payload?: FtueCoachPayload,
+): string | undefined {
   if (!payload || payload.replyMode !== "correction") return undefined;
-  if (goal === "natural") return "Goal check: phrasing became more natural.";
+  if (goal === "natural") return copy.goalCheckNatural;
   if (goal === "particles")
     return /は|が|を|に|で/.test(payload.correctedSentence)
-      ? "Goal check: particle usage is getting clearer."
-      : "Goal check: keep focusing on particles in your next line.";
+      ? copy.goalCheckParticlesClear
+      : copy.goalCheckParticlesFocus;
   if (goal === "polite")
     return /です|ます|でした|ください/.test(payload.correctedSentence)
-      ? "Goal check: politeness level matches better."
-      : "Goal check: add polite endings for this goal.";
+      ? copy.goalCheckPoliteMatch
+      : copy.goalCheckPoliteAdd;
   return payload.correctedSentence.length <= 32
-    ? "Goal check: concise sentence achieved."
-    : "Goal check: try one shorter version next.";
+    ? copy.goalCheckConciseDone
+    : copy.goalCheckConciseShorter;
 }
 
 function weakPointDrillPrompt(cat: MistakeCategory | undefined): string | null {
@@ -2291,7 +2295,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           ? "Nice improvement 👍\nYou sound more natural already.\n\n" + core
           : core;
         const storedFtue = addAssistantMessage(habitUserId, sessionId, body);
-        const goalFbFtue = showMicro ? undefined : buildGoalFeedback(sessionGoal, payload);
+        const goalFbFtue = showMicro ? undefined : buildGoalFeedback(sessionGoal, chatActionsCopy, payload);
         const turnIndexFtue = countAssistantTurns(messages);
         const coachInlineNoteFtue = showMicro
           ? undefined
@@ -2340,7 +2344,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           ? "Nice improvement 👍\nYou sound more natural already.\n\n" + core
           : core;
         const storedFtueFb = addAssistantMessage(habitUserId, sessionId, body);
-        const goalFbFtueFb = showMicro ? undefined : buildGoalFeedback(sessionGoal, payload);
+        const goalFbFtueFb = showMicro ? undefined : buildGoalFeedback(sessionGoal, chatActionsCopy, payload);
         const turnIndexFtueFb = countAssistantTurns(messages);
         const coachInlineNoteFtueFb = showMicro
           ? undefined
@@ -2478,7 +2482,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       const body = buildFtueCoachMessage(payload, text);
       accumulated = body;
       const stored = addAssistantMessage(habitUserId, sessionId, body);
-      const goalFb = buildGoalFeedback(sessionGoal, payload);
+      const goalFb = buildGoalFeedback(sessionGoal, chatActionsCopy, payload);
       const turnIndex = countAssistantTurns(messages);
       const coachInlineNote = computeCoachInlineNote(
         habitUserId,
@@ -3074,11 +3078,21 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   : undefined
               }
             >
-              <SeasonalProgressCard state={seasonalState} isLightTheme={isLightTheme} />
+              <SeasonalProgressCard
+                state={seasonalState}
+                isLightTheme={isLightTheme}
+                thisWeekLabel={progressCopy.seasonalThisWeek}
+                rhythmLabel={progressCopy.seasonalRhythm}
+              />
             </div>
 
             <CoachNotesCard title={homeCopy.coachNotes} notes={coachNotes} isLightTheme={isLightTheme} />
-            <RecentWinsCard title={homeCopy.recentWins} wins={recentWins} isLightTheme={isLightTheme} />
+            <RecentWinsCard
+              title={homeCopy.recentWins}
+              wins={recentWins}
+              emptyMessage={homeCopy.recentWinsEmpty}
+              isLightTheme={isLightTheme}
+            />
 
             {weeklyGoalStatus ? (
               <WeeklyCategoryGoalCard
@@ -3967,6 +3981,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                           <AssistantMessageBody
                             text={displayText}
                             payload={msg.senseiPayload}
+                            lang={appLang as Lang}
                             renderInline={(line) =>
                               renderMessageWithVocab(
                                 line,
@@ -4674,6 +4689,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         open={sessionDrawerOpen}
         sessions={chatSessions}
         activeId={currentSessionId}
+        newChatLabel={chatActionsCopy.newChat}
+        deleteLabel={chatActionsCopy.deleteSession}
         onClose={() => setSessionDrawerOpen(false)}
         onNewChat={() => createNewSession()}
         onOpenSession={openSession}

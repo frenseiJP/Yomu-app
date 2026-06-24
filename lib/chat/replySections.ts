@@ -1,4 +1,7 @@
 import { formatJaRomajiLine, stripJaWrappers } from "@/lib/chat/japaneseFormat";
+import type { ReplySectionLabels } from "@/lib/i18n/chatActionsCopy";
+import { getReplySectionLabels } from "@/lib/i18n/chatActionsCopy";
+import type { Lang } from "@/src/utils/i18n/types";
 import type { FtueCoachPayload } from "@/lib/ftue/types";
 
 export type ReplySection =
@@ -21,7 +24,11 @@ export function chunkProse(text: string, maxSentencesPerBlock = 2): string[] {
   return blocks;
 }
 
-export function buildReplySections(p: FtueCoachPayload, studentLine?: string): ReplySection[] {
+export function buildReplySections(
+  p: FtueCoachPayload,
+  studentLine?: string,
+  labels: ReplySectionLabels = getReplySectionLabels("en"),
+): ReplySection[] {
   if (p.replyMode === "explain" || p.replyMode === "reading") {
     const answer = (p.answer ?? p.whyEnglish ?? "").trim();
     const sections: ReplySection[] = [];
@@ -36,20 +43,20 @@ export function buildReplySections(p: FtueCoachPayload, studentLine?: string): R
   }
 
   const sections: ReplySection[] = [];
-  sections.push({ kind: "praise", text: (p.niceLine ?? "Nice 👍").trim() });
+  sections.push({ kind: "praise", text: (p.niceLine ?? labels.niceDefault).trim() });
 
   const student = (p.studentSentence ?? studentLine ?? "").trim();
   if (student) {
     sections.push({
       kind: "label",
-      label: "You wrote",
+      label: labels.youWrote,
       body: formatJaRomajiLine(stripJaWrappers(student), p.studentRomaji),
     });
   }
 
   sections.push({
     kind: "label",
-    label: "Better",
+    label: labels.better,
     body: formatJaRomajiLine(
       stripJaWrappers(p.correctedSentence),
       p.correctedRomaji,
@@ -61,7 +68,7 @@ export function buildReplySections(p: FtueCoachPayload, studentLine?: string): R
   whyChunks.forEach((chunk, i) => {
     sections.push({
       kind: "label",
-      label: "Why",
+      label: labels.why,
       body: chunk,
       hideLabel: i > 0,
     });
@@ -81,7 +88,7 @@ export function buildReplySections(p: FtueCoachPayload, studentLine?: string): R
   if (o1) bullets.push(o1);
   if (o2) bullets.push(o2);
   if (bullets.length) {
-    sections.push({ kind: "bullets", label: "Other ways", items: bullets });
+    sections.push({ kind: "bullets", label: labels.otherWays, items: bullets });
   }
 
   const shadowing = stripJaWrappers(p.correctedSentence)
@@ -90,10 +97,10 @@ export function buildReplySections(p: FtueCoachPayload, studentLine?: string): R
     .filter((x) => x.length >= 2)
     .slice(0, 5);
   if (shadowing.length >= 2) {
-    sections.push({ kind: "bullets", label: "Shadowing chunks", items: shadowing });
+    sections.push({ kind: "bullets", label: labels.shadowingChunks, items: shadowing });
   }
 
-  sections.push({ kind: "cta", text: "Try again 👇" });
+  sections.push({ kind: "cta", text: labels.tryAgain });
   return sections;
 }
 

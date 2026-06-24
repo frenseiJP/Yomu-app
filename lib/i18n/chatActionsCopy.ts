@@ -1,6 +1,17 @@
 import type { Lang } from "@/src/utils/i18n/types";
 
-export type ChatActionsCopy = {
+export type ReplySectionLabels = {
+  youWrote: string;
+  better: string;
+  why: string;
+  otherWays: string;
+  shadowingChunks: string;
+  tryAgain: string;
+  readFullExplanation: string;
+  niceDefault: string;
+};
+
+export type ChatActionsCopy = ReplySectionLabels & {
   coachNoteLabel: string;
   reuseCorrected: string;
   practiceCorrection: string;
@@ -24,10 +35,27 @@ export type ChatActionsCopy = {
   speaking: string;
   sayOutLoud: string;
   dismiss: string;
+  newChat: string;
+  deleteSession: string;
+  goalCheckNatural: string;
+  goalCheckParticlesClear: string;
+  goalCheckParticlesFocus: string;
+  goalCheckPoliteMatch: string;
+  goalCheckPoliteAdd: string;
+  goalCheckConciseDone: string;
+  goalCheckConciseShorter: string;
 };
 
 const COPY: Record<Lang, ChatActionsCopy> = {
   en: {
+    youWrote: "You wrote",
+    better: "Better",
+    why: "Why",
+    otherWays: "Other ways",
+    shadowingChunks: "Shadowing chunks",
+    tryAgain: "Try again 👇",
+    readFullExplanation: "Read full explanation",
+    niceDefault: "Nice 👍",
     coachNoteLabel: "Coach Note 🌸",
     reuseCorrected: "Reuse corrected sentence",
     practiceCorrection: "Practice this correction",
@@ -51,8 +79,25 @@ const COPY: Record<Lang, ChatActionsCopy> = {
     speaking: "Speaking",
     sayOutLoud: "Say it out loud",
     dismiss: "Dismiss",
+    newChat: "New Chat",
+    deleteSession: "Delete",
+    goalCheckNatural: "Goal check: phrasing became more natural.",
+    goalCheckParticlesClear: "Goal check: particle usage is getting clearer.",
+    goalCheckParticlesFocus: "Goal check: keep focusing on particles in your next line.",
+    goalCheckPoliteMatch: "Goal check: politeness level matches better.",
+    goalCheckPoliteAdd: "Goal check: add polite endings for this goal.",
+    goalCheckConciseDone: "Goal check: concise sentence achieved.",
+    goalCheckConciseShorter: "Goal check: try one shorter version next.",
   },
   ja: {
+    youWrote: "あなたの文",
+    better: "より自然な言い方",
+    why: "理由",
+    otherWays: "ほかの言い方",
+    shadowingChunks: "シャドーイング用",
+    tryAgain: "もう一度試す 👇",
+    readFullExplanation: "説明をすべて読む",
+    niceDefault: "いいですね 👍",
     coachNoteLabel: "コーチメモ 🌸",
     reuseCorrected: "添削文を再利用",
     practiceCorrection: "この添削を練習",
@@ -76,8 +121,25 @@ const COPY: Record<Lang, ChatActionsCopy> = {
     speaking: "スピーキング",
     sayOutLoud: "声に出して練習",
     dismiss: "閉じる",
+    newChat: "新しいチャット",
+    deleteSession: "削除",
+    goalCheckNatural: "目標チェック：表現がより自然になりました。",
+    goalCheckParticlesClear: "目標チェック：助詞の使い方が明確になってきました。",
+    goalCheckParticlesFocus: "目標チェック：次は助詞に意識を向けてみましょう。",
+    goalCheckPoliteMatch: "目標チェック：丁寧さのレベルが合っています。",
+    goalCheckPoliteAdd: "目標チェック：丁寧な語尾を意識してみましょう。",
+    goalCheckConciseDone: "目標チェック：簡潔な文になりました。",
+    goalCheckConciseShorter: "目標チェック：もう少し短い文も試してみましょう。",
   },
   ko: {
+    youWrote: "내가 쓴 문장",
+    better: "더 자연스러운 표현",
+    why: "이유",
+    otherWays: "다른 표현",
+    shadowingChunks: "섀도잉 구간",
+    tryAgain: "다시 시도 👇",
+    readFullExplanation: "설명 전체 보기",
+    niceDefault: "좋아요 👍",
     coachNoteLabel: "코치 노트 🌸",
     reuseCorrected: "교정 문장 재사용",
     practiceCorrection: "이 교정 연습하기",
@@ -101,8 +163,25 @@ const COPY: Record<Lang, ChatActionsCopy> = {
     speaking: "말하기",
     sayOutLoud: "소리 내어 연습",
     dismiss: "닫기",
+    newChat: "새 채팅",
+    deleteSession: "삭제",
+    goalCheckNatural: "목표 확인: 표현이 더 자연스러워졌어요.",
+    goalCheckParticlesClear: "목표 확인: 조사 사용이 더 분명해졌어요.",
+    goalCheckParticlesFocus: "목표 확인: 다음에는 조사에 집중해 보세요.",
+    goalCheckPoliteMatch: "목표 확인: 정중함 수준이 더 잘 맞아요.",
+    goalCheckPoliteAdd: "목표 확인: 정중한 어미를 추가해 보세요.",
+    goalCheckConciseDone: "목표 확인: 간결한 문장이 됐어요.",
+    goalCheckConciseShorter: "목표 확인: 더 짧은 버전도 시도해 보세요.",
   },
   zh: {
+    youWrote: "你写的",
+    better: "更好的说法",
+    why: "原因",
+    otherWays: "其他说法",
+    shadowingChunks: "跟读片段",
+    tryAgain: "再试一次 👇",
+    readFullExplanation: "阅读完整解释",
+    niceDefault: "不错 👍",
     coachNoteLabel: "教练笔记 🌸",
     reuseCorrected: "复用订正句",
     practiceCorrection: "练习这条订正",
@@ -126,9 +205,32 @@ const COPY: Record<Lang, ChatActionsCopy> = {
     speaking: "口语",
     sayOutLoud: "大声练习",
     dismiss: "关闭",
+    newChat: "新聊天",
+    deleteSession: "删除",
+    goalCheckNatural: "目标检查：表达更自然了。",
+    goalCheckParticlesClear: "目标检查：助词用法更清晰了。",
+    goalCheckParticlesFocus: "目标检查：下一句请继续关注助词。",
+    goalCheckPoliteMatch: "目标检查：礼貌程度更匹配了。",
+    goalCheckPoliteAdd: "目标检查：请加上礼貌语尾。",
+    goalCheckConciseDone: "目标检查：句子更简洁了。",
+    goalCheckConciseShorter: "目标检查：试试更短的版本。",
   },
 };
 
 export function getChatActionsCopy(lang: Lang): ChatActionsCopy {
   return COPY[lang] ?? COPY.en;
+}
+
+export function getReplySectionLabels(lang: Lang): ReplySectionLabels {
+  const c = getChatActionsCopy(lang);
+  return {
+    youWrote: c.youWrote,
+    better: c.better,
+    why: c.why,
+    otherWays: c.otherWays,
+    shadowingChunks: c.shadowingChunks,
+    tryAgain: c.tryAgain,
+    readFullExplanation: c.readFullExplanation,
+    niceDefault: c.niceDefault,
+  };
 }
