@@ -12,6 +12,7 @@ import {
 } from "@/lib/topic/service";
 import { logBetaEvent } from "@/lib/analytics/client";
 import { getTodaysTopicPrompt } from "@/lib/topic/todaysTopic";
+import { localizeTopicPrompt } from "@/lib/i18n/topicCopy";
 import type { TopicFeedback } from "@/lib/topic/types";
 
 function buildSyntheticAssistantText(f: TopicFeedback): string {
@@ -38,7 +39,10 @@ export default function TopicGuidedLearning({
   isLightTheme,
   onPracticeSaved,
 }: Props) {
-  const topic = useMemo(() => getTodaysTopicPrompt(), []);
+  const topic = useMemo(
+    () => localizeTopicPrompt(getTodaysTopicPrompt(), appLang),
+    [appLang],
+  );
   const heroLine = topic.dailyQuestion ?? topic.prompt;
 
   const [draft, setDraft] = useState("");

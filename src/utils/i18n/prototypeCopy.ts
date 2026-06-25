@@ -173,6 +173,8 @@ export type PrototypeUiText = {
   habitReviewCount: string;
   habitReviewWordPrompt: string;
   habitReviewMistakePrompt: string;
+  habitReviewWordTab: string;
+  habitReviewFixTab: string;
   habitGotIt: string;
   habitAgain: string;
   habitProgressTitle: string;
@@ -199,6 +201,13 @@ export type PrototypeUiText = {
   vocabTypeWord: string;
   vocabTypePhrase: string;
   vocabTypeCorrection: string;
+  vocabSourceChat: string;
+  vocabSourceTopic: string;
+  vocabSourceReview: string;
+  vocabSourceManual: string;
+  vocabReviewNew: string;
+  vocabReviewLearning: string;
+  vocabReviewReviewed: string;
   vocabDetailSavedPrefix: string;
   vocabDetailMeaning: string;
   vocabDetailExample: string;
@@ -410,6 +419,8 @@ const UI_EN: PrototypeUiText = {
   habitReviewCount: "You have {n} items to review today",
   habitReviewWordPrompt: "Recall this word — what does it mean or when would you use it?",
   habitReviewMistakePrompt: "Rewrite this more naturally:",
+  habitReviewWordTab: "Words",
+  habitReviewFixTab: "Fix",
   habitGotIt: "Got it",
   habitAgain: "Not yet",
   habitProgressTitle: "Your progress",
@@ -436,6 +447,13 @@ const UI_EN: PrototypeUiText = {
   vocabTypeWord: "Word",
   vocabTypePhrase: "Phrase",
   vocabTypeCorrection: "Correction",
+  vocabSourceChat: "Chat",
+  vocabSourceTopic: "Topic",
+  vocabSourceReview: "Review",
+  vocabSourceManual: "Manual",
+  vocabReviewNew: "New",
+  vocabReviewLearning: "Learning",
+  vocabReviewReviewed: "Reviewed",
   vocabDetailSavedPrefix: "Saved",
   vocabDetailMeaning: "Meaning / context",
   vocabDetailExample: "Example",
@@ -643,6 +661,8 @@ const UI_JA: PrototypeUiText = {
   habitReviewCount: "今日の復習が {n} 件あります",
   habitReviewWordPrompt: "この語の意味や、使う場面を思い出してみましょう。",
   habitReviewMistakePrompt: "より自然な日本語に直してみましょう:",
+  habitReviewWordTab: "語",
+  habitReviewFixTab: "直す",
   habitGotIt: "できた",
   habitAgain: "もう一度",
   habitProgressTitle: "進捗",
@@ -658,7 +678,7 @@ const UI_JA: PrototypeUiText = {
   vocabLibCountSaved: "{n} 件保存",
   vocabLibCountReview: "復習 {n} 件",
   vocabLibFilterAll: "すべて",
-  vocabLibFilterPhrase: "表現",
+  vocabLibFilterPhrase: "フレーズ",
   vocabLibFilterWord: "語",
   vocabLibFilterReview: "復習",
   vocabLibSearchPh: "語句・意味・タグで検索…",
@@ -667,8 +687,15 @@ const UI_JA: PrototypeUiText = {
     "該当する項目がありません。検索を変える・タグを外す・チャットから表現を保存、を試してください。",
   vocabLibBackAria: "アプリに戻る",
   vocabTypeWord: "語",
-  vocabTypePhrase: "表現",
+  vocabTypePhrase: "フレーズ",
   vocabTypeCorrection: "矯正",
+  vocabSourceChat: "チャット",
+  vocabSourceTopic: "トピック",
+  vocabSourceReview: "復習",
+  vocabSourceManual: "手動",
+  vocabReviewNew: "新規",
+  vocabReviewLearning: "学習中",
+  vocabReviewReviewed: "復習済み",
   vocabDetailSavedPrefix: "保存",
   vocabDetailMeaning: "意味・文脈",
   vocabDetailExample: "例文",
@@ -876,6 +903,8 @@ const UI_KO: PrototypeUiText = {
   habitReviewCount: "오늘 복습할 항목이 {n}개 있어요",
   habitReviewWordPrompt: "이 단어의 뜻이나 쓰는 상황을 떠올려 보세요.",
   habitReviewMistakePrompt: "더 자연스러운 일본어로 고쳐 보세요:",
+  habitReviewWordTab: "단어",
+  habitReviewFixTab: "고치기",
   habitGotIt: "알겠어요",
   habitAgain: "다시 볼게요",
   habitProgressTitle: "진행 상황",
@@ -902,6 +931,13 @@ const UI_KO: PrototypeUiText = {
   vocabTypeWord: "단어",
   vocabTypePhrase: "표현",
   vocabTypeCorrection: "교정",
+  vocabSourceChat: "채팅",
+  vocabSourceTopic: "토픽",
+  vocabSourceReview: "복습",
+  vocabSourceManual: "수동",
+  vocabReviewNew: "새로",
+  vocabReviewLearning: "학습 중",
+  vocabReviewReviewed: "복습 완료",
   vocabDetailSavedPrefix: "저장",
   vocabDetailMeaning: "의미·맥락",
   vocabDetailExample: "예문",
@@ -1104,6 +1140,8 @@ const UI_ZH: PrototypeUiText = {
   habitReviewCount: "今天有 {n} 项待复习",
   habitReviewWordPrompt: "回忆这个词的意思或使用场景。",
   habitReviewMistakePrompt: "把它改得更自然：",
+  habitReviewWordTab: "词",
+  habitReviewFixTab: "纠正",
   habitGotIt: "掌握了",
   habitAgain: "再练一次",
   habitProgressTitle: "进度",
@@ -1119,7 +1157,7 @@ const UI_ZH: PrototypeUiText = {
   vocabLibCountSaved: "已保存 {n} 条",
   vocabLibCountReview: "待复习 {n} 条",
   vocabLibFilterAll: "全部",
-  vocabLibFilterPhrase: "表达",
+  vocabLibFilterPhrase: "短语",
   vocabLibFilterWord: "词",
   vocabLibFilterReview: "复习",
   vocabLibSearchPh: "搜索词、释义或标签…",
@@ -1127,8 +1165,15 @@ const UI_ZH: PrototypeUiText = {
   vocabLibEmpty: "没有匹配项。可更换搜索、清除标签，或在聊天中保存表达。",
   vocabLibBackAria: "返回应用",
   vocabTypeWord: "词",
-  vocabTypePhrase: "表达",
+  vocabTypePhrase: "短语",
   vocabTypeCorrection: "纠正",
+  vocabSourceChat: "聊天",
+  vocabSourceTopic: "话题",
+  vocabSourceReview: "复习",
+  vocabSourceManual: "手动",
+  vocabReviewNew: "新",
+  vocabReviewLearning: "学习中",
+  vocabReviewReviewed: "已复习",
   vocabDetailSavedPrefix: "保存于",
   vocabDetailMeaning: "含义 / 语境",
   vocabDetailExample: "例句",

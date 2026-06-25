@@ -4,6 +4,7 @@ import { X, Trash2, CheckCircle } from "lucide-react";
 import VocabularyTypeBadge from "@/components/vocabulary/VocabularyTypeBadge";
 import type { VocabularyItem } from "@/lib/vocabulary/types";
 import type { PrototypeUiText } from "@/src/utils/i18n/prototypeCopy";
+import { vocabReviewStatusLabel, vocabSourceLabel } from "@/lib/vocabulary/uiLabels";
 
 function formatWhen(iso: string, locale: string): string {
   try {
@@ -40,16 +41,8 @@ export default function VocabularyDetailPanel({
   dateLocale,
   layout = "modal",
 }: Props) {
-  const sourceLabel =
-    item.sourceType === "chat"
-      ? "Chat"
-      : item.sourceType === "topic"
-        ? "Topic"
-        : item.sourceType === "review"
-          ? "Review"
-          : "Manual";
-  const reviewLabel =
-    item.reviewStatus === "new" ? "New" : item.reviewStatus === "learning" ? "Learning" : "Reviewed";
+  const sourceLabel = vocabSourceLabel(ui, item.sourceType);
+  const reviewLabel = vocabReviewStatusLabel(ui, item.reviewStatus);
 
   const card = (
     <div

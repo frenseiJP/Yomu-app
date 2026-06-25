@@ -75,7 +75,7 @@ export default function ReviewCard({
                   : "bg-slate-800 text-slate-300"
             }`}
           >
-            {ui.habitWordsLine.split(" ")[0] ?? "Word"}
+            {ui.habitReviewWordTab}
           </button>
         )}
         {mistakes.length > 0 && (
@@ -90,7 +90,7 @@ export default function ReviewCard({
                   : "bg-slate-800 text-slate-300"
             }`}
           >
-            Fix
+            {ui.habitReviewFixTab}
           </button>
         )}
       </div>

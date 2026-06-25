@@ -103,7 +103,7 @@ import { useVisualViewportInset } from "@/lib/chat/useVisualViewportInset";
 import SessionDrawer from "@/components/chat/SessionDrawer";
 import TopicSelector from "@/components/topic/TopicSelector";
 import TopicActions from "@/components/topic/TopicActions";
-import { buildTopicFeedbackMessage, buildTopicGuideMessage } from "@/components/topic/TopicMessageTemplate";
+import { buildTopicFeedbackMessage } from "@/components/topic/TopicMessageTemplate";
 import {
   TOPIC_PROMPTS,
   generateTopicFeedback,
@@ -111,6 +111,7 @@ import {
   saveTopicPracticeResult,
 } from "@/lib/topic/service";
 import type { TopicPrompt, TopicFeedback } from "@/lib/topic/types";
+import { localizeTopicList, localizeTopicPrompt, buildLocalizedTopicGuideMessage, scenarioPracticeLabel, scenarioSessionTitle } from "@/lib/i18n/topicCopy";
 import { getTodaysTopicPrompt } from "@/lib/topic/todaysTopic";
 import { shellTheme } from "@/lib/ui/shellTheme";
 import type { SaveCandidate } from "@/lib/save-candidates/types";
@@ -159,6 +160,7 @@ import CoachNotesCard from "@/components/coach/CoachNotesCard";
 import RecentWinsCard from "@/components/coach/RecentWinsCard";
 import WeeklyCoachSummaryCard from "@/components/coach/WeeklyCoachSummaryCard";
 import type { MistakeCategoryKey } from "@/lib/habit/types";
+import { getFtuePickerCopy } from "@/lib/i18n/ftueCopy";
 import FtuePracticePicker from "@/components/chat/FtuePracticePicker";
 import AssistantMessageBody from "@/components/chat/AssistantMessageBody";
 import BetaFeedbackPrompt from "@/components/feedback/BetaFeedbackPrompt";
@@ -1102,7 +1104,14 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   );
   const isLightTheme = uiTheme === "light";
   const th = useMemo(() => shellTheme(isLightTheme), [isLightTheme]);
-  const todaysScenario = useMemo(() => getTodaysTopicPrompt(), []);
+  const todaysScenario = useMemo(
+    () => localizeTopicPrompt(getTodaysTopicPrompt(), appLang as Lang),
+    [appLang],
+  );
+  const localizedTopicPrompts = useMemo(
+    () => localizeTopicList(TOPIC_PROMPTS, appLang as Lang),
+    [appLang],
+  );
   const savePromptLoggedRef = useRef<Set<number>>(new Set());
 
   const trackHomeCta = useCallback(
@@ -2695,15 +2704,19 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
   const startTopicScenario = useCallback(
     (topic: TopicPrompt, source = "unknown") => {
+      const localized = localizeTopicPrompt(topic, appLang as Lang);
       setRetentionMissionChatOpen(false);
       setFtueCoachActive(false);
       setFtueShowPicker(false);
-      setActiveTopicPrompt(topic);
+      setActiveTopicPrompt(localized);
       setTopicSelectorMode("hidden");
-      const guide = buildTopicGuideMessage(topic);
+      const guide = buildLocalizedTopicGuideMessage(localized, appLang as Lang);
       let sid = currentSessionId;
       if (!sid) {
-        const created = startNewChatSession(habitUserId, `Scenario: ${topic.title}`);
+        const created = startNewChatSession(
+          habitUserId,
+          scenarioSessionTitle(localized, appLang as Lang),
+        );
         sid = created.id;
         setCurrentSessionId(created.id);
         setChatSessions(getSessions(habitUserId));
@@ -2718,7 +2731,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           role: "assistant",
           baseText: guide,
           createdAt: new Date().toISOString(),
-          topicLabel: "Scenario practice",
+          topicLabel: scenarioPracticeLabel(appLang as Lang),
         },
       ]);
       void logBetaEvent({
@@ -2731,12 +2744,12 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
       setActiveView("chat");
       setSessionDrawerOpen(false);
     },
-    [habitUserId, currentSessionId, pathname],
+    [habitUserId, currentSessionId, pathname, appLang],
   );
 
   useEffect(() => {
     if (searchParams.get("scenario") !== "today") return;
-    startTopicScenario(getTodaysTopicPrompt(), "url");
+    startTopicScenario(localizeTopicPrompt(getTodaysTopicPrompt(), appLang as Lang), "url");
     setActiveView("chat");
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
@@ -2881,6 +2894,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const homeCopy = useMemo(() => getHomeCopy(appLang as Lang), [appLang]);
   const progressCopy = useMemo(() => getProgressCopy(appLang as Lang), [appLang]);
   const chatActionsCopy = useMemo(() => getChatActionsCopy(appLang as Lang), [appLang]);
+  const ftuePickerCopy = useMemo(() => getFtuePickerCopy(appLang as Lang), [appLang]);
   const settingsPlanCopy = useMemo(() => getSettingsPlanCopy(appLang as Lang), [appLang]);
   const coachNotes = useMemo(
     () => buildCoachNotes(habitUserId, appLang as Lang, jlptLevel),
@@ -4339,7 +4353,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   );
                 })()
               ) : null}
-              {ftueShowPicker ? <FtuePracticePicker onPick={beginFtue} /> : null}
+              {ftueShowPicker ? <FtuePracticePicker copy={ftuePickerCopy} onPick={beginFtue} /> : null}
               {followUpsToShow &&
               !isTyping &&
               !ftueShowPicker &&
@@ -4366,7 +4380,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   isLightTheme={isLightTheme}
                   copy={uiText}
                   mode={topicSelectorMode === "topic_list" ? "topic_list" : "entry"}
-                  topics={TOPIC_PROMPTS}
+                  topics={localizedTopicPrompts}
                   showContinueLast={chatSessions.length > 1}
                   continueChatLabel={homeCopy.continueChat}
                   onDailyMission={() => setActiveView("home")}

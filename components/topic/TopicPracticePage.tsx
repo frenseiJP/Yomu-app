@@ -12,6 +12,7 @@ import { SaveCandidateList } from "@/components/save-candidates/SaveCandidateLis
 import { recommendCandidatesForMessage, saveCandidateToVocabulary } from "@/lib/save-candidates/service";
 import type { SaveCandidate } from "@/lib/save-candidates/types";
 import { TOPIC_PROMPTS, generateTopicFeedback, saveTopicPracticeResult } from "@/lib/topic/service";
+import { localizeTopicList, localizeTopicPrompt } from "@/lib/i18n/topicCopy";
 import type { TopicFeedback, TopicPrompt } from "@/lib/topic/types";
 
 function buildAssistantBlob(feedback: TopicFeedback): string {
@@ -29,8 +30,10 @@ export default function TopicPracticePage() {
   const userId = useVocabularyUserId();
   const appLang = getLangClient();
   const isLightTheme = getStoredUiTheme() === "light";
-  const topics = TOPIC_PROMPTS;
-  const [topic, setTopic] = useState<TopicPrompt>(topics[0]!);
+  const topics = useMemo(() => localizeTopicList(TOPIC_PROMPTS, appLang), [appLang]);
+  const [topic, setTopic] = useState<TopicPrompt>(() =>
+    localizeTopicPrompt(TOPIC_PROMPTS[0]!, appLang),
+  );
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

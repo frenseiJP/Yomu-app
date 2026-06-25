@@ -2,12 +2,14 @@
 
 import { useRef, useState } from "react";
 import type { FtuePracticeMode } from "@/lib/ftue/types";
+import type { FtuePickerCopy } from "@/lib/i18n/ftueCopy";
 
 type Props = {
+  copy: FtuePickerCopy;
   onPick: (mode: FtuePracticeMode) => void;
 };
 
-export default function FtuePracticePicker({ onPick }: Props) {
+export default function FtuePracticePicker({ copy, onPick }: Props) {
   const [highlight, setHighlight] = useState<"natural" | "daily" | "free">("natural");
   const pickedRef = useRef(false);
 
@@ -28,7 +30,7 @@ export default function FtuePracticePicker({ onPick }: Props) {
   return (
     <div className="mb-3 space-y-3 rounded-2xl border border-slate-800/60 bg-slate-950/80 p-3 shadow-inner sm:p-4">
       <p className="text-center font-wa-serif text-[15px] font-semibold text-slate-50">
-        What do you want to practice?
+        {copy.title}
       </p>
       <div className="flex flex-col gap-2">
         <button
@@ -38,9 +40,9 @@ export default function FtuePracticePicker({ onPick }: Props) {
           onFocus={() => setHighlight("natural")}
           onClick={() => pick("natural")}
         >
-          <span className="block">Speak naturally</span>
+          <span className="block">{copy.speakNaturally}</span>
           <span className="mt-0.5 block text-[11px] font-normal text-slate-300/90">
-            Recommended first
+            {copy.recommendedFirst}
           </span>
         </button>
         <button
@@ -50,7 +52,7 @@ export default function FtuePracticePicker({ onPick }: Props) {
           onFocus={() => setHighlight("daily")}
           onClick={() => pick("daily")}
         >
-          Daily situation
+          {copy.dailySituation}
         </button>
         <button
           type="button"
@@ -59,7 +61,7 @@ export default function FtuePracticePicker({ onPick }: Props) {
           onFocus={() => setHighlight("free")}
           onClick={() => pick("free")}
         >
-          Free chat
+          {copy.freeChat}
         </button>
       </div>
     </div>

@@ -3,6 +3,7 @@
 import VocabularyTypeBadge from "@/components/vocabulary/VocabularyTypeBadge";
 import type { VocabularyItem } from "@/lib/vocabulary/types";
 import type { PrototypeUiText } from "@/src/utils/i18n/prototypeCopy";
+import { vocabReviewStatusLabel, vocabSourceLabel } from "@/lib/vocabulary/uiLabels";
 import { mistakeCategoryLabel } from "@/lib/vocabulary/mistakeCategory";
 
 type Props = {
@@ -12,16 +13,8 @@ type Props = {
 };
 
 export default function VocabularyListRow({ item, ui, onOpen }: Props) {
-  const sourceLabel =
-    item.sourceType === "chat"
-      ? "Chat"
-      : item.sourceType === "topic"
-        ? "Topic"
-        : item.sourceType === "review"
-          ? "Review"
-          : "Manual";
-  const reviewLabel =
-    item.reviewStatus === "new" ? "New" : item.reviewStatus === "learning" ? "Learning" : "Reviewed";
+  const sourceLabel = vocabSourceLabel(ui, item.sourceType);
+  const reviewLabel = vocabReviewStatusLabel(ui, item.reviewStatus);
   const mistakeLabel = mistakeCategoryLabel(item.mistakeCategory);
   const preview =
     item.exampleSentence?.trim() ||
