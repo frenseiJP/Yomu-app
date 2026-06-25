@@ -1,4 +1,4 @@
-const CACHE_NAME = "frensei-cache-v2";
+const CACHE_NAME = "frensei-cache-v3";
 const OFFLINE_URLS = ["/app", "/learn", "/try", "/chat", "/progress", "/report", "/vocabulary"];
 
 self.addEventListener("install", (event) => {
