@@ -100,16 +100,17 @@ async function main() {
     fail("QA-3 Google OAuth redirect", String(e));
   }
 
-  // Onboarding requires auth
+  // Onboarding requires auth (Next.js may return 200 with RSC redirect payload)
   try {
-    const res = await fetch(`${APP}/onboarding`, { redirect: "manual" });
+    const { res, text } = await fetchText(`${APP}/onboarding`, { redirect: "manual" });
     const status = res.status;
-    if (status === 307 || status === 302) {
-      const loc = res.headers.get("location") || "";
-      if (loc.includes("/login")) pass("QA-4 Onboarding auth gate", "unauthenticated → /login");
-      else fail("QA-4 Onboarding auth gate", loc);
-    } else if (status === 200) {
-      fail("QA-4 Onboarding auth gate", "expected redirect, got 200");
+    const redirectsToLogin =
+      (status === 307 || status === 302) && (res.headers.get("location") || "").includes("/login");
+    const softRedirect =
+      text.includes("NEXT_REDIRECT;replace;/login") ||
+      text.includes('content="1;url=/login"');
+    if (redirectsToLogin || softRedirect) {
+      pass("QA-4 Onboarding auth gate", "unauthenticated → /login");
     } else {
       fail("QA-4 Onboarding auth gate", `HTTP ${status}`);
     }
@@ -134,20 +135,21 @@ async function main() {
   // Beta badge in app bundle (deployed)
   try {
     const { text: appHtml } = await fetchText(`${APP}/app`);
-    const chunk =
-      appHtml.match(/YomuPrototypePage-[a-f0-9]+\.js/)?.[0] ||
-      appHtml.match(/app\/app\/page-[a-f0-9]+\.js/)?.[0];
-    if (chunk) {
-      const chunkPath = chunk.includes("/") ? chunk : `app/${chunk}`;
-      const { text: js } = await fetchText(`${APP}/_next/static/chunks/${chunkPath}`);
-      if (js.includes("getBetaBadgeCopy") || js.includes("Beta") || js.includes("ベータ")) {
-        pass("QA P1 Beta badge", "beta copy in deployed bundle");
-      } else {
-        fail("QA P1 Beta badge", "beta badge copy not found — redeploy may be pending");
+    const chunks = [...appHtml.matchAll(/\/_next\/static\/chunks\/[^"]+\.js/g)].map((m) => m[0]);
+    let found = false;
+    for (const chunkPath of chunks.slice(0, 40)) {
+      const { text: js } = await fetchText(`${APP}${chunkPath}`);
+      if (
+        js.includes("getBetaBadgeCopy") ||
+        js.includes("BetaBadge") ||
+        js.includes("ベータ")
+      ) {
+        found = true;
+        break;
       }
-    } else {
-      fail("QA P1 Beta badge", "app chunk not found in HTML");
     }
+    if (found) pass("QA P1 Beta badge", "beta copy in deployed bundle");
+    else fail("QA P1 Beta badge", "beta badge copy not found — redeploy may be pending");
   } catch (e) {
     fail("QA P1 Beta badge", String(e));
   }
