@@ -29,8 +29,8 @@ export default function LanguageSelectClient({
   const languages = useMemo(
     () =>
       [
-        ["ja", "日本語"],
         ["en", "English"],
+        ["ja", "日本語"],
         ["ko", "한국어"],
         ["zh", "中文"],
       ] as const,

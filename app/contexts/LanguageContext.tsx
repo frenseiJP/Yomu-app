@@ -40,7 +40,6 @@ function resolveClientLanguage(): Language {
   return resolveLanguage({
     savedPreference: readCookie("yomu_lang"),
     localPreference: readLocalPreference(),
-    browserLanguages: navigator.languages?.length ? navigator.languages : [navigator.language],
   });
 }
 
@@ -64,11 +63,11 @@ export function LanguageProvider({
     if (typeof document !== "undefined") {
       document.documentElement.lang = htmlLangAttribute(resolved);
     }
-    // Persist auto-detected language once when no saved cookie exists
+    // Persist base English once when no saved preference exists
     if (!readCookie("yomu_lang") && !readLocalPreference()) {
-      writeCookie("yomu_lang", resolved);
+      writeCookie("yomu_lang", "en");
       try {
-        localStorage.setItem("yomu-language", resolved);
+        localStorage.setItem("yomu-language", "en");
       } catch {
         /* ignore */
       }

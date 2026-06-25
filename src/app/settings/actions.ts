@@ -7,7 +7,7 @@ import { isMissingTableError } from "@/src/utils/supabase/schema-errors";
 import type { Lang } from "@/src/utils/i18n/types";
 import { PROFILE_ICON_DEFAULT } from "@/lib/profile/icon";
 
-const ALLOWED_DISPLAY_LANG: Lang[] = ["ja", "en", "ko", "zh"];
+const ALLOWED_DISPLAY_LANG: Lang[] = ["en", "ja", "ko", "zh"];
 
 function parseDisplayLang(raw: string): Lang {
   return ALLOWED_DISPLAY_LANG.includes(raw as Lang) ? (raw as Lang) : "en";

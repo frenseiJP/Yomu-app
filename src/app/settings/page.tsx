@@ -58,7 +58,7 @@ export default async function SettingsPage() {
   const langCookie = cookies().get("yomu_lang")?.value;
   const profileSettingsLanguage = profileRows?.[0]?.settings_language;
 
-  const allowedDisplayLang: Lang[] = ["ja", "en", "ko", "zh"];
+  const allowedDisplayLang: Lang[] = ["en", "ja", "ko", "zh"];
   const langCookieRaw: Lang | null =
     langCookie && allowedDisplayLang.includes(langCookie as Lang)
       ? (langCookie as Lang)

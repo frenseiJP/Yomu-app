@@ -35,16 +35,8 @@ export function getLangClient(): Lang {
     /* private mode */
   }
 
-  const browserLanguages =
-    typeof navigator !== "undefined"
-      ? navigator.languages?.length
-        ? navigator.languages
-        : [navigator.language]
-      : undefined;
-
   return resolveLanguage({
     savedPreference: readCookie("yomu_lang"),
     localPreference,
-    browserLanguages,
   });
 }

@@ -828,7 +828,7 @@ async function saveUserProfileLanguageSettings(
     user.email?.split("@")[0] ||
     "Frensei";
 
-  const firstLang = patch.first_language ?? "ja";
+  const firstLang = patch.first_language ?? "en";
 
   const { error } = await supabase.from("user_profiles").insert({
     user_id: user.id,
@@ -4657,7 +4657,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             </div>
             <ul className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 pb-safe sm:pb-2">
               {choiceSheet === "language"
-                ? (["ja", "en", "ko", "zh"] as const).map((code) => {
+                ? (["en", "ja", "ko", "zh"] as const).map((code) => {
                     const selected = draftDisplayLanguage === code;
                     return (
                       <li key={code}>

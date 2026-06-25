@@ -61,22 +61,14 @@ export type ResolveLanguageInput = {
 /**
  * Resolution order:
  * 1. User saved preference (cookie / localStorage)
- * 2. Browser locale
- * 3. Accept-Language
- * 4. English
+ * 2. English (app base language)
+ *
+ * Browser locale and Accept-Language are intentionally not used for UI language.
+ * Users switch to ja / ko / zh explicitly in Settings.
  */
 export function resolveLanguage(input: ResolveLanguageInput): Lang {
   if (isLang(input.savedPreference)) return input.savedPreference;
   if (isLang(input.localPreference)) return input.localPreference;
-
-  if (input.browserLanguages?.length) {
-    return resolveLangFromBrowserLanguages(input.browserLanguages);
-  }
-
-  if (input.acceptLanguage) {
-    return parseAcceptLanguage(input.acceptLanguage);
-  }
-
   return "en";
 }
 

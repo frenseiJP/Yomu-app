@@ -35,7 +35,7 @@ export default async function OnboardingPage() {
   const supabase = await createClient();
   const lang = getLangServer();
   const goalCopy = getOnboardingGoalCopy(lang);
-  const defaultFirstLang = lang === "ja" ? "ja" : "en";
+  const defaultFirstLang = "en";
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -64,9 +64,7 @@ export default async function OnboardingPage() {
     const allowed: Array<"ja" | "en" | "ko" | "zh"> = ["ja", "en", "ko", "zh"];
     const langCookie = allowed.includes(settingsLanguage as "ja" | "en" | "ko" | "zh")
       ? (settingsLanguage as "ja" | "en" | "ko" | "zh")
-      : firstLanguage === "en"
-        ? "en"
-        : "ja";
+      : "en";
 
     const supabaseForAction = await createClient();
     const {
@@ -214,7 +212,7 @@ export default async function OnboardingPage() {
                 <select
                   name="settings_language"
                   required
-                  defaultValue={lang}
+                  defaultValue="en"
                   className="w-full appearance-none rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2.5 text-[13px] text-slate-100 focus:border-wa-ruri focus:outline-none focus:ring-1 focus:ring-wa-ruri/60"
                 >
                   <option value="en">{goalCopy.displayLanguage.en}</option>
