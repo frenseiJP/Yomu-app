@@ -112,6 +112,7 @@ import {
 } from "@/lib/topic/service";
 import type { TopicPrompt, TopicFeedback } from "@/lib/topic/types";
 import { localizeTopicList, localizeTopicPrompt, buildLocalizedTopicGuideMessage, scenarioPracticeLabel, scenarioSessionTitle } from "@/lib/i18n/topicCopy";
+import { EXPLICIT_LANG_COOKIE } from "@/lib/i18n/resolveLanguage";
 import { getTodaysTopicPrompt } from "@/lib/topic/todaysTopic";
 import { shellTheme } from "@/lib/ui/shellTheme";
 import type { SaveCandidate } from "@/lib/save-candidates/types";
@@ -1601,9 +1602,12 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
         const row = data?.[0];
         const cookieRaw = readCookie("yomu_lang");
+        const explicitLang = readCookie(EXPLICIT_LANG_COOKIE) === "1";
         const nextLang: DisplayLangRaw = cookieRaw
           ? (normalizeDisplayLang(cookieRaw) as DisplayLangRaw)
-          : (normalizeDisplayLang(row?.settings_language) as DisplayLangRaw);
+          : explicitLang && row?.settings_language
+            ? (normalizeDisplayLang(row.settings_language) as DisplayLangRaw)
+            : "en";
 
         const nextFirstLang: "ja" | "en" =
           row?.first_language === "en" ? "en" : "ja";

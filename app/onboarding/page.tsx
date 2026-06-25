@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/src/utils/supabase/server";
 import { getLangServer } from "@/src/utils/i18n/serverLang";
+import { EXPLICIT_LANG_COOKIE } from "@/lib/i18n/resolveLanguage";
 import { t } from "@/src/utils/i18n/t";
 import PendingGuestNote from "@/components/onboarding/PendingGuestNote";
 import ProfileAvatarField from "@/components/profile/ProfileAvatarField";
@@ -74,6 +75,12 @@ export default async function OnboardingPage() {
     if (!currentUser) redirect("/login");
 
     cookies().set("yomu_lang", langCookie, {
+      path: "/",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365,
+    });
+
+    cookies().set(EXPLICIT_LANG_COOKIE, "1", {
       path: "/",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 365,

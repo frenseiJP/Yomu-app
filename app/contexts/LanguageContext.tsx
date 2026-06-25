@@ -1,7 +1,11 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { htmlLangAttribute, resolveLanguage } from "@/lib/i18n/resolveLanguage";
+import {
+  EXPLICIT_LANG_COOKIE,
+  htmlLangAttribute,
+  resolveLanguage,
+} from "@/lib/i18n/resolveLanguage";
 import type { Lang } from "@/src/utils/i18n/types";
 
 export type Language = Lang;
@@ -27,20 +31,25 @@ function writeCookie(name: string, value: string) {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax`;
 }
 
-function readLocalPreference(): string | null {
-  try {
-    return localStorage.getItem("yomu-language");
-  } catch {
-    return null;
-  }
-}
-
 function resolveClientLanguage(): Language {
   if (typeof window === "undefined") return "en";
+  const explicit = readCookie(EXPLICIT_LANG_COOKIE) === "1";
   return resolveLanguage({
     savedPreference: readCookie("yomu_lang"),
-    localPreference: readLocalPreference(),
+    explicitUserChoice: explicit,
   });
+}
+
+function resetToBaseEnglish(): void {
+  writeCookie("yomu_lang", "en");
+  try {
+    localStorage.setItem("yomu-language", "en");
+  } catch {
+    /* ignore */
+  }
+  if (typeof document !== "undefined") {
+    document.documentElement.lang = htmlLangAttribute("en");
+  }
 }
 
 const LanguageContext = createContext<LanguageContextType>({
@@ -58,19 +67,22 @@ export function LanguageProvider({
   const [language, setLanguageState] = useState<Language>(initialLang);
 
   useEffect(() => {
+    const explicit = readCookie(EXPLICIT_LANG_COOKIE) === "1";
+    if (!explicit) {
+      resetToBaseEnglish();
+      setLanguageState("en");
+      return;
+    }
+
     const resolved = resolveClientLanguage();
     setLanguageState(resolved);
     if (typeof document !== "undefined") {
       document.documentElement.lang = htmlLangAttribute(resolved);
     }
-    // Persist base English once when no saved preference exists
-    if (!readCookie("yomu_lang") && !readLocalPreference()) {
-      writeCookie("yomu_lang", "en");
-      try {
-        localStorage.setItem("yomu-language", "en");
-      } catch {
-        /* ignore */
-      }
+    try {
+      localStorage.setItem("yomu-language", resolved);
+    } catch {
+      /* ignore */
     }
   }, []);
 
@@ -102,7 +114,7 @@ export function LanguageProvider({
       /* ignore */
     }
     writeCookie("yomu_lang", lang);
-    writeCookie("yomu_lang_user", "1");
+    writeCookie(EXPLICIT_LANG_COOKIE, "1");
     window.dispatchEvent(new CustomEvent("yomu:lang-changed", { detail: { lang } }));
     if (typeof document !== "undefined") {
       document.documentElement.lang = htmlLangAttribute(lang);

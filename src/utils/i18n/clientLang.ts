@@ -1,4 +1,8 @@
-import { resolveLanguage, resolveLangFromBrowserLanguages } from "@/lib/i18n/resolveLanguage";
+import {
+  EXPLICIT_LANG_COOKIE,
+  resolveLanguage,
+  resolveLangFromBrowserLanguages,
+} from "@/lib/i18n/resolveLanguage";
 import type { Lang } from "./types";
 
 const ALLOWED: Lang[] = ["ja", "en", "ko", "zh"];
@@ -28,15 +32,8 @@ function readCookie(name: string): string | null {
 export function getLangClient(): Lang {
   if (typeof document === "undefined") return "en";
 
-  let localPreference: string | null = null;
-  try {
-    localPreference = localStorage.getItem("yomu-language");
-  } catch {
-    /* private mode */
-  }
-
   return resolveLanguage({
     savedPreference: readCookie("yomu_lang"),
-    localPreference,
+    explicitUserChoice: readCookie(EXPLICIT_LANG_COOKIE) === "1",
   });
 }

@@ -47,28 +47,27 @@ export function resolveLangFromBrowserLanguages(languages: readonly string[] | u
   return "en";
 }
 
+export const EXPLICIT_LANG_COOKIE = "yomu_lang_user";
+
 export type ResolveLanguageInput = {
-  /** yomu_lang cookie — user saved display preference */
+  /** yomu_lang cookie — user saved display language */
   savedPreference?: string | null;
-  /** localStorage mirror (client only) */
-  localPreference?: string | null;
-  /** navigator.languages (client only) */
-  browserLanguages?: readonly string[];
-  /** Accept-Language header (server / middleware) */
-  acceptLanguage?: string | null;
+  /** When true, honor savedPreference even if it was auto-detected legacy state */
+  explicitUserChoice?: boolean;
 };
 
 /**
  * Resolution order:
- * 1. User saved preference (cookie / localStorage)
+ * 1. yomu_lang cookie (only when user explicitly chose a language, or cookie is en)
  * 2. English (app base language)
  *
- * Browser locale and Accept-Language are intentionally not used for UI language.
- * Users switch to ja / ko / zh explicitly in Settings.
+ * Browser locale, Accept-Language, and localStorage are not used.
  */
 export function resolveLanguage(input: ResolveLanguageInput): Lang {
-  if (isLang(input.savedPreference)) return input.savedPreference;
-  if (isLang(input.localPreference)) return input.localPreference;
+  const raw = input.savedPreference;
+  if (isLang(raw)) {
+    if (input.explicitUserChoice || raw === "en") return raw;
+  }
   return "en";
 }
 
