@@ -49,25 +49,27 @@ export function resolveLangFromBrowserLanguages(languages: readonly string[] | u
 
 export const EXPLICIT_LANG_COOKIE = "yomu_lang_user";
 
+/** Bump when default-language policy changes — forces one-time reset to English. */
+export const LANG_POLICY_VERSION = "4";
+
 export type ResolveLanguageInput = {
   /** yomu_lang cookie — user saved display language */
   savedPreference?: string | null;
-  /** When true, honor savedPreference even if it was auto-detected legacy state */
+  /** When true, honor savedPreference (user saved in Settings / onboarding) */
   explicitUserChoice?: boolean;
+  /** Must match LANG_POLICY_VERSION or fall back to English */
+  policyVersion?: string | null;
 };
 
 /**
- * Resolution order:
- * 1. yomu_lang cookie (only when user explicitly chose a language, or cookie is en)
- * 2. English (app base language)
- *
- * Browser locale, Accept-Language, and localStorage are not used.
+ * English is the base language.
+ * ja / ko / zh apply only after the user explicitly saves a language choice.
  */
 export function resolveLanguage(input: ResolveLanguageInput): Lang {
+  if (input.policyVersion !== LANG_POLICY_VERSION) return "en";
+  if (!input.explicitUserChoice) return "en";
   const raw = input.savedPreference;
-  if (isLang(raw)) {
-    if (input.explicitUserChoice || raw === "en") return raw;
-  }
+  if (isLang(raw)) return raw;
   return "en";
 }
 

@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/src/utils/supabase/server";
 import { isMissingTableError } from "@/src/utils/supabase/schema-errors";
-import { EXPLICIT_LANG_COOKIE } from "@/lib/i18n/resolveLanguage";
+import { EXPLICIT_LANG_COOKIE, LANG_POLICY_VERSION } from "@/lib/i18n/resolveLanguage";
 import type { Lang } from "@/src/utils/i18n/types";
 import { PROFILE_ICON_DEFAULT } from "@/lib/profile/icon";
 
@@ -56,6 +56,12 @@ export async function saveLanguageAction(formData: FormData) {
   const nextLang = parseDisplayLang(String(formData.get("lang") ?? ""));
 
   cookies().set("yomu_lang", nextLang, {
+    path: "/",
+    sameSite: "lax",
+    httpOnly: false,
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  cookies().set("yomu_lang_rev", LANG_POLICY_VERSION, {
     path: "/",
     sameSite: "lax",
     httpOnly: false,

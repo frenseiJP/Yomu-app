@@ -112,7 +112,7 @@ import {
 } from "@/lib/topic/service";
 import type { TopicPrompt, TopicFeedback } from "@/lib/topic/types";
 import { localizeTopicList, localizeTopicPrompt, buildLocalizedTopicGuideMessage, scenarioPracticeLabel, scenarioSessionTitle } from "@/lib/i18n/topicCopy";
-import { EXPLICIT_LANG_COOKIE } from "@/lib/i18n/resolveLanguage";
+import { EXPLICIT_LANG_COOKIE, LANG_POLICY_VERSION } from "@/lib/i18n/resolveLanguage";
 import { getTodaysTopicPrompt } from "@/lib/topic/todaysTopic";
 import { shellTheme } from "@/lib/ui/shellTheme";
 import type { SaveCandidate } from "@/lib/save-candidates/types";
@@ -1504,6 +1504,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
     async (nextLang: DisplayLangRaw) => {
       setLanguage(nextLang as Language);
       setDraftDisplayLanguage(nextLang);
+      setCookie("yomu_lang_rev", LANG_POLICY_VERSION);
+      setCookie(EXPLICIT_LANG_COOKIE, "1");
       try {
         const supabase = createAuthClient();
         const {
@@ -1580,15 +1582,13 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         if (aborted) return;
 
         if (profileErr && isMissingTableError(profileErr, "user_profiles")) {
-          const cLang = readCookie("yomu_lang");
-          const nextLang: DisplayLangRaw = normalizeDisplayLang(cLang) as DisplayLangRaw;
+          const nextLang = getLangClient() as DisplayLangRaw;
           const cf = readCookie("yomu_first_lang");
           const nextFirstLang: "ja" | "en" = cf === "en" ? "en" : "ja";
           const cReg = readCookie(REGION_COOKIE_KEY);
           const nextRegion = normalizeRegion(cReg);
 
           setDraftDisplayLanguage(nextLang);
-          setLanguage(nextLang as Language);
           setDraftFirstLanguage(nextFirstLang);
           setDraftRegion(nextRegion);
           setAuthRegion(nextRegion);
@@ -1601,13 +1601,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         }
 
         const row = data?.[0];
-        const cookieRaw = readCookie("yomu_lang");
-        const explicitLang = readCookie(EXPLICIT_LANG_COOKIE) === "1";
-        const nextLang: DisplayLangRaw = cookieRaw
-          ? (normalizeDisplayLang(cookieRaw) as DisplayLangRaw)
-          : explicitLang && row?.settings_language
-            ? (normalizeDisplayLang(row.settings_language) as DisplayLangRaw)
-            : "en";
+        const nextLang = getLangClient() as DisplayLangRaw;
 
         const nextFirstLang: "ja" | "en" =
           row?.first_language === "en" ? "en" : "ja";
@@ -1623,7 +1617,6 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         const nextRegion = normalizeRegion(row?.region);
 
         setDraftDisplayLanguage(nextLang);
-        setLanguage(nextLang as Language);
         setDraftFirstLanguage(nextFirstLang);
         setDraftNativeLanguage(nextNative);
         setDraftRegion(nextRegion);

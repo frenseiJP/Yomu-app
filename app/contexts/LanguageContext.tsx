@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   EXPLICIT_LANG_COOKIE,
+  LANG_POLICY_VERSION,
   htmlLangAttribute,
   resolveLanguage,
 } from "@/lib/i18n/resolveLanguage";
@@ -31,17 +32,23 @@ function writeCookie(name: string, value: string) {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax`;
 }
 
+function clearCookie(name: string) {
+  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
+}
+
 function resolveClientLanguage(): Language {
   if (typeof window === "undefined") return "en";
-  const explicit = readCookie(EXPLICIT_LANG_COOKIE) === "1";
   return resolveLanguage({
     savedPreference: readCookie("yomu_lang"),
-    explicitUserChoice: explicit,
+    explicitUserChoice: readCookie(EXPLICIT_LANG_COOKIE) === "1",
+    policyVersion: readCookie("yomu_lang_rev"),
   });
 }
 
-function resetToBaseEnglish(): void {
+function applyEnglishBaseClient(): void {
+  writeCookie("yomu_lang_rev", LANG_POLICY_VERSION);
   writeCookie("yomu_lang", "en");
+  clearCookie(EXPLICIT_LANG_COOKIE);
   try {
     localStorage.setItem("yomu-language", "en");
   } catch {
@@ -67,9 +74,9 @@ export function LanguageProvider({
   const [language, setLanguageState] = useState<Language>(initialLang);
 
   useEffect(() => {
-    const explicit = readCookie(EXPLICIT_LANG_COOKIE) === "1";
-    if (!explicit) {
-      resetToBaseEnglish();
+    const policyOk = readCookie("yomu_lang_rev") === LANG_POLICY_VERSION;
+    if (!policyOk) {
+      applyEnglishBaseClient();
       setLanguageState("en");
       return;
     }
@@ -108,6 +115,7 @@ export function LanguageProvider({
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
+    writeCookie("yomu_lang_rev", LANG_POLICY_VERSION);
     try {
       localStorage.setItem("yomu-language", lang);
     } catch {

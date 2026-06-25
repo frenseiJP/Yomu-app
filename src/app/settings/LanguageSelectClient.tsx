@@ -22,8 +22,7 @@ export default function LanguageSelectClient({
 
   useEffect(() => {
     setSelected(currentDisplayLang);
-    setLanguage(currentDisplayLang as Language);
-  }, [currentDisplayLang, setLanguage]);
+  }, [currentDisplayLang]);
 
   /** 各言語の自語名（表示言語に依らず統一） */
   const languages = useMemo(

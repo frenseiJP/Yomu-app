@@ -1,5 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { EXPLICIT_LANG_COOKIE } from "@/lib/i18n/resolveLanguage";
+import {
+  EXPLICIT_LANG_COOKIE,
+  LANG_POLICY_VERSION,
+} from "@/lib/i18n/resolveLanguage";
 import { updateSession } from "@/src/utils/supabase/middleware";
 
 const LANG_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
@@ -28,18 +31,39 @@ function isAppShellPath(pathname: string): boolean {
   return APP_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
-/**
- * Base language is English until the user explicitly saves a language choice.
- */
-function ensureLanguageCookie(request: NextRequest, response: NextResponse): void {
-  if (!isAppShellPath(request.nextUrl.pathname)) return;
-  if (request.cookies.get(EXPLICIT_LANG_COOKIE)?.value === "1") return;
-
+function applyEnglishBaseCookies(response: NextResponse, clearExplicit: boolean): void {
+  response.cookies.set("yomu_lang_rev", LANG_POLICY_VERSION, {
+    path: "/",
+    maxAge: LANG_COOKIE_MAX_AGE,
+    sameSite: "lax",
+  });
   response.cookies.set("yomu_lang", "en", {
     path: "/",
     maxAge: LANG_COOKIE_MAX_AGE,
     sameSite: "lax",
   });
+  if (clearExplicit) {
+    response.cookies.set(EXPLICIT_LANG_COOKIE, "", {
+      path: "/",
+      maxAge: 0,
+      sameSite: "lax",
+    });
+  }
+}
+
+/** English default until user saves a language in Settings or onboarding. */
+function ensureLanguageCookie(request: NextRequest, response: NextResponse): void {
+  if (!isAppShellPath(request.nextUrl.pathname)) return;
+
+  const policyOk = request.cookies.get("yomu_lang_rev")?.value === LANG_POLICY_VERSION;
+  if (!policyOk) {
+    applyEnglishBaseCookies(response, true);
+    return;
+  }
+
+  if (request.cookies.get(EXPLICIT_LANG_COOKIE)?.value === "1") return;
+
+  applyEnglishBaseCookies(response, false);
 }
 
 export async function middleware(request: NextRequest) {

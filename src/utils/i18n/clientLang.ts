@@ -1,5 +1,6 @@
 import {
   EXPLICIT_LANG_COOKIE,
+  LANG_POLICY_VERSION,
   resolveLanguage,
   resolveLangFromBrowserLanguages,
 } from "@/lib/i18n/resolveLanguage";
@@ -35,5 +36,6 @@ export function getLangClient(): Lang {
   return resolveLanguage({
     savedPreference: readCookie("yomu_lang"),
     explicitUserChoice: readCookie(EXPLICIT_LANG_COOKIE) === "1",
+    policyVersion: readCookie("yomu_lang_rev"),
   });
 }

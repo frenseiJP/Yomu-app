@@ -4,6 +4,7 @@ import { createClient } from "@/src/utils/supabase/server";
 import { isMissingTableError } from "@/src/utils/supabase/schema-errors";
 import { Activity, Mail, Sparkles, Crown, UserRound } from "lucide-react";
 import { t } from "@/src/utils/i18n/t";
+import { getLangServer } from "@/src/utils/i18n/serverLang";
 import type { Lang } from "@/src/utils/i18n/types";
 import { regionLabelForLang } from "@/src/utils/i18n/prototypeCopy";
 import {
@@ -55,22 +56,8 @@ export default async function SettingsPage() {
 
   const currentRegion = normalizeRegion(profileRows?.[0]?.region);
 
-  const langCookie = cookies().get("yomu_lang")?.value;
-  const profileSettingsLanguage = profileRows?.[0]?.settings_language;
-
-  const allowedDisplayLang: Lang[] = ["en", "ja", "ko", "zh"];
-  const langCookieRaw: Lang | null =
-    langCookie && allowedDisplayLang.includes(langCookie as Lang)
-      ? (langCookie as Lang)
-      : null;
-
-  const profileLangRaw: Lang =
-    allowedDisplayLang.includes(profileSettingsLanguage as Lang)
-      ? (profileSettingsLanguage as Lang)
-      : "en";
-
-  const currentDisplayLang: Lang = langCookieRaw ?? profileLangRaw;
-  const lang: Lang = currentDisplayLang;
+  const lang = getLangServer();
+  const currentDisplayLang: Lang = lang;
 
   const profileDisplayName =
     profileRows?.[0]?.display_name?.trim() || user.email?.split("@")[0] || "Frensei";
