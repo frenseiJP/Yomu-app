@@ -51,15 +51,16 @@ export function markBetaFeedbackPromptShown(userId: string): void {
   });
 }
 
-export function submitBetaFeedback(input: {
+export async function submitBetaFeedback(input: {
   userId: string;
   source: BetaFeedbackSource;
   helpful: boolean | null;
   message?: string | null;
   sessionId?: string;
   appVersion?: string;
-}): BetaFeedback | null {
-  const { userId, source, helpful, sessionId, appVersion } = input;
+  route?: string;
+}): Promise<BetaFeedback | null> {
+  const { userId, source, helpful, sessionId, appVersion, route = "/app" } = input;
   if (!userId) return null;
 
   const message = typeof input.message === "string" ? input.message.trim().slice(0, 500) : "";
@@ -92,13 +93,32 @@ export function submitBetaFeedback(input: {
   };
 
   saveBetaFeedbackEntries(userId, [entry, ...entries]);
+
+  void fetch("/api/feedback/beta-prompt", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      userId,
+      source,
+      helpful,
+      message: message || undefined,
+      sessionId,
+      appVersion,
+      route,
+      createdAt,
+    }),
+  }).catch(() => {
+    /* local copy retained; server sync is best-effort */
+  });
+
   void logBetaEvent({
     eventType: "feedback_submit",
     userId,
     sessionId,
-    route: "/feedback",
+    route,
     metadata: {
       source,
+      channel: "beta_prompt",
       helpful: helpful === null ? "null" : String(helpful),
       hasMessage: Boolean(message),
     },

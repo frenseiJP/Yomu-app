@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/src/utils/supabase/client";
 import YomuPrototypePage from "../YomuPrototypePage";
+import { resolvePostLoginPath } from "@/lib/auth/resolvePostLoginPath";
 import { LogOut, BookOpen } from "lucide-react";
 import { getLangClient } from "@/src/utils/i18n/clientLang";
 import { t } from "@/src/utils/i18n/t";
@@ -48,35 +49,20 @@ export default function ChatPage() {
 
   useEffect(() => {
     const init = async () => {
-      const {
-        data: { user: u },
-      } = await supabase.auth.getUser();
-      if (!u) {
-        router.replace("/login");
+      const destination = await resolvePostLoginPath(supabase, "/chat");
+      if (destination !== "/chat") {
+        router.replace(destination);
         return;
       }
 
-      // 初回はオンボーディング（プロフィール未完了）へ誘導
-      try {
-        const { data: profileRows, error: profileError } = await supabase
-          .from("user_profiles")
-          .select("user_id")
-          .eq("user_id", u.id)
-          .limit(1);
-
-        if (!profileError && (!profileRows || profileRows.length === 0)) {
-          router.replace("/onboarding");
-          return;
-        }
-      } catch {
-        // テーブル未作成などの場合は、まずは通常表示にフォールバック
-      }
-
+      const {
+        data: { user: u },
+      } = await supabase.auth.getUser();
       setUser(u);
       setChecking(false);
     };
-    init();
-  }, [router]);
+    void init();
+  }, [router, supabase]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -93,7 +79,6 @@ export default function ChatPage() {
 
   return (
     <div className="flex min-h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[#020617]">
-      {/* メイン画面用ヘッダー: パーソナライズ挨拶 + ログアウト */}
       <header className={`z-[150] flex flex-shrink-0 items-center justify-between gap-2 border-b px-3 pb-3 pt-[max(12px,env(safe-area-inset-top,0px))] backdrop-blur-xl sm:gap-3 sm:px-6 sm:py-3 sm:pt-3 ${isLightTheme ? "border-slate-200 bg-white/95" : "border-slate-800/60 bg-slate-950/95"}`}>
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-wa-ruri to-wa-asagi text-sm font-bold text-white shadow-lg">

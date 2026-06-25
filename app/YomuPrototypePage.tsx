@@ -165,6 +165,7 @@ import { getFtuePickerCopy } from "@/lib/i18n/ftueCopy";
 import FtuePracticePicker from "@/components/chat/FtuePracticePicker";
 import AssistantMessageBody from "@/components/chat/AssistantMessageBody";
 import BetaFeedbackPrompt from "@/components/feedback/BetaFeedbackPrompt";
+import BetaBadge from "@/components/BetaBadge";
 import {
   buildDailyPhrasePracticeOpener,
   getDailyUsefulPhrase,
@@ -3374,6 +3375,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             className={`${shellViewFrame} ${pagePaddingX} flex flex-col gap-3 py-6 lg:py-8 ${shellStandard}`}
           >
             <h1 className={`font-wa-serif text-lg font-semibold sm:text-xl ${th.pageTitle}`}>{progressCopy.moreTitle}</h1>
+            <BetaBadge lang={appLang as Lang} showNotice className="mb-1" />
             <div className="grid gap-3 md:grid-cols-2">
             <Link
               href="/history"

@@ -32,7 +32,6 @@ function loadEnvFile() {
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://frensei.jp").replace(/\/$/, "");
 const APP = process.env.NEXT_PUBLIC_APP_URL || "https://app.frensei.jp";
-const ADMIN_SECRET = process.env.ADMIN_ANALYTICS_SECRET || "f000e3c1558eb233db4d798f";
 const PROJECT_REF = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1]
   ?? "jlhxzzhkjuduutyfpwzu";
 
@@ -48,6 +47,7 @@ function fail(label, detail) {
 
 async function main() {
   loadEnvFile();
+  const adminSecret = process.env.ADMIN_ANALYTICS_SECRET?.trim();
   console.log("Frensei setup verification\n");
 
   try {
@@ -65,7 +65,7 @@ async function main() {
 
   try {
     const res = await fetch(`${APP}/api/admin/analytics?days=7`, {
-      headers: { Authorization: `Bearer ${ADMIN_SECRET}` },
+      headers: { Authorization: `Bearer ${adminSecret ?? ""}` },
     });
     const data = await res.json();
     if (data.configured) {
@@ -133,28 +133,32 @@ async function main() {
   }
 
   if (webhook) {
-    try {
-      const url = new URL(webhook);
-      url.searchParams.set("action", "analytics_summary");
-      url.searchParams.set("days", "7");
-      url.searchParams.set("secret", ADMIN_SECRET);
-      const res = await fetch(url.toString(), { redirect: "manual" });
-      let text = await res.text();
-      if (res.status === 302 || res.status === 303) {
-        const loc = res.headers.get("location");
-        if (loc) text = await (await fetch(loc)).text();
+    if (!adminSecret) {
+      fail("Admin analytics secret", "ADMIN_ANALYTICS_SECRET 未設定 — vercel env で設定");
+    } else {
+      try {
+        const url = new URL(webhook);
+        url.searchParams.set("action", "analytics_summary");
+        url.searchParams.set("days", "7");
+        url.searchParams.set("secret", adminSecret);
+        const res = await fetch(url.toString(), { redirect: "manual" });
+        let text = await res.text();
+        if (res.status === 302 || res.status === 303) {
+          const loc = res.headers.get("location");
+          if (loc) text = await (await fetch(loc)).text();
+        }
+        const parsed = JSON.parse(text);
+        if (parsed.ok && Array.isArray(parsed.rows)) {
+          pass("GAS analytics export", `${parsed.rows.length} rows (Sheets ダッシュボード連携 OK)`);
+        } else {
+          fail(
+            "GAS analytics export",
+            parsed.error || "GAS 再デプロイが必要 — npm run gas:publish",
+          );
+        }
+      } catch (err) {
+        fail("GAS analytics export", String(err));
       }
-      const parsed = JSON.parse(text);
-      if (parsed.ok && Array.isArray(parsed.rows)) {
-        pass("GAS analytics export", `${parsed.rows.length} rows (Sheets ダッシュボード連携 OK)`);
-      } else {
-        fail(
-          "GAS analytics export",
-          parsed.error || "GAS 再デプロイが必要 — npm run gas:publish",
-        );
-      }
-    } catch (err) {
-      fail("GAS analytics export", String(err));
     }
   }
 

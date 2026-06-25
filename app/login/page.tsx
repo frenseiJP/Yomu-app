@@ -9,6 +9,7 @@ import { formatAuthErrorMessageForLang } from "@/lib/auth/errors";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { getLoginCopy, validatePasswordForLang } from "@/lib/i18n/loginCopy";
 import { hasPendingGuestChat } from "@/lib/guest/pendingChat";
+import { resolvePostLoginPath } from "@/lib/auth/resolvePostLoginPath";
 import { Mail, Lock, BookOpen, Eye, EyeOff } from "lucide-react";
 
 type Mode = "login" | "signup";
@@ -58,7 +59,7 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/chat")}`;
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/app")}`;
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo },
@@ -76,7 +77,8 @@ export default function LoginPage() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          router.replace("/chat");
+          const destination = await resolvePostLoginPath(supabase, "/app");
+          router.replace(destination);
           return;
         }
       } catch {
@@ -153,7 +155,8 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      router.replace("/chat");
+      const destination = await resolvePostLoginPath(supabase, "/app");
+      router.replace(destination);
     } catch (err) {
       setError(formatAuthErrorMessageForLang(uiLang, err));
     } finally {
