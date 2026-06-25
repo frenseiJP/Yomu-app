@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+.gas-deploy/
 
 # debug
 npm-debug.log*

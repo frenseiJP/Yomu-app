@@ -62,8 +62,21 @@ function consumeRateLimitInMemory(params: {
   };
 }
 
+function getUpstashRestConfig(): { url: string; token: string } | null {
+  const url =
+    process.env.UPSTASH_REDIS_REST_URL?.trim() ||
+    process.env.KV_REST_API_URL?.trim() ||
+    null;
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN?.trim() ||
+    process.env.KV_REST_API_TOKEN?.trim() ||
+    null;
+  if (!url || !token) return null;
+  return { url, token };
+}
+
 function canUseUpstash(): boolean {
-  return Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+  return getUpstashRestConfig() !== null;
 }
 
 const upstashLimiterByPolicy = new Map<string, Promise<{
@@ -79,9 +92,13 @@ async function getUpstashLimiter(limit: number, windowMs: number) {
         import("@upstash/ratelimit"),
         import("@upstash/redis"),
       ]);
+      const upstash = getUpstashRestConfig();
+      if (!upstash) {
+        throw new Error("Upstash REST config missing");
+      }
       const redis = new Redis({
-        url: process.env.UPSTASH_REDIS_REST_URL!,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+        url: upstash.url,
+        token: upstash.token,
       });
       const limiter = new Ratelimit({
         redis,

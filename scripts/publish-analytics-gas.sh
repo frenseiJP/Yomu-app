@@ -21,6 +21,17 @@ if command -v pbcopy >/dev/null 2>&1; then
 else
   echo "  一時ファイル: $TMP_FILE"
 fi
+
+if [[ -x "$ROOT/node_modules/.bin/clasp" ]]; then
+  echo ""
+  echo "→ clasp 自動デプロイを試行…"
+  if node "$ROOT/scripts/deploy-gas.mjs"; then
+    echo "  ✓ GAS 自動デプロイ完了"
+    rm -f "$TMP_FILE"
+    exit 0
+  fi
+  echo "  ○ 自動デプロイ不可 — script.google.com/home/usersettings で「Google Apps Script API」を ON にして npm run gas:deploy"
+fi
 rm -f "$TMP_FILE"
 
 echo ""

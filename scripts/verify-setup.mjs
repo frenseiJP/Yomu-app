@@ -179,7 +179,7 @@ async function main() {
 
   fail(
     "Search Console",
-    `npm run search-console で送信画面を開き ${SITE}/sitemap.xml を追加`,
+    `npm run sitemap:submit で Bing ping + GSC 画面を開き ${SITE}/sitemap.xml を登録`,
   );
 
   const token = process.env.SUPABASE_ACCESS_TOKEN?.trim();

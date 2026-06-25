@@ -122,7 +122,10 @@ async function main() {
     else fail(label, v ? `値=${v}` : "未設定");
   }
 
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  if (
+    (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) ||
+    (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+  ) {
     pass("Upstash rate limit", "設定済み");
   } else {
     note("Upstash（推奨）", "UPSTASH_REDIS_REST_URL/TOKEN 未設定 — 高トラフィック前に設定");
