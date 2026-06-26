@@ -26,7 +26,8 @@
     "gas:deploy": "node scripts/deploy-gas.mjs",
     "search-console": "node scripts/submit-search-console.mjs",
     "sitemap:submit": "node scripts/submit-sitemap.mjs",
-    "qa:beta": "node scripts/beta-qa-automated.mjs"
+    "qa:beta": "node scripts/beta-qa-automated.mjs",
+    "promo:links": "node scripts/promo-links.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",

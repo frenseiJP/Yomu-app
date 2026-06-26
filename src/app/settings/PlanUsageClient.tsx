@@ -52,7 +52,7 @@ export default function PlanUsageClient({ lang }: Props) {
           <p className="text-[11px] leading-relaxed text-slate-500">{t(lang, "planUpgradeHint")}</p>
           <div className="flex flex-wrap gap-2">
             <a
-              href="https://frensei.jp/trial/"
+              href="/trial"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center rounded-full border border-pink-500/30 bg-pink-500/10 px-3 py-1 text-[11px] font-medium text-pink-200 transition hover:bg-pink-500/20"

@@ -1,8 +1,15 @@
 "use client";
 
 import type { BetaEventInput } from "@/lib/analytics/types";
+import { mergeAttributionMetadata } from "@/lib/analytics/attribution";
 
 const SESSION_KEY = "frensei:beta:session_id:v1";
+
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void;
+  }
+}
 
 function getOrCreateSessionId(): string {
   if (typeof window === "undefined") return "server";
@@ -33,7 +40,16 @@ function sanitizeMetadata(
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
+function emitGa4Event(eventType: string, metadata?: Record<string, unknown>): void {
+  if (typeof window === "undefined" || typeof window.gtag !== "function") return;
+  window.gtag("event", eventType, metadata ?? {});
+}
+
 export async function logBetaEvent(input: BetaEventInput): Promise<void> {
+  const metadata = sanitizeMetadata(mergeAttributionMetadata(input.metadata));
+
+  emitGa4Event(input.eventType, metadata);
+
   try {
     await fetch("/api/events", {
       method: "POST",
@@ -44,7 +60,7 @@ export async function logBetaEvent(input: BetaEventInput): Promise<void> {
         userId: input.userId,
         sessionId: input.sessionId ?? getOrCreateSessionId(),
         route: input.route,
-        metadata: sanitizeMetadata(input.metadata),
+        metadata,
       }),
     });
   } catch {

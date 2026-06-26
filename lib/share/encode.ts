@@ -51,7 +51,16 @@ export function decodeSharePayload(token: string): ShareCorrectionPayload | null
   }
 }
 
-export function buildShareUrl(payload: ShareCorrectionPayload, origin: string): string {
+export function buildShareUrl(
+  payload: ShareCorrectionPayload,
+  origin: string,
+  utm?: { source?: string; medium?: string },
+): string {
   const token = encodeSharePayload(payload);
-  return `${origin.replace(/\/$/, "")}/share/c/${token}`;
+  const base = `${origin.replace(/\/$/, "")}/share/c/${token}`;
+  const params = new URLSearchParams();
+  params.set("utm_source", utm?.source ?? "share");
+  params.set("utm_medium", utm?.medium ?? "social");
+  params.set("utm_campaign", "beta");
+  return `${base}?${params.toString()}`;
 }

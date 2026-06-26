@@ -23,6 +23,15 @@ export default function Footer() {
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-center gap-3 px-4 py-4 text-xs text-slate-300 sm:justify-between sm:gap-4 sm:px-6 lg:px-8 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))]">
         <p className="text-center text-slate-500 sm:text-left">Frensei</p>
         <nav className="flex max-w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-end">
+          <Link className="text-pink-200 hover:text-pink-100" href="/try">
+            Try
+          </Link>
+          <Link className="text-pink-200 hover:text-pink-100" href="/learn">
+            Guides
+          </Link>
+          <Link className="text-pink-200 hover:text-pink-100" href="/trial">
+            Beta intro
+          </Link>
           <Link className="text-pink-200 hover:text-pink-100" href="/terms">
             {copy.terms}
           </Link>

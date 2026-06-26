@@ -7,6 +7,7 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import Footer from "@/components/Footer";
 import MobileAppBridge from "@/components/MobileAppBridge";
 import PageViewLogger from "@/components/analytics/PageViewLogger";
+import AttributionCapture from "@/components/analytics/AttributionCapture";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import { getSiteUrl } from "@/lib/siteUrl";
 import { getLangServer } from "@/src/utils/i18n/serverLang";
@@ -79,6 +80,9 @@ export default function RootLayout({
             <LanguageProvider initialLang={initialLang}>
               <GoogleAnalytics />
               <PageViewLogger />
+              <Suspense fallback={null}>
+                <AttributionCapture />
+              </Suspense>
               {children}
               <MobileAppBridge />
               <Analytics />

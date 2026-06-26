@@ -162,6 +162,7 @@ export default function GuestTryChat({
               createdAt: new Date().toISOString(),
             },
             window.location.origin,
+            { source: "guest_correction", medium: "share" },
           );
           setShareUrl(url);
         }
@@ -191,13 +192,26 @@ export default function GuestTryChat({
   const copyShare = async () => {
     if (!shareUrl) return;
     try {
+      if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        await navigator.share({
+          title: "Frensei — natural Japanese coaching",
+          text: copy.shareButton,
+          url: shareUrl,
+        });
+        void logBetaEvent({
+          eventType: "share_native",
+          route: window.location.pathname,
+          metadata: { source, channel: "native" },
+        });
+        return;
+      }
       await navigator.clipboard.writeText(shareUrl);
       setShareCopied(true);
       window.setTimeout(() => setShareCopied(false), 2500);
       void logBetaEvent({
         eventType: "share_copy",
         route: window.location.pathname,
-        metadata: { source },
+        metadata: { source, channel: "clipboard" },
       });
     } catch {
       window.prompt("Copy this link:", shareUrl);

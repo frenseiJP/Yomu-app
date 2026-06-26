@@ -1,12 +1,24 @@
+"use client";
+
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
+import { useEffect } from "react";
 import type { ShareCorrectionPayload } from "@/lib/share/encode";
+import { logBetaEvent } from "@/lib/analytics/client";
 
 type Props = {
   data: ShareCorrectionPayload;
 };
 
 export default function ShareCorrectionView({ data }: Props) {
+  useEffect(() => {
+    void logBetaEvent({
+      eventType: "landing_view",
+      route: "/share",
+      metadata: { source: "share_page" },
+    });
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#020617] px-4 py-10 sm:px-6">
       <div className="mx-auto w-full max-w-lg">
@@ -57,12 +69,22 @@ export default function ShareCorrectionView({ data }: Props) {
         <div className="mt-10 rounded-2xl border border-pink-500/25 bg-pink-500/8 p-6 text-center">
           <p className="text-sm text-slate-300">Want your own Japanese coach?</p>
           <Link
-            href="/login?intent=signup"
+            href="/login?intent=signup&utm_source=share&utm_medium=social&utm_campaign=beta"
+            onClick={() =>
+              void logBetaEvent({
+                eventType: "signup_cta_click",
+                route: "/share",
+                metadata: { source: "share_page", trigger: "signup" },
+              })
+            }
             className="mt-4 inline-flex rounded-xl bg-gradient-to-r from-pink-500 to-pink-600 px-6 py-3 text-sm font-medium text-white"
           >
             Try Frensei free
           </Link>
-          <Link href="/try" className="mt-3 block text-[12px] text-slate-500 hover:text-slate-300">
+          <Link
+            href="/try?utm_source=share&utm_medium=social&utm_campaign=beta"
+            className="mt-3 block text-[12px] text-slate-500 hover:text-slate-300"
+          >
             Or try 3 messages without signing up
           </Link>
         </div>

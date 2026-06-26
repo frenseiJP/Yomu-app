@@ -30,6 +30,9 @@ export const BETA_EVENT_TYPES = [
   "signup_cta_click",
   "login_success",
   "share_copy",
+  "calendly_trial_click",
+  "share_native",
+  "promo_cta_click",
 ] as const;
 
 export type BetaEventType = (typeof BETA_EVENT_TYPES)[number];

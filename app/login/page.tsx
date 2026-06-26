@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/src/utils/supabase/client";
 import { logBetaEvent } from "@/lib/analytics/client";
+import { getStoredAttribution } from "@/lib/analytics/attribution";
 import { formatAuthErrorMessageForLang } from "@/lib/auth/errors";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { getLoginCopy, validatePasswordForLang } from "@/lib/i18n/loginCopy";
@@ -13,6 +14,21 @@ import { resolvePostLoginPath } from "@/lib/auth/resolvePostLoginPath";
 import { Mail, Lock, BookOpen, Eye, EyeOff } from "lucide-react";
 
 type Mode = "login" | "signup";
+
+function loginSuccessMetadata(mode: Mode): Record<string, string | undefined> {
+  const attr = getStoredAttribution();
+  let fromParam: string | null = null;
+  if (typeof window !== "undefined") {
+    fromParam = new URLSearchParams(window.location.search).get("from");
+  }
+  return {
+    mode,
+    from: fromParam ?? attr?.from,
+    utm_source: attr?.utm_source,
+    utm_medium: attr?.utm_medium,
+    utm_campaign: attr?.utm_campaign,
+  };
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -125,7 +141,7 @@ export default function LoginPage() {
           eventType: "login_success",
           userId: signInData.user?.id,
           route: "/login",
-          metadata: { mode: "login" },
+          metadata: loginSuccessMetadata("login"),
         });
       } else {
         const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -145,7 +161,7 @@ export default function LoginPage() {
             eventType: "login_success",
             userId: signUpData.user?.id,
             route: "/login",
-            metadata: { mode: "signup" },
+            metadata: loginSuccessMetadata("signup"),
           });
           router.replace("/onboarding");
           return;

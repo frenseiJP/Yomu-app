@@ -28,7 +28,7 @@ function pickAllowedMetadata(
 ): JsonLike | null {
   if (!metadata) return null;
   const allowlist: Record<BetaEventInput["eventType"], string[]> = {
-    page_view: [],
+    page_view: ["utm_source", "utm_medium", "utm_campaign", "from"],
     chat_send: ["textLength", "mode"],
     mission_start: ["missionTitle", "missionCategory"],
     topic_submit: ["topicId", "answerLength", "source"],
@@ -52,13 +52,16 @@ function pickAllowedMetadata(
     scenario_started: ["topicId", "source"],
     save_prompt_shown: ["messageId", "candidateCount", "topCandidateType"],
     save_clicked: ["candidateType", "source", "messageId"],
-    landing_view: [],
-    guest_chat_start: [],
-    guest_chat_turn: ["turn", "source"],
-    guest_chat_limit: ["source"],
-    signup_cta_click: ["source", "trigger", "slug"],
-    login_success: ["mode"],
-    share_copy: ["source"],
+    landing_view: ["source", "utm_source", "utm_medium", "utm_campaign", "from"],
+    guest_chat_start: ["utm_source", "from"],
+    guest_chat_turn: ["turn", "source", "utm_source"],
+    guest_chat_limit: ["source", "utm_source"],
+    signup_cta_click: ["source", "trigger", "slug", "utm_source", "utm_medium", "from"],
+    login_success: ["mode", "from", "utm_source", "utm_medium", "utm_campaign"],
+    share_copy: ["source", "channel"],
+    calendly_trial_click: ["source", "utm_source"],
+    share_native: ["source", "channel"],
+    promo_cta_click: ["source", "medium", "campaign"],
   };
   const out: Record<string, JsonLike> = {};
   for (const key of allowlist[eventType]) {
