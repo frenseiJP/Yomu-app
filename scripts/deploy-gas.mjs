@@ -49,7 +49,7 @@ function resolveScriptId() {
   return (
     process.env.GAS_SCRIPT_ID?.trim() ||
     process.env.GOOGLE_APPS_SCRIPT_ID?.trim() ||
-    "MUvEyRWXKLMAS1MxjrlCcpfYpiytys1ko"
+    "1Ec5syTxgGYQC20b5XfAmPVwOhIDfiIOFEyl8bHHTQy7SCRNfJDyNBoKt"
   );
 }
 
