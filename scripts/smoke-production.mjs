@@ -76,6 +76,33 @@ async function main() {
   }
 
   try {
+    const { res, text } = await fetchText(`${APP}/try`);
+    if (res.ok && (text.includes("guest") || text.includes("Try") || text.includes("メッセージ")))
+      ok("Guest try", `${APP}/try`);
+    else bad("Guest try", `HTTP ${res.status}`);
+  } catch (e) {
+    bad("Guest try", String(e));
+  }
+
+  try {
+    const { res, text } = await fetchText(`${APP}/launch`);
+    if (res.ok && (text.includes("Product Hunt") || text.includes("launch") || text.includes("Frensei")))
+      ok("Launch page", `${APP}/launch`);
+    else bad("Launch page", `HTTP ${res.status}`);
+  } catch (e) {
+    bad("Launch page", String(e));
+  }
+
+  try {
+    const { res, text } = await fetchText(`${APP}/trial`);
+    if (res.ok && text.includes("Calendly"))
+      ok("App trial page", `${APP}/trial`);
+    else bad("App trial page", `HTTP ${res.status}`);
+  } catch (e) {
+    bad("App trial page", String(e));
+  }
+
+  try {
     const { res, text } = await fetchText(`${APP}/`);
     if (res.ok) ok("App root", `${APP}/ (HTTP ${res.status})`);
     else bad("App root", `HTTP ${res.status}`);

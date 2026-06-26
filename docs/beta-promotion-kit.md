@@ -2,7 +2,12 @@
 
 公開ベータの配信に使うリンク・コピー・手順の一覧です。
 
-## 公式リンク（UTM 付きを生成）
+## ドメイン
+
+プロモ導線（`/try`, `/trial`, `/launch`, `/ja`）と UTM 計測は **`https://app.frensei.jp`** で動作します。  
+静的マーケサイト `https://frensei.jp` は英語/日本語 LP と Calendly 用 `/trial/` をホストしていますが、ゲスト体験・attribution はアプリ側を使ってください。
+
+---
 
 ```bash
 npm run promo:links
@@ -24,14 +29,14 @@ npm run promo:links
 ```
 AI Japanese coach for natural, real-life Japanese — not textbook drills.
 Try 3 free messages (no signup) 👇
-https://frensei.jp/try?utm_source=twitter&utm_medium=bio&utm_campaign=beta
+https://app.frensei.jp/try?utm_source=twitter&utm_medium=bio&utm_campaign=beta
 ```
 
 **日本語 bio 例**
 ```
 教科書の日本語から、自然な日本語へ。AIコーチ Frensei（ベータ）
 無料3メッセージ体験 👇
-https://frensei.jp/ja?utm_source=instagram&utm_medium=bio&utm_campaign=beta
+https://app.frensei.jp/ja?utm_source=instagram&utm_medium=bio&utm_campaign=beta
 ```
 
 ---
@@ -47,7 +52,7 @@ Stop sounding like a textbook. Chat with an AI coach that explains nuance + cult
 ✅ 3 free messages, no signup
 ✅ Save vocab from real chat
 
-Try it: https://frensei.jp/try?utm_source=twitter&utm_medium=post&utm_campaign=beta
+Try it: https://app.frensei.jp/try?utm_source=twitter&utm_medium=post&utm_campaign=beta
 
 Feedback welcome — we're shipping fast.
 ```
@@ -61,7 +66,7 @@ Frensei ベータ公開中 🌸
 ・登録不要で3メッセージ無料
 ・気に入ったらアカウント作成
 
-https://frensei.jp/ja?utm_source=twitter&utm_medium=post&utm_campaign=beta
+https://app.frensei.jp/ja?utm_source=twitter&utm_medium=post&utm_campaign=beta
 
 バグ・要望はアプリ内フィードバックから歓迎です。
 ```
@@ -80,7 +85,7 @@ https://frensei.jp/ja?utm_source=twitter&utm_medium=post&utm_campaign=beta
 Hey everyone — I'm building Frensei, an AI Japanese coach focused on natural phrasing, politeness, and cultural context (not grammar drills).
 
 Public beta: try 3 chat messages without an account:
-https://frensei.jp/try?utm_source=reddit&utm_medium=post&utm_campaign=learnjapanese
+https://app.frensei.jp/try?utm_source=reddit&utm_medium=post&utm_campaign=learnjapanese
 
 Would love feedback on what feels unnatural or confusing. Thanks!
 ```
@@ -98,7 +103,7 @@ Would love feedback on what feels unnatural or confusing. Thanks!
 
 ## Product Hunt
 
-1. ローンチURL: `https://frensei.jp/launch?utm_source=product_hunt&utm_medium=launch`
+1. ローンチURL: `https://app.frensei.jp/launch?utm_source=product_hunt&utm_medium=launch`
 2. **Tagline**: Stop sounding like a textbook. Start sounding natural.
 3. **Maker comment 例**:
 
@@ -120,7 +125,7 @@ Roast us in the comments — every bug report goes straight into the next deploy
 ```
 Sharing a beta I've been working on — Frensei, an AI Japanese coach (natural phrasing + culture).
 
-Guest try (no account): https://frensei.jp/try?utm_source=discord&utm_medium=community&utm_campaign=beta
+Guest try (no account): https://app.frensei.jp/try?utm_source=discord&utm_medium=community&utm_campaign=beta
 
 Happy to answer questions about the product or Japanese learning in general.
 ```

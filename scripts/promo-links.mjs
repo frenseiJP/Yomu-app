@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
  * Print UTM-tracked promo links for beta channels.
+ * Marketing routes (/try, /trial, /launch, /ja, /learn) live on the Next app host.
+ *
  * Usage: node scripts/promo-links.mjs
  */
 
@@ -10,22 +12,24 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-function loadSite() {
+function loadEnvValue(key, fallback) {
   try {
     const raw = readFileSync(join(ROOT, ".env.production.local"), "utf8");
     for (const line of raw.split("\n")) {
-      if (line.startsWith("NEXT_PUBLIC_SITE_URL=")) {
+      if (line.startsWith(`${key}=`)) {
         return line.split("=")[1].trim().replace(/^"|"$/g, "").replace(/\/$/, "");
       }
     }
   } catch {
     /* ignore */
   }
-  return process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://frensei.jp";
+  return process.env[key]?.replace(/\/$/, "") || fallback;
 }
 
-function link(path, source, medium, campaign = "beta") {
-  const base = loadSite();
+const APP = loadEnvValue("NEXT_PUBLIC_APP_URL", "https://app.frensei.jp");
+const SITE = loadEnvValue("NEXT_PUBLIC_SITE_URL", "https://frensei.jp");
+
+function link(base, path, source, medium, campaign = "beta") {
   const url = new URL(path, base);
   url.searchParams.set("utm_source", source);
   url.searchParams.set("utm_medium", medium);
@@ -34,23 +38,25 @@ function link(path, source, medium, campaign = "beta") {
 }
 
 const channels = [
-  ["X / Twitter bio", "/try", "twitter", "bio"],
-  ["Instagram bio", "/trial", "instagram", "bio"],
-  ["TikTok bio", "/try", "tiktok", "bio"],
-  ["Reddit r/LearnJapanese", "/try", "reddit", "learnjapanese"],
-  ["Product Hunt", "/launch", "product_hunt", "launch"],
-  ["Discord share", "/try", "discord", "community"],
-  ["Email signature", "/try", "email", "signature"],
-  ["Japanese LP", "/ja", "twitter", "ja_lp"],
-  ["Phrase guide SEO", "/learn", "google", "organic"],
+  ["X / Twitter bio", APP, "/try", "twitter", "bio"],
+  ["Instagram bio", APP, "/trial", "instagram", "bio"],
+  ["TikTok bio", APP, "/try", "tiktok", "bio"],
+  ["Reddit r/LearnJapanese", APP, "/try", "reddit", "learnjapanese"],
+  ["Product Hunt", APP, "/launch", "product_hunt", "launch"],
+  ["Discord share", APP, "/try", "discord", "community"],
+  ["Email signature", APP, "/try", "email", "signature"],
+  ["Japanese LP (app)", APP, "/ja", "twitter", "ja_lp"],
+  ["Japanese LP (static)", SITE, "/ja/", "twitter", "ja_lp_static"],
+  ["Phrase guide SEO", APP, "/learn", "google", "organic"],
 ];
 
 console.log("Frensei beta promo links\n");
-console.log(`Base: ${loadSite()}\n`);
+console.log(`App (attribution + guest try): ${APP}`);
+console.log(`Static marketing site: ${SITE}\n`);
 
-for (const [label, path, source, medium] of channels) {
+for (const [label, base, path, source, medium] of channels) {
   console.log(`${label}`);
-  console.log(`  ${link(path, source, medium)}\n`);
+  console.log(`  ${link(base, path, source, medium)}\n`);
 }
 
 console.log("Share correction links use utm_source=share automatically.");
