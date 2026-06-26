@@ -24,6 +24,8 @@
 .DS_Store
 *.pem
 .gas-deploy/
+.gsc-oauth-token.json
+.ga4-oauth-token.json
 
 # debug
 npm-debug.log*

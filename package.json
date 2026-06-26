@@ -22,10 +22,12 @@
     "setup:google": "node scripts/setup-google-services.mjs",
     "smoke:prod": "node scripts/smoke-production.mjs",
     "ga4:conversions": "node scripts/mark-ga4-conversions.mjs",
+    "ga4:conversions:oauth": "node scripts/submit-ga4-conversions.mjs",
     "gas:publish": "bash scripts/publish-analytics-gas.sh",
     "gas:deploy": "node scripts/deploy-gas.mjs",
     "search-console": "node scripts/submit-search-console.mjs",
     "sitemap:submit": "node scripts/submit-sitemap.mjs",
+    "gsc:submit": "node scripts/submit-gsc-sitemap.mjs",
     "qa:beta": "node scripts/beta-qa-automated.mjs",
     "promo:links": "node scripts/promo-links.mjs"
   },
