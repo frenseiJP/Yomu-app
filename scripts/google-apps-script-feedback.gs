@@ -9,7 +9,7 @@
  */
 
 // ← Paste your spreadsheet ID here (required for reliable writes)
-const SPREADSHEET_ID = "";
+const SPREADSHEET_ID = "1nc8iIGqGL-7h_DU71kwqNuUd1Lu1hnxxOC2oiqpOTbw";
 
 // Injected by scripts/publish-analytics-gas.sh (matches Vercel ADMIN_ANALYTICS_SECRET)
 const ANALYTICS_EXPORT_SECRET = "__ADMIN_ANALYTICS_SECRET__";
