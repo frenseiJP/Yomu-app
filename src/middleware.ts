@@ -28,7 +28,6 @@ const APP_PATH_PREFIXES = [
   "/share",
   "/trial",
   "/launch",
-  "/ja",
 ];
 
 function isAppShellPath(pathname: string): boolean {

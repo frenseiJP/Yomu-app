@@ -19,7 +19,7 @@ export default function ProgressVisual({
   season,
   stage,
   progressRatio,
-  isLightTheme = false,
+  isLightTheme = true,
   className = "",
 }: Props) {
   const shell = isLightTheme

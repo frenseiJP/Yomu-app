@@ -74,7 +74,7 @@ export default function RootLayout({
 
   return (
     <html lang={htmlLangAttribute(initialLang)} className="touch-manipulation" suppressHydrationWarning>
-      <body className="bg-[#020617] pb-[env(safe-area-inset-bottom,0px)] text-slate-100 overscroll-behavior-none">
+      <body className="bg-slate-50 pb-[env(safe-area-inset-bottom,0px)] text-slate-900 overscroll-behavior-none">
         <Suspense fallback={null}>
           <AuthProvider>
             <LanguageProvider initialLang={initialLang}>

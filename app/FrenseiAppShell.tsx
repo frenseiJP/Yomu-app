@@ -851,13 +851,13 @@ async function saveUserProfileLanguageSettings(
   return { error };
 }
 
-type YomuPrototypePageProps = {
+type FrenseiAppShellProps = {
   initialView?: TabView;
   /** /chat などに埋め込むとき true。高さを親に合わせる */
   embedded?: boolean;
 };
 
-function YomuPrototypePageInner({ initialView = "home", embedded = false }: YomuPrototypePageProps = {}) {
+function FrenseiAppShellInner({ initialView = "home", embedded = false }: FrenseiAppShellProps = {}) {
   const pathname = usePathname() || "";
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -885,7 +885,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   const { region: authRegion, setRegion: setAuthRegion } = useAuthContext();
   const [profileSettingsLoading, setProfileSettingsLoading] = useState(false);
   const { language: appLang, setLanguage } = useLanguage();
-  const [uiTheme, setUiTheme] = useState<UiTheme>("dark");
+  const [uiTheme, setUiTheme] = useState<UiTheme>("light");
   const [draftDisplayLanguage, setDraftDisplayLanguage] = useState<DisplayLangRaw>(
     appLang as DisplayLangRaw,
   );
@@ -2994,8 +2994,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
   return (
     <div
-      className={`relative flex w-full max-w-[100vw] flex-col overflow-x-hidden overflow-y-hidden antialiased ${isLightTheme ? "frensei-theme-light bg-white text-neutral-900" : "bg-yomu-bg text-slate-100"} ${embedded ? "min-h-0 min-h-[200px] flex-1" : "h-[100dvh] max-h-[100dvh] sm:h-screen sm:max-h-none"}`}
-      style={{ background: isLightTheme ? "#ffffff" : BG }}
+      className={`relative flex w-full max-w-[100vw] flex-col overflow-x-hidden overflow-y-hidden antialiased ${isLightTheme ? "frensei-theme-light bg-slate-50 text-slate-900" : "bg-frensei-bg text-slate-100"} ${embedded ? "min-h-0 min-h-[200px] flex-1" : "h-[100dvh] max-h-[100dvh] sm:h-screen sm:max-h-none"}`}
+      style={{ background: isLightTheme ? "#f8fafc" : BG }}
     >
       {/* メインエリア: ビューに応じて mission / record / chat を表示 */}
       <main
@@ -3544,7 +3544,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     <button
                       type="button"
                       onClick={handleSaveProfileSettings}
-                      className="btn-wa-hover-ruri inline-flex w-full items-center justify-center rounded-2xl bg-pink-500/90 px-4 py-3 text-[12px] font-medium text-white shadow-[0_18px_60px_rgba(236,72,153,0.25)] transition hover:bg-pink-400"
+                      className="inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-[12px] font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
                       disabled={profileSettingsLoading}
                     >
                       {settingsUiText.save}
@@ -3797,7 +3797,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 >
                   <PanelLeft className="h-4 w-4" />
                 </button>
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-wa-ruri to-wa-asagi text-[11px] font-bold text-white sm:h-9 sm:w-9 sm:text-xs">
+                <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-[11px] font-bold text-white sm:h-9 sm:w-9 sm:text-xs ${th.brandIcon}`}>
                   F
                 </div>
                 <p className={`font-wa-serif hidden min-w-0 flex-1 truncate text-[13px] font-semibold sm:block sm:text-sm ${th.chatTitle}`}>
@@ -3832,15 +3832,21 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
 
             <section className={`relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border p-1 backdrop-blur-sm sm:rounded-2xl sm:p-1.5 ${th.chatPanel}`}>
             {chatSettingsOpen ? (
-            <div className="mb-1 flex flex-shrink-0 flex-col gap-2 rounded-lg border border-slate-700/45 bg-slate-900/35 p-1.5 sm:mb-1.5 sm:rounded-xl sm:p-2">
+            <div className={`mb-1 flex flex-shrink-0 flex-col gap-2 rounded-lg border p-1.5 sm:mb-1.5 sm:rounded-xl sm:p-2 ${th.chatSettingsPanel}`}>
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-400">{uiText.furigana}</span>
+                  <span className={`text-[11px] ${th.pageMuted}`}>{uiText.furigana}</span>
                   <button
                     type="button"
                     onClick={() => setFuriganaOn((v) => !v)}
                     className={`btn-wa-hover btn-wa-hover-ruri flex h-8 w-12 items-center rounded-full border px-0.5 transition sm:h-6 sm:w-11 ${
-                      furiganaOn ? "border-wa-ruri bg-wa-ruri/30" : "border-slate-600 bg-slate-900"
+                      furiganaOn
+                        ? isLightTheme
+                          ? "border-blue-500 bg-blue-100"
+                          : "border-wa-ruri bg-wa-ruri/30"
+                        : isLightTheme
+                          ? "border-slate-300 bg-white"
+                          : "border-slate-600 bg-slate-900"
                     }`}
                     aria-label={furiganaOn ? uiText.ariaFuriganaOff : uiText.ariaFuriganaOn}
                   >
@@ -3852,8 +3858,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     />
                   </button>
                 </div>
-                <div className="flex items-center gap-1 rounded-full border border-yomu-glassBorder bg-yomu-glass px-2 py-1 text-[11px] backdrop-blur-sm">
-                  <span className="hidden text-slate-500 sm:inline">JLPT</span>
+                <div className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] ${th.glassPill}`}>
+                  <span className={`hidden sm:inline ${th.pageMuted}`}>JLPT</span>
                   <select
                     value={jlptLevel}
                     onChange={(e) => {
@@ -3861,7 +3867,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                       setJlptLevel(next);
                       writeStoredJlpt(habitUserId, next);
                     }}
-                    className="max-w-[4.5rem] rounded-full border border-slate-700 bg-slate-900/80 px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-wa-ruri"
+                    className={`max-w-[4.5rem] rounded-full border px-2 py-1 text-[11px] focus:outline-none focus:ring-1 ${th.select}`}
                     aria-label={uiText.jlptLevelTitle}
                   >
                     {JLPT_LEVELS.map((level) => (
@@ -3977,16 +3983,16 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   >
                     {isAssistant && (
                       <div className="flex max-w-[min(100%,36rem)] items-center gap-2 lg:max-w-2xl">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-wa-ruri to-wa-asagi text-[10px] font-bold text-white">
+                        <div className={`flex h-6 w-6 items-center justify-center rounded-lg text-[10px] font-bold text-white ${th.brandIcon}`}>
                           F
                         </div>
-                        <span className="text-[11px] text-slate-500">
+                        <span className={`text-[11px] ${th.metaMuted}`}>
                           Frensei · {formatTime(msg.createdAt)}
                         </span>
                         <button
                           type="button"
                           onClick={() => toggleSpeak(msg.baseText)}
-                          className="btn-wa-hover btn-wa-hover-ruri ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-700/50 bg-slate-900/40 text-slate-300 hover:border-wa-ruri hover:text-slate-50"
+                          className={`btn-wa-hover btn-wa-hover-ruri ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full border ${th.iconBtnGhost}`}
                           aria-label={uiText.ariaPlayAudio}
                         >
                           <Volume2 className="h-3.5 w-3.5" />
@@ -3996,12 +4002,10 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                     {isAssistant ? (
                       <div className="flex w-full max-w-[min(100%,36rem)] flex-col gap-2 lg:max-w-2xl">
                         <div
-                          className={`rounded-2xl px-3.5 py-3 sm:px-4 sm:py-3.5 ${
-                            "rounded-bl-md border border-slate-700/45 bg-slate-800/50 text-slate-100 shadow-sm"
-                          } ${
+                          className={`rounded-2xl px-3.5 py-3 sm:px-4 sm:py-3.5 ${th.assistantBubble} ${
                             guidedStep === "correction_seen" &&
                             guidedAssistantMsgIdRef.current === msg.id
-                              ? "ring-2 ring-wa-ruri/55 ring-offset-2 ring-offset-slate-950"
+                              ? `ring-2 ring-wa-ruri/55 ring-offset-2 ${th.ringOffset}`
                               : ""
                           }`}
                         >
@@ -4014,6 +4018,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                             text={displayText}
                             payload={msg.senseiPayload}
                             lang={appLang as Lang}
+                            theme={isLightTheme ? "light" : "dark"}
                             renderInline={(line) =>
                               renderMessageWithVocab(
                                 line,
@@ -4128,8 +4133,8 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                           </p>
                         ) : null}
                         {msg.coachInlineNote ? (
-                          <div className="mt-2 rounded-lg border border-pink-500/30 bg-pink-500/10 px-2.5 py-1.5 text-[11px] text-pink-50">
-                            <p className="font-semibold text-pink-100">{chatActionsCopy.coachNoteLabel}</p>
+                          <div className={`mt-2 rounded-lg border px-2.5 py-1.5 text-[11px] ${th.coachNote}`}>
+                            <p className={`font-semibold ${th.coachNoteTitle}`}>{chatActionsCopy.coachNoteLabel}</p>
                             <p className="mt-0.5 leading-relaxed">{msg.coachInlineNote}</p>
                           </div>
                         ) : null}
@@ -4255,11 +4260,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                         ) : null}
                       </div>
                     ) : (
-                      <div
-                        className={
-                          "w-fit max-w-[min(92%,22rem)] rounded-2xl rounded-br-md border border-wa-ruri/35 bg-wa-ruri/20 px-3 py-2.5 text-slate-50 shadow-sm sm:max-w-[min(88%,24rem)] lg:max-w-md"
-                        }
-                      >
+                      <div className={`w-fit max-w-[min(92%,22rem)] rounded-2xl px-3 py-2.5 sm:max-w-[min(88%,24rem)] lg:max-w-md ${th.userBubble}`}>
                         <p className="break-words">{displayText}</p>
                       </div>
                     )}
@@ -4268,10 +4269,10 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               })}
               {showTypingIndicator && (
                 <div className="msg-enter flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-wa-ruri to-wa-asagi text-[10px] font-bold text-white">
+                  <div className={`flex h-6 w-6 items-center justify-center rounded-lg text-[10px] font-bold text-white ${th.brandIcon}`}>
                     F
                   </div>
-                  <div className="flex items-center gap-2 rounded-2xl border border-yomu-glassBorder bg-yomu-glass px-3 py-2">
+                  <div className={`flex items-center gap-2 rounded-2xl border px-3 py-2 ${th.typingBubble}`}>
                     <div className="flex items-center gap-1">
                       <span className="dot" />
                       <span className="dot" />
@@ -4366,7 +4367,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                         type="button"
                         disabled={isLoading}
                         onClick={() => handleQuickSend(prompt, idx)}
-                        className="btn-wa-hover min-h-[44px] touch-manipulation rounded-xl border border-pink-500/25 bg-pink-500/8 px-3 py-2.5 text-left text-[12px] leading-snug text-slate-100 transition hover:border-pink-500/45 hover:bg-pink-500/15 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:min-w-[9rem]"
+                        className={`btn-wa-hover min-h-[44px] touch-manipulation rounded-xl border px-3 py-2.5 text-left text-[12px] leading-snug transition disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:min-w-[9rem] ${th.starterChip}`}
                       >
                         {prompt}
                       </button>
@@ -4437,14 +4438,12 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                           type="button"
                           disabled={isLoading}
                           onClick={() => handleQuickSend(prompt, idx)}
-                          className={`btn-wa-hover rounded-xl border px-3 py-2 text-left text-[12px] leading-snug text-slate-100 transition disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:min-w-[9rem] ${
-                            isRecommended
-                              ? "border-violet-400/45 bg-violet-500/15 ring-1 ring-violet-400/25 hover:border-violet-400/60 hover:bg-violet-500/22"
-                              : "border-pink-500/25 bg-pink-500/8 hover:border-pink-500/45 hover:bg-pink-500/15"
+                          className={`btn-wa-hover rounded-xl border px-3 py-2 text-left text-[12px] leading-snug transition disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:min-w-[9rem] ${
+                            isRecommended ? th.starterChipRecommended : th.starterChip
                           }`}
                         >
                           {isRecommended ? (
-                            <span className="mb-0.5 block text-[10px] font-medium uppercase tracking-wide text-violet-300/90">
+                            <span className={`mb-0.5 block text-[10px] font-medium uppercase tracking-wide ${isLightTheme ? "text-blue-700" : "text-violet-300/90"}`}>
                               {uiText.chatFollowUpRecommended}
                             </span>
                           ) : null}
@@ -4456,7 +4455,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                 </div>
               ) : null}
 
-              <div className="flex items-end gap-2 rounded-2xl border border-slate-700/55 bg-slate-950/95 px-2.5 py-2 shadow-lg backdrop-blur-md sm:gap-2.5 sm:px-3 sm:py-2.5">
+              <div className={`flex items-end gap-2 rounded-2xl border px-2.5 py-2 sm:gap-2.5 sm:px-3 sm:py-2.5 ${th.composer}`}>
                 <div className="flex-1">
                   <textarea
                     ref={chatInputRef}
@@ -4478,7 +4477,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                       });
                     }}
                     placeholder={uiText.inputPlaceholder}
-                    className="max-h-32 w-full resize-none border-0 bg-transparent text-[15px] leading-snug text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
+                    className={`max-h-32 w-full resize-none border-0 bg-transparent text-[15px] leading-snug focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50 ${th.composerInput}`}
                   />
                 </div>
                 <button
@@ -4486,7 +4485,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                   disabled={!canSend}
                   onClick={() => handleSend(input)}
                   aria-busy={isLoading}
-                  className="btn-wa-hover btn-wa-hover-ruri flex h-11 min-h-[44px] min-w-[80px] items-center justify-center gap-2 rounded-xl bg-wa-ruri px-4 text-[12px] font-medium text-slate-50 shadow-glass transition hover:bg-wa-asagi disabled:cursor-not-allowed disabled:bg-wa-hai/50 disabled:text-slate-400 sm:h-9"
+                  className={`btn-wa-hover btn-wa-hover-ruri flex h-11 min-h-[44px] min-w-[80px] items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-medium shadow-glass transition disabled:cursor-not-allowed sm:h-9 ${th.sendBtn}`}
                 >
                   {isLoading ? uiText.sending : uiText.send}
                 </button>
@@ -4634,13 +4633,26 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
           <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="yomu-choice-sheet-title"
-            className="relative z-10 flex max-h-[min(85dvh,32rem)] w-full flex-col rounded-t-2xl border border-slate-800/80 bg-slate-950 shadow-2xl sm:max-w-md sm:rounded-2xl"
+            aria-labelledby="frensei-choice-sheet-title"
+            className={[
+              "relative z-10 flex max-h-[min(85dvh,32rem)] w-full flex-col rounded-t-2xl shadow-2xl sm:max-w-md sm:rounded-2xl",
+              isLightTheme
+                ? "border border-slate-200 bg-white"
+                : "border border-slate-800/80 bg-slate-950",
+            ].join(" ")}
           >
-            <div className="flex items-center justify-between gap-3 border-b border-slate-800/70 px-4 py-3">
+            <div
+              className={[
+                "flex items-center justify-between gap-3 border-b px-4 py-3",
+                isLightTheme ? "border-slate-200" : "border-slate-800/70",
+              ].join(" ")}
+            >
               <h2
-                id="yomu-choice-sheet-title"
-                className="font-wa-serif text-base font-semibold text-slate-50"
+                id="frensei-choice-sheet-title"
+                className={[
+                  "text-base font-semibold",
+                  isLightTheme ? "text-slate-900" : "text-slate-50",
+                ].join(" ")}
               >
                 {choiceSheet === "language"
                   ? settingsUiText.chooseLanguageTitle
@@ -4649,7 +4661,12 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
               <button
                 type="button"
                 onClick={() => setChoiceSheet(null)}
-                className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
+                className={[
+                  "rounded-lg px-3 py-1.5 text-xs font-medium transition",
+                  isLightTheme
+                    ? "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                    : "text-slate-400 hover:bg-slate-800 hover:text-slate-200",
+                ].join(" ")}
               >
                 {uiText.cancel}
               </button>
@@ -4669,13 +4686,17 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                           className={[
                             "flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3.5 text-left text-sm transition sm:py-3",
                             selected
-                              ? "bg-pink-500/15 text-white ring-1 ring-pink-500/40"
-                              : "text-slate-200 hover:bg-slate-800/80",
+                              ? isLightTheme
+                                ? "bg-blue-50 text-blue-900 ring-1 ring-blue-500/40"
+                                : "bg-blue-500/15 text-white ring-1 ring-blue-500/40"
+                              : isLightTheme
+                                ? "text-slate-700 hover:bg-slate-100"
+                                : "text-slate-200 hover:bg-slate-800/80",
                           ].join(" ")}
                         >
                           <span>{labelForDisplayLang(code, uiText)}</span>
                           {selected ? (
-                            <Check className="h-4 w-4 flex-shrink-0 text-pink-400" aria-hidden />
+                            <Check className={`h-4 w-4 flex-shrink-0 ${isLightTheme ? "text-blue-600" : "text-blue-400"}`} aria-hidden />
                           ) : null}
                         </button>
                       </li>
@@ -4698,15 +4719,19 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
                           className={[
                             "flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3.5 text-left text-sm transition sm:py-3",
                             selected
-                              ? "bg-pink-500/15 text-white ring-1 ring-pink-500/40"
-                              : "text-slate-200 hover:bg-slate-800/80",
+                              ? isLightTheme
+                                ? "bg-blue-50 text-blue-900 ring-1 ring-blue-500/40"
+                                : "bg-blue-500/15 text-white ring-1 ring-blue-500/40"
+                              : isLightTheme
+                                ? "text-slate-700 hover:bg-slate-100"
+                                : "text-slate-200 hover:bg-slate-800/80",
                           ].join(" ")}
                         >
                           <span className="truncate">
                             {regionLabelForLang(r.value, appLang as Lang)}
                           </span>
                           {selected ? (
-                            <Check className="h-4 w-4 flex-shrink-0 text-pink-400" aria-hidden />
+                            <Check className={`h-4 w-4 flex-shrink-0 ${isLightTheme ? "text-blue-600" : "text-blue-400"}`} aria-hidden />
                           ) : null}
                         </button>
                       </li>
@@ -4723,6 +4748,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
         activeId={currentSessionId}
         newChatLabel={chatActionsCopy.newChat}
         deleteLabel={chatActionsCopy.deleteSession}
+        isLightTheme={isLightTheme}
         onClose={() => setSessionDrawerOpen(false)}
         onNewChat={() => createNewSession()}
         onOpenSession={openSession}
@@ -4785,7 +4811,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             transition={{ type: "spring", stiffness: 420, damping: 22 }}
           >
             <motion.div
-              className="pointer-events-none flex items-center justify-center rounded-full bg-gradient-to-br from-wa-ruri to-wa-asagi p-3 shadow-glass ring-2 ring-wa-asagi/60"
+              className={`pointer-events-none flex items-center justify-center rounded-full p-3 ${th.navChatFab}`}
               animate={
                 activeView === "chat"
                   ? {
@@ -4871,7 +4897,7 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
             className="fixed inset-0 z-[210] bg-black/50 backdrop-blur-sm"
             onClick={() => setVocabMenu(null)}
           />
-          <div className="fixed left-4 right-4 top-1/2 z-[220] max-w-sm -translate-y-1/2 rounded-2xl border border-yomu-glassBorder bg-yomu-glass p-4 shadow-glass backdrop-blur-xl sm:left-1/2 sm:right-auto sm:w-[calc(100%-2rem)] sm:-translate-x-1/2">
+          <div className="fixed left-4 right-4 top-1/2 z-[220] max-w-sm -translate-y-1/2 rounded-2xl border border-frensei-glassBorder bg-frensei-glass p-4 shadow-glass backdrop-blur-xl sm:left-1/2 sm:right-auto sm:w-[calc(100%-2rem)] sm:-translate-x-1/2">
             <p className="mb-3 text-[13px] text-slate-200">
               “{vocabMenu.phrase}” ({vocabMenu.reading}
               {vocabMenu.romaji ? ` / ${vocabMenu.romaji}` : ""})
@@ -4913,16 +4939,16 @@ function YomuPrototypePageInner({ initialView = "home", embedded = false }: Yomu
   );
 }
 
-export default function YomuPrototypePage(props: YomuPrototypePageProps = {}) {
+export default function FrenseiAppShell(props: FrenseiAppShellProps = {}) {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-[100dvh] items-center justify-center bg-[#020617] text-sm text-slate-400">
+        <div className="flex min-h-[100dvh] items-center justify-center bg-slate-50 text-sm text-slate-500">
           Loading…
         </div>
       }
     >
-      <YomuPrototypePageInner {...props} />
+      <FrenseiAppShellInner {...props} />
     </Suspense>
   );
 }

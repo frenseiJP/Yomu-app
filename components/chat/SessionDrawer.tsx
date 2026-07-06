@@ -8,6 +8,7 @@ type Props = {
   activeId: string | null;
   newChatLabel: string;
   deleteLabel: string;
+  isLightTheme?: boolean;
   onClose: () => void;
   onNewChat: () => void;
   onOpenSession: (id: string) => void;
@@ -25,6 +26,7 @@ export default function SessionDrawer({
   activeId,
   newChatLabel,
   deleteLabel,
+  isLightTheme = true,
   onClose,
   onNewChat,
   onOpenSession,
@@ -36,30 +38,51 @@ export default function SessionDrawer({
       <button
         type="button"
         aria-label="close"
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
-      <aside className="absolute left-0 top-0 h-full w-[84%] max-w-sm border-r border-slate-800 bg-slate-950 p-3">
+      <aside
+        className={`absolute left-0 top-0 h-full w-[84%] max-w-sm border-r p-3 ${
+          isLightTheme ? "border-slate-200 bg-white" : "border-slate-800 bg-slate-950"
+        }`}
+      >
         <button
           type="button"
           onClick={onNewChat}
-          className="mb-3 w-full rounded-xl bg-wa-ruri px-3 py-2 text-sm font-medium text-white"
+          className="mb-3 w-full rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
         >
           {newChatLabel}
         </button>
         <ul className="space-y-2 overflow-y-auto pb-6">
           {sessions.map((s) => (
-            <li key={s.id} className="rounded-xl border border-slate-800 bg-slate-900/60 p-2.5">
+            <li
+              key={s.id}
+              className={`rounded-xl border p-2.5 ${
+                isLightTheme ? "border-slate-200 bg-slate-50" : "border-slate-800 bg-slate-900/60"
+              }`}
+            >
               <button type="button" onClick={() => onOpenSession(s.id)} className="w-full text-left">
-                <p className={`truncate text-sm ${activeId === s.id ? "text-sky-300" : "text-slate-100"}`}>
+                <p
+                  className={`truncate text-sm ${
+                    activeId === s.id
+                      ? isLightTheme
+                        ? "font-medium text-blue-700"
+                        : "text-sky-300"
+                      : isLightTheme
+                        ? "text-slate-900"
+                        : "text-slate-100"
+                  }`}
+                >
                   {s.title}
                 </p>
-                <p className="mt-0.5 text-[11px] text-slate-500">{dateLabel(s.updatedAt)}</p>
+                <p className={`mt-0.5 text-[11px] ${isLightTheme ? "text-slate-500" : "text-slate-500"}`}>
+                  {dateLabel(s.updatedAt)}
+                </p>
               </button>
               <button
                 type="button"
                 onClick={() => onDeleteSession(s.id)}
-                className="mt-2 text-[11px] text-slate-500 hover:text-red-400"
+                className="mt-2 text-[11px] text-slate-500 hover:text-red-500"
               >
                 {deleteLabel}
               </button>

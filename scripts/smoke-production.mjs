@@ -40,12 +40,12 @@ async function main() {
   }
 
   try {
-    const { res, text } = await fetchText(`${SITE}/ja/`);
-    if (res.ok && text.includes("教科書の日本語ではなく"))
-      ok("Japanese LP", `${SITE}/ja/ (HTTP ${res.status})`);
-    else bad("Japanese LP", `HTTP ${res.status} or missing content`);
+    const { res } = await fetchText(`${SITE}/ja/`);
+    if (res.status === 404 || res.status === 410)
+      ok("Japanese LP removed", `${SITE}/ja/ → HTTP ${res.status}`);
+    else bad("Japanese LP removed", `Expected 404, got HTTP ${res.status}`);
   } catch (e) {
-    bad("Japanese LP", String(e));
+    bad("Japanese LP removed", String(e));
   }
 
   try {

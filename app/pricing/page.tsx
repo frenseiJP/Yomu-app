@@ -1,67 +1,85 @@
 import Link from "next/link";
+import MarketingShell, { mkt } from "@/components/marketing/MarketingShell";
 import { getLangServer } from "@/src/utils/i18n/serverLang";
-import { getPricingCopy } from "@/lib/i18n/pricingCopy";
+import { getPricingCopy, type PricingPlan } from "@/lib/i18n/pricingCopy";
+
+function PlanCard({ plan, ctaLabel }: { plan: PricingPlan; ctaLabel: string }) {
+  const className = plan.highlight
+    ? "rounded-2xl border-2 border-blue-500 bg-blue-50 p-5 shadow-sm"
+    : `${mkt.card} p-5`;
+
+  const ctaClass = `${mkt.cta} mt-5 w-full py-2.5`;
+
+  const body = (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-lg font-semibold text-slate-900">{plan.name}</h2>
+        {plan.tag ? (
+          <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
+            {plan.tag}
+          </span>
+        ) : null}
+      </div>
+      <p className="mt-2 text-2xl font-bold text-slate-900">{plan.price}</p>
+      <p className={`text-xs ${mkt.muted}`}>{plan.period}</p>
+      <ul className={`mt-4 space-y-2 text-[13px] ${mkt.body}`}>
+        {plan.bullets.map((b) => (
+          <li key={b}>• {b}</li>
+        ))}
+      </ul>
+    </>
+  );
+
+  return (
+    <section className={className}>
+      {body}
+      {plan.href ? (
+        plan.external ? (
+          <a href={plan.href} className={ctaClass} target="_blank" rel="noopener noreferrer">
+            {ctaLabel}
+          </a>
+        ) : (
+          <Link href={plan.href} className={ctaClass}>
+            {ctaLabel}
+          </Link>
+        )
+      ) : null}
+    </section>
+  );
+}
 
 export default function PricingPage() {
   const lang = getLangServer();
   const copy = getPricingCopy(lang);
+  const { free, pro, standard, intensive } = copy.plans;
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100">
+    <MarketingShell>
       <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-        <h1 className="font-wa-serif text-2xl font-semibold">{copy.title}</h1>
-        <p className="mt-2 text-sm text-slate-400">{copy.betaDisclaimer}</p>
+        <h1 className="text-2xl font-bold text-slate-900">{copy.title}</h1>
+        <p className={`mt-2 text-sm ${mkt.body}`}>{copy.subtitle}</p>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          {[
-            { name: copy.free, bullets: copy.freeBullets, highlight: false, tag: null },
-            { name: copy.pro, bullets: copy.proBullets, highlight: true, tag: null },
-            {
-              name: copy.founder,
-              bullets: copy.founderBullets,
-              highlight: false,
-              tag: copy.betaPreview,
-            },
-          ].map((plan) => (
-            <section
-              key={plan.name}
-              className={`rounded-2xl border p-5 ${
-                plan.highlight
-                  ? "border-wa-ruri/50 bg-wa-ruri/10 shadow-[0_12px_40px_rgba(56,189,248,0.12)]"
-                  : "border-slate-800 bg-slate-950/80"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold">{plan.name}</h2>
-                {plan.tag ? (
-                  <span className="rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 text-[10px] text-slate-400">
-                    {plan.tag}
-                  </span>
-                ) : null}
-              </div>
-              <ul className="mt-4 space-y-2 text-[13px] text-slate-300">
-                {plan.bullets.map((b) => (
-                  <li key={b}>• {b}</li>
-                ))}
-              </ul>
-              <button
-                type="button"
-                disabled
-                className="mt-5 w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2.5 text-sm text-slate-400"
-              >
-                {copy.cta}
-              </button>
-            </section>
-          ))}
+        <h2 className={`mt-8 text-sm font-semibold uppercase tracking-wide ${mkt.muted}`}>
+          {copy.appSection}
+        </h2>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <PlanCard plan={free} ctaLabel={copy.ctaApp} />
+          <PlanCard plan={pro} ctaLabel={copy.ctaApp} />
         </div>
 
-        <Link
-          href="/app"
-          className="mt-8 inline-flex text-sm text-sky-300 hover:text-sky-200"
-        >
+        <h2 className={`mt-10 text-sm font-semibold uppercase tracking-wide ${mkt.muted}`}>
+          {copy.lessonSection}
+        </h2>
+        <p className="mt-1 text-xs font-medium text-emerald-800">{copy.lessonNote}</p>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <PlanCard plan={standard} ctaLabel={copy.ctaLesson} />
+          <PlanCard plan={intensive} ctaLabel={copy.ctaLesson} />
+        </div>
+
+        <Link href="/try" className={`mt-8 inline-flex ${mkt.link}`}>
           ← {copy.back}
         </Link>
       </main>
-    </div>
+    </MarketingShell>
   );
 }

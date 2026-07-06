@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/src/utils/supabase/client";
 import { checkUserProfileStatus } from "@/lib/auth/profile";
+import { mkt } from "@/lib/ui/appTheme";
 
 type Props = {
   children: React.ReactNode;
-  /** When true, unauthenticated users are sent to /login (e.g. /chat). */
   requireAuth?: boolean;
 };
 
@@ -54,8 +54,8 @@ export default function OnboardingGate({ children, requireAuth = false }: Props)
 
   if (!ready) {
     return (
-      <div className="flex min-h-screen min-h-[100dvh] items-center justify-center overflow-x-hidden bg-[#020617]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-pink-500/30 border-t-pink-400" />
+      <div className={`flex min-h-screen min-h-[100dvh] items-center justify-center ${mkt.page}`}>
+        <div className={mkt.spinner} />
       </div>
     );
   }

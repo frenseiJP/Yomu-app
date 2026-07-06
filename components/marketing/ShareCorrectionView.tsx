@@ -5,6 +5,7 @@ import { BookOpen } from "lucide-react";
 import { useEffect } from "react";
 import type { ShareCorrectionPayload } from "@/lib/share/encode";
 import { logBetaEvent } from "@/lib/analytics/client";
+import MarketingShell, { mkt } from "@/components/marketing/MarketingShell";
 
 type Props = {
   data: ShareCorrectionPayload;
@@ -20,54 +21,42 @@ export default function ShareCorrectionView({ data }: Props) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#020617] px-4 py-10 sm:px-6">
+    <MarketingShell className="px-4 py-10 sm:px-6">
       <div className="mx-auto w-full max-w-lg">
-        <Link href="/" className="mb-8 inline-flex items-center gap-2 text-slate-400 hover:text-slate-200">
+        <Link href="/" className={`mb-8 inline-flex items-center gap-2 ${mkt.muted} hover:text-slate-900`}>
           <BookOpen className="h-4 w-4" />
           <span className="text-sm">Frensei</span>
         </Link>
 
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-pink-400/90">
-          Shared correction
-        </p>
-        <h1 className="mt-2 font-wa-serif text-2xl font-semibold text-slate-50">
-          Natural Japanese coaching
-        </h1>
+        <p className={mkt.badge}>Shared correction</p>
+        <h1 className={`mt-2 text-2xl font-semibold ${mkt.heading}`}>Natural Japanese coaching</h1>
 
         <div className="mt-8 space-y-4">
           {data.niceLine ? (
-            <section className="rounded-2xl border border-emerald-500/25 bg-emerald-500/8 p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300/90">
-                Nice
-              </p>
-              <p className="mt-2 text-slate-100">{data.niceLine}</p>
+            <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Nice</p>
+              <p className={`mt-2 ${mkt.heading}`}>{data.niceLine}</p>
             </section>
           ) : null}
 
-          <section className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              You wrote
-            </p>
-            <p className="mt-2 text-slate-100">{data.userText}</p>
+          <section className={`p-4 ${mkt.card}`}>
+            <p className={`text-[10px] font-semibold uppercase tracking-wider ${mkt.faint}`}>You wrote</p>
+            <p className={`mt-2 ${mkt.heading}`}>{data.userText}</p>
           </section>
 
-          <section className="rounded-2xl border border-sky-500/25 bg-sky-500/8 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-300/90">
-              Better
-            </p>
-            <p className="mt-2 text-lg text-slate-50">{data.correctedSentence}</p>
+          <section className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-700">Better</p>
+            <p className={`mt-2 text-lg ${mkt.heading}`}>{data.correctedSentence}</p>
           </section>
 
-          <section className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              Why
-            </p>
-            <p className="mt-2 leading-relaxed text-slate-300">{data.whyEnglish}</p>
+          <section className={`p-4 ${mkt.card}`}>
+            <p className={`text-[10px] font-semibold uppercase tracking-wider ${mkt.faint}`}>Why</p>
+            <p className={`mt-2 leading-relaxed ${mkt.body}`}>{data.whyEnglish}</p>
           </section>
         </div>
 
-        <div className="mt-10 rounded-2xl border border-pink-500/25 bg-pink-500/8 p-6 text-center">
-          <p className="text-sm text-slate-300">Want your own Japanese coach?</p>
+        <div className={`mt-10 p-6 text-center ${mkt.alertInfo}`}>
+          <p className={`text-sm ${mkt.body}`}>Want your own Japanese coach?</p>
           <Link
             href="/login?intent=signup&utm_source=share&utm_medium=social&utm_campaign=beta"
             onClick={() =>
@@ -77,18 +66,15 @@ export default function ShareCorrectionView({ data }: Props) {
                 metadata: { source: "share_page", trigger: "signup" },
               })
             }
-            className="mt-4 inline-flex rounded-xl bg-gradient-to-r from-pink-500 to-pink-600 px-6 py-3 text-sm font-medium text-white"
+            className={`mt-4 inline-flex ${mkt.cta}`}
           >
             Try Frensei free
           </Link>
-          <Link
-            href="/try?utm_source=share&utm_medium=social&utm_campaign=beta"
-            className="mt-3 block text-[12px] text-slate-500 hover:text-slate-300"
-          >
+          <Link href="/try?utm_source=share&utm_medium=social&utm_campaign=beta" className={`mt-3 block text-[12px] ${mkt.link}`}>
             Or try 3 messages without signing up
           </Link>
         </div>
       </div>
-    </div>
+    </MarketingShell>
   );
 }

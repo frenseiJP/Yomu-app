@@ -93,11 +93,11 @@ export default function MobileAppBridge() {
   };
 
   return (
-    <div className="fixed inset-x-3 bottom-[max(88px,env(safe-area-inset-bottom,0px)+72px)] z-[1200] rounded-2xl border border-slate-700 bg-slate-900/95 p-3 text-slate-100 shadow-2xl backdrop-blur">
+    <div className="fixed inset-x-3 bottom-[max(88px,env(safe-area-inset-bottom,0px)+72px)] z-[1200] rounded-2xl border border-slate-200 bg-white p-3 text-slate-900 shadow-lg">
       {showLineHint ? (
-        <p className="text-xs leading-relaxed text-slate-200">{lineHint}</p>
+        <p className="text-xs leading-relaxed text-slate-700">{lineHint}</p>
       ) : (
-        <p className="text-xs leading-relaxed text-slate-200">{copy.installBody}</p>
+        <p className="text-xs leading-relaxed text-slate-700">{copy.installBody}</p>
       )}
       <div className="mt-2 flex flex-wrap gap-2">
         {showLineHint ? (
@@ -113,7 +113,7 @@ export default function MobileAppBridge() {
           <button
             type="button"
             onClick={() => void runInstall()}
-            className="rounded-lg bg-pink-500 px-3 py-1.5 text-xs font-semibold text-white"
+            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
           >
             {copy.installButton}
           </button>

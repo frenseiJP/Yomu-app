@@ -1,45 +1,39 @@
 import Link from "next/link";
 import { getTermsCopy, CONTACT_EMAIL } from "@/lib/i18n/legalCopy";
 import { getLangServer } from "@/src/utils/i18n/serverLang";
+import { mkt } from "@/lib/ui/appTheme";
 
 export default function TermsPage() {
   const lang = getLangServer();
   const c = getTermsCopy(lang);
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100">
+    <div className={mkt.page}>
       <main id="top" className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-        <section className="rounded-3xl border border-pink-400/60 bg-slate-950/90 p-6 shadow-[0_20px_70px_rgba(236,72,153,0.16)] sm:p-8">
-          <p className="text-xs tracking-[0.18em] text-pink-200">{c.eyebrow}</p>
-          <h1 className="mt-2 font-wa-serif text-2xl font-semibold text-slate-50 sm:text-3xl">
-            {c.title}
-          </h1>
-          <p className="mt-3 text-sm text-slate-300">
+        <section className={mkt.cardHero}>
+          <p className={mkt.eyebrow}>{c.eyebrow}</p>
+          <h1 className="mt-2 text-2xl font-semibold text-slate-900 sm:text-3xl">{c.title}</h1>
+          <p className={`mt-3 text-sm ${mkt.muted}`}>
             {c.lastUpdatedLabel}：{c.lastUpdated} ｜ {c.versionLabel}：{c.version}
           </p>
-          <p className="mt-5 text-sm leading-relaxed text-slate-200">{c.intro}</p>
+          <p className={`mt-5 text-sm leading-relaxed ${mkt.body}`}>{c.intro}</p>
         </section>
 
         <section className="mt-6 space-y-4 sm:mt-8 sm:space-y-5">
           {c.articles.map((article) => (
-            <article
-              key={article.title}
-              className="rounded-2xl border border-slate-800/80 bg-slate-950/80 p-5 sm:p-6"
-            >
-              <h2 className="font-wa-serif text-base font-bold text-pink-200 sm:text-lg">
-                {article.title}
-              </h2>
+            <article key={article.title} className={`p-5 sm:p-6 ${mkt.card}`}>
+              <h2 className={mkt.articleTitle}>{article.title}</h2>
               {article.body ? (
                 <div className="mt-3 space-y-3">
                   {article.body.map((line) => (
-                    <p key={line} className="text-sm leading-7 text-slate-200">
+                    <p key={line} className={`text-sm leading-7 ${mkt.body}`}>
                       {line}
                     </p>
                   ))}
                 </div>
               ) : null}
               {article.bullets ? (
-                <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-7 text-slate-200">
+                <ul className={`mt-3 list-disc space-y-2 pl-5 text-sm leading-7 ${mkt.body}`}>
                   {article.bullets.map((line) => (
                     <li key={line}>{line}</li>
                   ))}
@@ -49,23 +43,17 @@ export default function TermsPage() {
           ))}
         </section>
 
-        <section className="mt-8 rounded-2xl border border-pink-500/40 bg-slate-950/90 p-5 sm:mt-10 sm:p-6">
-          <p className="text-sm leading-7 text-slate-200">
+        <section className={`mt-8 p-5 sm:mt-10 sm:p-6 ${mkt.card}`}>
+          <p className={`text-sm leading-7 ${mkt.body}`}>
             {c.contactBlock.replace("frensei.jp@gmail.com", CONTACT_EMAIL)}
             <br />
             {c.contactHours}
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <Link
-              href="/"
-              className="inline-flex items-center rounded-xl bg-pink-500 px-4 py-2.5 text-sm font-medium text-white shadow-[0_16px_45px_rgba(236,72,153,0.35)] hover:bg-pink-400"
-            >
+            <Link href="/" className={mkt.cta}>
               {c.agreeCta}
             </Link>
-            <a
-              href="#top"
-              className="inline-flex items-center rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-sm text-slate-200 hover:border-pink-400/60"
-            >
+            <a href="#top" className={mkt.secondaryBtn}>
               {c.backToTop}
             </a>
           </div>

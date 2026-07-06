@@ -1,8 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getAllPhraseSlugs } from "@/lib/learn/phrases";
-import { getAppUrl, getSiteUrl } from "@/lib/siteUrl";
+import { getAppUrl } from "@/lib/siteUrl";
 
-const SITE = getSiteUrl();
 const APP = getAppUrl();
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -15,15 +14,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }));
 
   return [
-    { url: `${SITE}/`, lastModified: now, changeFrequency: "weekly", priority: 1 },
-    { url: `${SITE}/ja/`, lastModified: now, changeFrequency: "weekly", priority: 0.95 },
-    { url: `${SITE}/trial/`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
-    { url: `${APP}/`, lastModified: now, changeFrequency: "weekly", priority: 0.92 },
+    { url: `${APP}/`, lastModified: now, changeFrequency: "weekly", priority: 1 },
     { url: `${APP}/learn`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${APP}/try`, lastModified: now, changeFrequency: "weekly", priority: 0.88 },
     { url: `${APP}/trial`, lastModified: now, changeFrequency: "weekly", priority: 0.87 },
     { url: `${APP}/launch`, lastModified: now, changeFrequency: "weekly", priority: 0.86 },
-    { url: `${APP}/ja`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${APP}/pricing`, lastModified: now, changeFrequency: "monthly", priority: 0.55 },
     { url: `${APP}/contact`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${APP}/feedback`, lastModified: now, changeFrequency: "monthly", priority: 0.45 },

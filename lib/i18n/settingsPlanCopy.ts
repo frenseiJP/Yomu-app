@@ -10,22 +10,22 @@ const COPY: Record<Lang, SettingsPlanCopy> = {
   en: {
     sectionTitle: "Plan",
     pricingTitle: "Pricing",
-    pricingDesc: "Free, Pro, and Founder (beta preview)",
+    pricingDesc: "Free & Pro app · Standard & Intensive lessons (Pro included)",
   },
   ja: {
     sectionTitle: "プラン",
     pricingTitle: "料金プラン",
-    pricingDesc: "無料・Pro・Founder（ベータプレビュー）",
+    pricingDesc: "Free / Pro アプリ · Standard / Intensive レッスン（Pro 込み）",
   },
   ko: {
     sectionTitle: "플랜",
     pricingTitle: "요금제",
-    pricingDesc: "무료, Pro, Founder (베타 미리보기)",
+    pricingDesc: "무료·Pro 앱 · Standard·Intensive 레슨 (Pro 포함)",
   },
   zh: {
     sectionTitle: "方案",
     pricingTitle: "定价",
-    pricingDesc: "免费、Pro、Founder（测试预览）",
+    pricingDesc: "Free / Pro 应用 · Standard / Intensive 课程（含 Pro）",
   },
 };
 

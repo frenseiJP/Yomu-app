@@ -33,7 +33,7 @@ export default function TopicSelector({
   mode,
   topics,
   copy,
-  isLightTheme = false,
+  isLightTheme = true,
   onDailyMission,
   onTopicPractice,
   onPracticeTodaysScenario,

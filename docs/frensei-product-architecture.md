@@ -23,7 +23,7 @@ Chat-first AI coach for **nuance, politeness, and real-life Japanese** — not g
 
 ```
 app/
-  YomuPrototypePage.tsx      # Shell: tabs Home · Topic · Chat · Progress · More + chat/mission/progress UI
+  FrenseiAppShell.tsx         # Shell: tabs Home · Topic · Chat · Progress · More + chat/mission/progress UI
   page.tsx                   # Default shell (home)
   chat/ topic/ progress/ more/ …
 

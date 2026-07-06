@@ -228,7 +228,7 @@ export default function TopicGuidedLearning({
           <div
             className={
               saveCandidates.length > 0
-                ? `${card} p-4 sm:p-5 ${isLightTheme ? "border-neutral-200 bg-white" : "border-slate-800/80 bg-yomu-glass/80"}`
+                ? `${card} p-4 sm:p-5 ${isLightTheme ? "border-neutral-200 bg-white" : "border-slate-800/80 bg-frensei-glass/80"}`
                 : undefined
             }
           >

@@ -6,6 +6,7 @@ import { ChatHistoryList } from "@/components/chat/ChatHistoryList";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { t } from "@/src/utils/i18n/t";
 import type { Lang } from "@/src/utils/i18n/types";
+import { mkt } from "@/lib/ui/appTheme";
 
 type Props = { children: ReactNode };
 
@@ -25,12 +26,12 @@ class HistoryChunkErrorBoundary extends Component<Props & { lang: Lang }, State>
   render() {
     if (this.state.hasError) {
       return (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+        <div className={mkt.alertWarn}>
           <p className="font-medium">{t(this.props.lang, "historyLoadError")}</p>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="mt-3 rounded-lg bg-amber-500/20 px-3 py-2 text-xs font-medium text-amber-50 hover:bg-amber-500/30"
+            className="mt-3 rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-medium text-amber-900 hover:bg-amber-50"
           >
             {t(this.props.lang, "historyReload")}
           </button>
@@ -58,19 +59,16 @@ export default function HistoryPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 antialiased">
+    <div className={mkt.page}>
       <div className="mx-auto max-w-2xl px-4 py-6">
         <header className="mb-6">
-          <Link
-            href="/app"
-            className="text-sm font-medium text-slate-400 transition hover:text-slate-100"
-          >
+          <Link href="/app" className={`text-sm font-medium ${mkt.link}`}>
             ← {t(lang, "historyBackHome")}
           </Link>
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-slate-100">
+          <h1 className={`mt-4 text-2xl font-semibold tracking-tight ${mkt.heading}`}>
             {t(lang, "historyPageTitle")}
           </h1>
-          <p className="mt-2 text-sm text-slate-400">{t(lang, "historyPageSubtitle")}</p>
+          <p className={`mt-2 text-sm ${mkt.muted}`}>{t(lang, "historyPageSubtitle")}</p>
         </header>
         <section key={reloadKey}>
           <HistoryChunkErrorBoundary lang={lang}>

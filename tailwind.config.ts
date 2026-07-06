@@ -21,7 +21,7 @@ const config: Config = {
           asagi: "#48929b",       // 浅葱
           botan: "#b94047",       // 牡丹（アクセント）
         },
-        yomu: {
+        frensei: {
           bg: "#020617",
           glass: "rgb(15 23 42 / 0.6)",
           glassBorder: "rgb(148 163 184 / 0.08)",

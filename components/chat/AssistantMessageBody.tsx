@@ -8,21 +8,44 @@ import type { FtueCoachPayload } from "@/lib/ftue/types";
 
 type PhrasePair = [string, string, string?];
 
+type Theme = "light" | "dark";
+
 type Props = {
   text: string;
   payload?: FtueCoachPayload | null;
   lang?: Lang;
+  theme?: Theme;
   renderInline: (line: string) => ReactNode;
 };
 
-function SectionLabel({ children, accent }: { children: string; accent?: boolean }) {
+function useBodyStyles(theme: Theme) {
+  const light = theme === "light";
+  return {
+    body: light ? "text-slate-800" : "text-slate-100",
+    label: light ? "text-slate-500" : "text-slate-500",
+    labelAccent: light ? "text-blue-600" : "text-sky-300/90",
+    praise: light ? "text-emerald-700" : "text-emerald-100/95",
+    cta: light ? "text-slate-600" : "text-slate-400",
+    details: light
+      ? "border-slate-200 bg-white"
+      : "border-slate-800/50 bg-slate-900/30",
+    detailsSummary: light ? "text-slate-600" : "text-slate-400",
+    bulletMarker: light ? "text-slate-400" : "text-slate-500",
+  };
+}
+
+function SectionLabel({
+  children,
+  accent,
+  className,
+}: {
+  children: string;
+  accent?: boolean;
+  className: string;
+}) {
   if (!children) return null;
   return (
-    <p
-      className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${
-        accent ? "text-sky-300/90" : "text-slate-500"
-      }`}
-    >
+    <p className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${className}`}>
       {children}
     </p>
   );
@@ -34,17 +57,19 @@ function LabelSection({
   hideLabel,
   readFullLabel,
   renderInline,
+  styles,
 }: {
   label: string;
   body: string;
   hideLabel?: boolean;
   readFullLabel: string;
   renderInline: (line: string) => ReactNode;
+  styles: ReturnType<typeof useBodyStyles>;
 }) {
   if (hideLabel || !label) {
     return (
       <section>
-        <BodyBlock>{renderInline(body)}</BodyBlock>
+        <BodyBlock className={styles.body}>{renderInline(body)}</BodyBlock>
       </section>
     );
   }
@@ -52,45 +77,49 @@ function LabelSection({
   if (!isWhy) {
     return (
       <section>
-        <SectionLabel accent={label === "Better"}>{label}</SectionLabel>
-        <BodyBlock>{renderInline(body)}</BodyBlock>
+        <SectionLabel accent={label === "Better"} className={label === "Better" ? styles.labelAccent : styles.label}>
+          {label}
+        </SectionLabel>
+        <BodyBlock className={styles.body}>{renderInline(body)}</BodyBlock>
       </section>
     );
   }
   const preview = body.split(/(?<=[.!?。])\s+/).slice(0, 1).join(" ").trim() || body.slice(0, 120);
   return (
     <section>
-      <SectionLabel>{hideLabel ? "" : label}</SectionLabel>
-      <BodyBlock>{renderInline(preview)}{body.length > preview.length ? "…" : ""}</BodyBlock>
-      <details className="mt-1 rounded-lg border border-slate-800/50 bg-slate-900/30 px-2 py-1.5">
-        <summary className="cursor-pointer text-[11px] font-medium text-slate-400">{readFullLabel}</summary>
+      <SectionLabel className={styles.label}>{hideLabel ? "" : label}</SectionLabel>
+      <BodyBlock className={styles.body}>
+        {renderInline(preview)}
+        {body.length > preview.length ? "…" : ""}
+      </BodyBlock>
+      <details className={`mt-1 rounded-lg border px-2 py-1.5 ${styles.details}`}>
+        <summary className={`cursor-pointer text-[11px] font-medium ${styles.detailsSummary}`}>
+          {readFullLabel}
+        </summary>
         <div className="mt-2">
-          <BodyBlock>{renderInline(body)}</BodyBlock>
+          <BodyBlock className={styles.body}>{renderInline(body)}</BodyBlock>
         </div>
       </details>
     </section>
   );
 }
 
-function BodyBlock({ children }: { children: ReactNode }) {
-  return (
-    <div className="mt-1.5 text-[15px] leading-[1.55] tracking-[0.01em] text-slate-100">
-      {children}
-    </div>
-  );
+function BodyBlock({ children, className }: { children: ReactNode; className: string }) {
+  return <div className={`mt-1.5 text-[15px] leading-[1.55] tracking-[0.01em] ${className}`}>{children}</div>;
 }
 
 function renderSections(
   sections: ReplySection[],
   labels: ReplySectionLabels,
   renderInline: (line: string) => ReactNode,
+  styles: ReturnType<typeof useBodyStyles>,
 ) {
   return (
     <div className="flex flex-col gap-4">
       {sections.map((s, i) => {
         if (s.kind === "praise") {
           return (
-            <p key={i} className="text-[15px] font-medium leading-snug text-emerald-100/95">
+            <p key={i} className={`text-[15px] font-medium leading-snug ${styles.praise}`}>
               {renderInline(s.text)}
             </p>
           );
@@ -104,17 +133,18 @@ function renderSections(
               hideLabel={s.hideLabel}
               readFullLabel={labels.readFullExplanation}
               renderInline={renderInline}
+              styles={styles}
             />
           );
         }
         if (s.kind === "bullets") {
           return (
             <section key={i}>
-              <SectionLabel>{s.label}</SectionLabel>
+              <SectionLabel className={styles.label}>{s.label}</SectionLabel>
               <ul className="mt-2 space-y-2.5">
                 {s.items.map((item, j) => (
-                  <li key={j} className="flex gap-2 text-[15px] leading-[1.5] text-slate-100">
-                    <span className="shrink-0 text-slate-500">・</span>
+                  <li key={j} className={`flex gap-2 text-[15px] leading-[1.5] ${styles.body}`}>
+                    <span className={`shrink-0 ${styles.bulletMarker}`}>・</span>
                     <span className="min-w-0 flex-1">{renderInline(item)}</span>
                   </li>
                 ))}
@@ -126,14 +156,16 @@ function renderSections(
           return (
             <div key={i} className="space-y-3">
               {s.blocks.map((block, j) => (
-                <BodyBlock key={j}>{renderInline(block)}</BodyBlock>
+                <BodyBlock key={j} className={styles.body}>
+                  {renderInline(block)}
+                </BodyBlock>
               ))}
             </div>
           );
         }
         if (s.kind === "cta") {
           return (
-            <p key={i} className="pt-1 text-[13px] font-medium text-slate-400">
+            <p key={i} className={`pt-1 text-[13px] font-medium ${styles.cta}`}>
               {s.text}
             </p>
           );
@@ -211,20 +243,27 @@ function legacySectionsFromText(text: string, labels: ReplySectionLabels): Reply
   return sections.length ? sections : null;
 }
 
-export default function AssistantMessageBody({ text, payload, lang = "en", renderInline }: Props) {
+export default function AssistantMessageBody({
+  text,
+  payload,
+  lang = "en",
+  theme = "dark",
+  renderInline,
+}: Props) {
   const labels = getReplySectionLabels(lang);
+  const styles = useBodyStyles(theme);
   const sections = payload
     ? buildReplySections(payload, undefined, labels)
     : legacySectionsFromText(text, labels);
 
   if (sections?.length) {
-    return renderSections(sections, labels, renderInline);
+    return renderSections(sections, labels, renderInline, styles);
   }
 
   const blocks = chunkProse(text, 2);
   if (blocks.length > 1) {
-    return renderSections([{ kind: "paragraphs", blocks }], labels, renderInline);
+    return renderSections([{ kind: "paragraphs", blocks }], labels, renderInline, styles);
   }
 
-  return <BodyBlock>{renderInline(text)}</BodyBlock>;
+  return <BodyBlock className={styles.body}>{renderInline(text)}</BodyBlock>;
 }

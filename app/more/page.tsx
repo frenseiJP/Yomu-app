@@ -1,5 +1,5 @@
-import YomuPrototypePage from "@/app/YomuPrototypePage";
+import FrenseiAppShell from "@/app/FrenseiAppShell";
 
 export default function MorePage() {
-  return <YomuPrototypePage initialView="more" />;
+  return <FrenseiAppShell initialView="more" />;
 }

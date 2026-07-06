@@ -10,6 +10,11 @@ const nextConfig = {
         destination: "/app",
         permanent: true,
       },
+      {
+        source: "/ja",
+        destination: "/",
+        permanent: true,
+      },
     ];
   },
 };

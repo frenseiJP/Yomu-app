@@ -1,5 +1,5 @@
-import YomuPrototypePage from "@/app/YomuPrototypePage";
+import FrenseiAppShell from "@/app/FrenseiAppShell";
 
 export default function VocabularyRoutePage() {
-  return <YomuPrototypePage initialView="vocabulary" />;
+  return <FrenseiAppShell initialView="vocabulary" />;
 }

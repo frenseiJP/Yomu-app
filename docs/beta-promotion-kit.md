@@ -4,8 +4,8 @@
 
 ## ドメイン
 
-プロモ導線（`/try`, `/trial`, `/launch`, `/ja`）と UTM 計測は **`https://app.frensei.jp`** で動作します。  
-静的マーケサイト `https://frensei.jp` は英語/日本語 LP と Calendly 用 `/trial/` をホストしていますが、ゲスト体験・attribution はアプリ側を使ってください。
+プロモ導線（`/try`, `/trial`, `/launch`）と UTM 計測は **`https://app.frensei.jp`** で動作します。  
+静的マーケサイト `https://frensei.jp` は英語 LP と Calendly 用 `/trial/` をホストしていますが、ゲスト体験・attribution はアプリ側を使ってください。
 
 ---
 
@@ -18,7 +18,6 @@ npm run promo:links
 | メイン体験（3メッセージ無料） | `/try` |
 | Calendly 体験予約 | `/trial` |
 | Product Hunt 用 | `/launch` |
-| 日本語 LP | `/ja` |
 | フレーズガイド SEO | `/learn` |
 
 ---
@@ -36,7 +35,7 @@ https://app.frensei.jp/try?utm_source=twitter&utm_medium=bio&utm_campaign=beta
 ```
 教科書の日本語から、自然な日本語へ。AIコーチ Frensei（ベータ）
 無料3メッセージ体験 👇
-https://app.frensei.jp/ja?utm_source=instagram&utm_medium=bio&utm_campaign=beta
+https://app.frensei.jp/try?utm_source=instagram&utm_medium=bio&utm_campaign=beta
 ```
 
 ---
@@ -66,7 +65,7 @@ Frensei ベータ公開中 🌸
 ・登録不要で3メッセージ無料
 ・気に入ったらアカウント作成
 
-https://app.frensei.jp/ja?utm_source=twitter&utm_medium=post&utm_campaign=beta
+https://app.frensei.jp/try?utm_source=twitter&utm_medium=post&utm_campaign=beta
 
 バグ・要望はアプリ内フィードバックから歓迎です。
 ```

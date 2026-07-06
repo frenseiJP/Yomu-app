@@ -8,6 +8,7 @@ import { getLangClient } from "@/src/utils/i18n/clientLang";
 import { t } from "@/src/utils/i18n/t";
 import type { Lang } from "@/src/utils/i18n/types";
 import { ChatHistoryItem } from "./ChatHistoryItem";
+import { mkt } from "@/lib/ui/appTheme";
 
 function latestPreview(userId: string, sessionId: string): string {
   const msgs = getMessages(userId, sessionId);
@@ -63,12 +64,9 @@ export function ChatHistoryList() {
 
   if (sessions.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-8 text-center">
-        <p className="text-sm font-medium leading-relaxed text-slate-200">{t(lang, "historyEmpty")}</p>
-        <a
-          href={chatBase === "/chat" ? "/chat" : "/app"}
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#155EEF] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#1B6CFF]"
-        >
+      <div className={`p-8 text-center ${mkt.card}`}>
+        <p className={`text-sm font-medium leading-relaxed ${mkt.body}`}>{t(lang, "historyEmpty")}</p>
+        <a href={chatBase === "/chat" ? "/chat" : "/app"} className={`mt-5 inline-flex items-center gap-2 ${mkt.ctaSm}`}>
           {t(lang, "historyStartChat")}
         </a>
       </div>

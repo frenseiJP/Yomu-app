@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { logBetaEvent } from "@/lib/analytics/client";
 import { Calendar } from "lucide-react";
+import { mkt } from "@/lib/ui/appTheme";
 
 type Props = {
   url: string;
@@ -34,13 +35,13 @@ export default function CalendlyTrialEmbed({ url, ctaLabel, route = "/trial" }: 
 
   if (url.includes("calendly.com")) {
     return (
-      <div className="mt-6 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/50">
+      <div className={`mt-6 overflow-hidden ${mkt.card}`}>
         <a
           href={url}
           target="_blank"
           rel="noopener noreferrer"
           onClick={onCalendlyClick}
-          className="flex items-center justify-center gap-2 border-b border-slate-800 bg-pink-500/10 px-4 py-3 text-sm font-medium text-pink-100 hover:bg-pink-500/15"
+          className="flex items-center justify-center gap-2 border-b border-slate-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800 hover:bg-blue-100"
         >
           <Calendar className="h-4 w-4" />
           {ctaLabel}
@@ -59,7 +60,7 @@ export default function CalendlyTrialEmbed({ url, ctaLabel, route = "/trial" }: 
       target="_blank"
       rel="noopener noreferrer"
       onClick={onCalendlyClick}
-      className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-pink-600 px-5 py-3 text-sm font-medium text-white"
+      className={`mt-6 inline-flex items-center gap-2 ${mkt.cta}`}
     >
       <Calendar className="h-4 w-4" />
       {ctaLabel}

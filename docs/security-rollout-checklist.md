@@ -1,6 +1,6 @@
 # Security Rollout Checklist
 
-Frensei / Yomu の高コストAIルート向け staged auth-gating と rate limiting の本番切り替え手順。
+Frensei の高コストAIルート向け staged auth-gating と rate limiting の本番切り替え手順。
 
 ## 0. 事前確認
 
@@ -19,9 +19,9 @@ Frensei / Yomu の高コストAIルート向け staged auth-gating と rate limi
 - ログインで呼び出し -> `200`（既存挙動維持）
 - 連打時 -> `429` が返る
 
-## 2. `REQUIRE_AUTH_FOR_OPENAI_GENERATE_PROMPT=true`
+## 2. `REQUIRE_AUTH_FOR_OPENAI_GENERATE_PROMPT=true`（任意・レガシー）
 
-対象: `/api/openai-generate-prompt`
+対象: `/api/generate-prompt`（旧 `/api/openai-generate-prompt` は削除済み）
 
 - 未ログインで呼び出し -> `401 {"error":"Unauthorized"}`
 - ログインで呼び出し -> `200`（`title_jp`, `title_en`）

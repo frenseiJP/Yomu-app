@@ -38,7 +38,7 @@ import { getLangClient } from "@/src/utils/i18n/clientLang";
 import { t } from "@/src/utils/i18n/t";
 
 type VocabularyPageProps = {
-  /** Render inside YomuPrototypePage (bottom nav, no modal overlay). */
+  /** Render inside FrenseiAppShell (bottom nav, no modal overlay). */
   inAppShell?: boolean;
   isLightTheme?: boolean;
   onNavigateHome?: () => void;
@@ -50,7 +50,7 @@ type VocabularyPageProps = {
 
 export default function VocabularyPage({
   inAppShell = false,
-  isLightTheme = false,
+  isLightTheme = true,
   onNavigateHome,
   onNavigateChat,
   onNavigateTopic,

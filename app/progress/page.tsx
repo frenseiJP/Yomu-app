@@ -1,5 +1,5 @@
-import YomuPrototypePage from "@/app/YomuPrototypePage";
+import FrenseiAppShell from "@/app/FrenseiAppShell";
 
 export default function ProgressPage() {
-  return <YomuPrototypePage initialView="progress" />;
+  return <FrenseiAppShell initialView="progress" />;
 }

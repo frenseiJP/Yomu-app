@@ -14,7 +14,7 @@ export default function ChatMessage({ message }: Props) {
         className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed sm:max-w-[70%] ${
           isUser
             ? "rounded-br-sm bg-wa-ruri text-white"
-            : "rounded-bl-sm border border-yomu-glassBorder bg-yomu-glass text-slate-100"
+            : "rounded-bl-sm border border-frensei-glassBorder bg-frensei-glass text-slate-100"
         }`}
       >
         {message.content}

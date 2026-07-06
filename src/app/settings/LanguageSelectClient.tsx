@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage, type Language } from "@/app/contexts/LanguageContext";
 import type { Lang } from "@/src/utils/i18n/types";
+import { mkt } from "@/lib/ui/appTheme";
 
 type Props = {
   currentDisplayLang: Lang;
@@ -24,7 +25,6 @@ export default function LanguageSelectClient({
     setSelected(currentDisplayLang);
   }, [currentDisplayLang]);
 
-  /** 各言語の自語名（表示言語に依らず統一） */
   const languages = useMemo(
     () =>
       [
@@ -39,7 +39,7 @@ export default function LanguageSelectClient({
   return (
     <form action={saveAction} className="space-y-3">
       <div className="space-y-1.5">
-        <p className="text-[11px] font-medium text-slate-400">{displayLanguageLabel}</p>
+        <p className={`text-[11px] font-medium ${mkt.faint}`}>{displayLanguageLabel}</p>
         <select
           name="lang"
           value={selected}
@@ -48,7 +48,7 @@ export default function LanguageSelectClient({
             setSelected(next);
             setLanguage(next as Language);
           }}
-          className="w-full appearance-none rounded-2xl border border-slate-800 bg-slate-950/80 px-3 py-2.5 text-[13px] text-slate-100 focus:border-wa-ruri focus:outline-none focus:ring-1 focus:ring-wa-ruri/60"
+          className={mkt.select}
         >
           {languages.map(([code, label]) => (
             <option key={code} value={code}>
@@ -58,13 +58,9 @@ export default function LanguageSelectClient({
         </select>
       </div>
 
-      <button
-        type="submit"
-        className="btn-wa-hover btn-wa-hover-ruri inline-flex w-full items-center justify-center rounded-2xl bg-pink-500/90 px-4 py-3 text-[12px] font-medium text-white shadow-[0_18px_60px_rgba(236,72,153,0.25)] transition hover:bg-pink-400"
-      >
+      <button type="submit" className={mkt.ctaFull}>
         {saveLanguageButtonLabel}
       </button>
     </form>
   );
 }
-

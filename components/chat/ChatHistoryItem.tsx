@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { mkt } from "@/lib/ui/appTheme";
 
 type Props = {
   title: string;
@@ -25,11 +26,11 @@ export function ChatHistoryItem({ title, updatedAt, preview, href, onDelete }: P
   const previewLine = preview.trim() || "—";
 
   return (
-    <div className="group rounded-2xl border border-slate-800/80 bg-slate-950/80 p-4 transition hover:border-slate-600 hover:bg-slate-900/80">
+    <div className={`group p-4 transition hover:border-blue-200 hover:shadow-md ${mkt.card}`}>
       <Link href={href} className="block">
-        <p className="mb-1 text-xs text-slate-500">{formatDate(updatedAt)}</p>
-        <p className="mb-2 line-clamp-1 text-sm font-medium text-slate-100">{title}</p>
-        <p className="line-clamp-2 text-xs leading-relaxed text-slate-400">{previewLine}</p>
+        <p className={`mb-1 text-xs ${mkt.faint}`}>{formatDate(updatedAt)}</p>
+        <p className={`mb-2 line-clamp-1 text-sm font-medium ${mkt.heading}`}>{title}</p>
+        <p className={`line-clamp-2 text-xs leading-relaxed ${mkt.muted}`}>{previewLine}</p>
       </Link>
       {onDelete ? (
         <button
@@ -38,7 +39,7 @@ export function ChatHistoryItem({ title, updatedAt, preview, href, onDelete }: P
             e.preventDefault();
             onDelete();
           }}
-          className="mt-3 text-xs text-slate-500 underline-offset-2 hover:text-red-400 hover:underline"
+          className="mt-3 text-xs text-slate-500 underline-offset-2 hover:text-red-600 hover:underline"
         >
           Delete
         </button>

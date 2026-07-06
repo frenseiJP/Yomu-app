@@ -6,6 +6,7 @@ import { getVocabularyLibrary } from "@/lib/vocabulary/service";
 import { useVocabularyUserId } from "@/lib/vocabulary/useVocabularyUserId";
 import { t } from "@/src/utils/i18n/t";
 import type { Lang } from "@/src/utils/i18n/types";
+import { mkt } from "@/lib/ui/appTheme";
 
 type Props = {
   lang: Lang;
@@ -30,15 +31,15 @@ export default function LearningStatsClient({
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <div className="rounded-2xl border border-slate-800/70 bg-slate-900/45 p-3">
-        <p className="text-[11px] font-medium text-slate-400">{chatSessionsLabel}</p>
-        <p className="mt-1 text-[20px] font-semibold text-slate-50">{sessions}</p>
+      <div className={`p-3 ${mkt.cardSoft}`}>
+        <p className={`text-[11px] font-medium ${mkt.faint}`}>{chatSessionsLabel}</p>
+        <p className={`mt-1 text-[20px] font-semibold ${mkt.heading}`}>{sessions}</p>
       </div>
-      <div className="rounded-2xl border border-slate-800/70 bg-slate-900/45 p-3">
-        <p className="text-[11px] font-medium text-slate-400">{vocabularyItemsLabel}</p>
-        <p className="mt-1 text-[20px] font-semibold text-slate-50">{vocab}</p>
+      <div className={`p-3 ${mkt.cardSoft}`}>
+        <p className={`text-[11px] font-medium ${mkt.faint}`}>{vocabularyItemsLabel}</p>
+        <p className={`mt-1 text-[20px] font-semibold ${mkt.heading}`}>{vocab}</p>
       </div>
-      <p className="sm:col-span-2 text-[10px] text-slate-500">{t(lang, "learningStatsSyncNote")}</p>
+      <p className={`sm:col-span-2 text-[10px] ${mkt.faint}`}>{t(lang, "learningStatsSyncNote")}</p>
     </div>
   );
 }

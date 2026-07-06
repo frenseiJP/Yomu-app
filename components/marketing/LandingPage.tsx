@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BookOpen, MessageCircle, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, MessageCircle, Sparkles, UserRound } from "lucide-react";
 import GuestTryChat from "@/components/marketing/GuestTryChat";
+import MarketingShell, { mkt } from "@/components/marketing/MarketingShell";
 import { getAllPhrases } from "@/lib/learn/phrases";
 import { logBetaEvent } from "@/lib/analytics/client";
 import { createClient } from "@/src/utils/supabase/client";
@@ -42,29 +43,30 @@ export default function LandingPage() {
     };
   }, []);
 
-  return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#020617]">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-40"
-        aria-hidden
-        style={{
-          background:
-            "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(236,72,153,0.18), transparent), radial-gradient(ellipse 60% 40% at 100% 50%, rgba(42,92,170,0.12), transparent)",
-        }}
-      />
+  const tryCtaProps = {
+    href: "/try",
+    onClick: () =>
+      void logBetaEvent({
+        eventType: "promo_cta_click",
+        route: "/",
+        metadata: { source: "landing", medium: "cta" },
+      }),
+  };
 
-      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
+  return (
+    <MarketingShell>
+      <header className="mx-auto flex w-full max-w-6xl items-center justify-between border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-wa-ruri to-wa-asagi shadow-lg">
-            <BookOpen className="h-5 w-5 text-white" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600">
+            <BookOpen className="h-4 w-4 text-white" />
           </div>
-          <span className="font-wa-serif text-lg font-semibold text-slate-100">Frensei</span>
+          <span className="text-lg font-semibold text-slate-900">Frensei</span>
         </Link>
-        <nav className="flex items-center gap-2 sm:gap-3">
-          <Link
-            href="/learn"
-            className="hidden rounded-lg px-3 py-2 text-sm text-slate-400 hover:text-slate-200 sm:inline"
-          >
+        <nav className="flex items-center gap-1 sm:gap-2">
+          <Link href="/pricing" className={`hidden sm:inline ${mkt.navLink}`}>
+            {m.pricing}
+          </Link>
+          <Link href="/learn" className={`hidden md:inline ${mkt.navLink}`}>
             {m.phraseGuides}
           </Link>
           {signedIn ? (
@@ -77,116 +79,121 @@ export default function LandingPage() {
                   metadata: { cta: "continue_learning_header" },
                 })
               }
-              className="rounded-xl bg-gradient-to-r from-wa-ruri to-wa-asagi px-4 py-2 text-sm font-medium text-white shadow-lg hover:opacity-95"
+              className={mkt.ctaSm}
             >
               {m.continueLearning}
             </Link>
           ) : (
             <>
-              <Link
-                href="/app"
-                className="hidden rounded-lg px-3 py-2 text-sm text-slate-400 hover:text-slate-200 md:inline"
-              >
-                {m.openApp}
-              </Link>
-              <Link
-                href="/login"
-                className="rounded-lg px-3 py-2 text-sm text-slate-300 hover:text-white"
-              >
+              <Link href="/login" className={mkt.navLink}>
                 {m.signIn}
               </Link>
-              <Link
-                href="/login?intent=signup"
-                onClick={() =>
-                  void logBetaEvent({
-                    eventType: "signup_cta_click",
-                    route: "/",
-                    metadata: { source: "landing_header" },
-                  })
-                }
-                className="rounded-xl bg-gradient-to-r from-pink-500/90 to-pink-600/90 px-4 py-2 text-sm font-medium text-white shadow-lg hover:from-pink-500 hover:to-pink-600"
-              >
-                {m.startFree}
+              <Link {...tryCtaProps} className={mkt.ctaSm}>
+                {m.tryChatNow}
               </Link>
             </>
           )}
         </nav>
       </header>
 
-      <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-20 sm:px-6">
-        <section className="grid gap-10 pt-6 lg:grid-cols-2 lg:items-center lg:gap-14 lg:pt-12">
-          <div className="space-y-6">
-            <p className="inline-flex items-center gap-2 rounded-full border border-pink-500/25 bg-pink-500/8 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-pink-200/90">
-              <Sparkles className="h-3.5 w-3.5" />
-              {m.badge}
-            </p>
-            <h1 className="font-wa-serif text-4xl font-semibold leading-[1.15] tracking-tight text-slate-50 sm:text-5xl">
+      <main className="mx-auto w-full max-w-6xl px-4 pb-20 sm:px-6">
+        <section className="grid gap-10 pt-10 lg:grid-cols-2 lg:items-center lg:gap-14 lg:pt-14">
+          <div className="space-y-5">
+            <p className={mkt.badge}>{m.badge}</p>
+            <h1 className="text-4xl font-bold leading-[1.12] tracking-tight text-slate-900 sm:text-5xl">
               {m.heroTitle1}
-              <span className="mt-2 block bg-gradient-to-r from-pink-300 to-sky-300 bg-clip-text text-transparent">
-                {m.heroTitle2}
-              </span>
+              <span className={`mt-1 block ${mkt.accent}`}>{m.heroTitle2}</span>
             </h1>
-            <p className="max-w-lg text-base leading-relaxed text-slate-400 sm:text-lg">
-              {m.heroBody}
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/try"
-                className="inline-flex items-center gap-2 rounded-xl bg-wa-ruri px-5 py-3 text-sm font-medium text-white shadow-glass hover:bg-wa-asagi"
-              >
-                {m.tryChatNow}
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/learn"
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-700/80 bg-slate-900/60 px-5 py-3 text-sm font-medium text-slate-200 hover:border-slate-600"
-              >
-                {m.browsePhraseGuides}
-              </Link>
-            </div>
+            <p className={`max-w-lg text-base leading-relaxed sm:text-lg ${mkt.body}`}>{m.heroBody}</p>
+            <Link {...tryCtaProps} className={`${mkt.cta} gap-2 px-6 py-3.5`}>
+              {m.tryChatNow}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
+          <GuestTryChat compact source="landing_hero" theme="light" />
+        </section>
 
-          <GuestTryChat compact source="landing_hero" />
+        <section className={`mt-20 p-8 sm:p-10 ${mkt.cardSoft}`}>
+          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">{m.empathyTitle}</h2>
+          <p className={`mt-3 max-w-2xl text-base leading-relaxed ${mkt.body}`}>{m.empathyBody}</p>
+          <ul className="mt-6 space-y-3">
+            {m.empathyQuotes.map((quote) => (
+              <li key={quote} className={`px-4 py-3 text-sm italic text-slate-800 ${mkt.card}`}>
+                &ldquo;{quote}&rdquo;
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="mt-20">
+          <h2 className="text-2xl font-bold text-slate-900">{m.comparisonTitle}</h2>
+          <p className={`mt-1 text-sm ${mkt.muted}`}>{m.comparisonSubtitle}</p>
+          <div className={`mt-6 overflow-x-auto ${mkt.card}`}>
+            <table className="w-full min-w-[520px] text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-100 text-slate-700">
+                <tr>
+                  <th className="px-4 py-3 font-medium" scope="col" />
+                  <th className="px-4 py-3 font-medium" scope="col">
+                    {m.comparisonColApps}
+                  </th>
+                  <th className="px-4 py-3 font-medium" scope="col">
+                    {m.comparisonColTutor}
+                  </th>
+                  <th className={`px-4 py-3 font-semibold ${mkt.accent}`} scope="col">
+                    {m.comparisonColFrensei}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white">
+                {m.comparisonRows.map((row) => (
+                  <tr key={row.feature} className="border-b border-slate-100 last:border-0">
+                    <th className="px-4 py-3 font-medium text-slate-900" scope="row">
+                      {row.feature}
+                    </th>
+                    <td className={`px-4 py-3 ${mkt.muted}`}>{row.apps}</td>
+                    <td className={`px-4 py-3 ${mkt.muted}`}>{row.tutor}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-900">{row.frensei}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section className="mt-20 grid gap-4 sm:grid-cols-3">
           {[
-            {
-              icon: MessageCircle,
-              title: m.featureChatTitle,
-              body: m.featureChatBody,
-            },
-            {
-              icon: Sparkles,
-              title: m.featureCultureTitle,
-              body: m.featureCultureBody,
-            },
-            {
-              icon: BookOpen,
-              title: m.featureWordbookTitle,
-              body: m.featureWordbookBody,
-            },
+            { icon: MessageCircle, title: m.featureChatTitle, body: m.featureChatBody },
+            { icon: Sparkles, title: m.featureCultureTitle, body: m.featureCultureBody },
+            { icon: BookOpen, title: m.featureWordbookTitle, body: m.featureWordbookBody },
           ].map(({ icon: Icon, title, body }) => (
-            <div
-              key={title}
-              className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-5 backdrop-blur-sm"
-            >
-              <Icon className="mb-3 h-5 w-5 text-pink-400/90" />
-              <h2 className="font-wa-serif text-lg font-semibold text-slate-100">{title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">{body}</p>
+            <div key={title} className={`p-5 ${mkt.card}`}>
+              <Icon className={`mb-3 h-5 w-5 ${mkt.icon}`} />
+              <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+              <p className={`mt-2 text-sm leading-relaxed ${mkt.body}`}>{body}</p>
             </div>
           ))}
+        </section>
+
+        <section className={`mt-20 p-8 sm:flex sm:items-start sm:gap-6 ${mkt.cardSoft}`}>
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+            <UserRound className="h-6 w-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">{m.founderTitle}</h2>
+            <p className={`mt-3 text-sm leading-relaxed ${mkt.body}`}>{m.founderBody}</p>
+            <p className={`mt-3 text-xs font-medium uppercase tracking-wide ${mkt.accent}`}>
+              {m.founderNote}
+            </p>
+          </div>
         </section>
 
         <section className="mt-20">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <h2 className="font-wa-serif text-2xl font-semibold text-slate-100">
-                {m.popularGuidesTitle}
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">{m.popularGuidesSubtitle}</p>
+              <h2 className="text-2xl font-bold text-slate-900">{m.popularGuidesTitle}</h2>
+              <p className={`mt-1 text-sm ${mkt.muted}`}>{m.popularGuidesSubtitle}</p>
             </div>
-            <Link href="/learn" className="text-sm text-pink-300 hover:text-pink-200">
+            <Link href="/learn" className={mkt.link}>
               {m.viewAll}
             </Link>
           </div>
@@ -194,44 +201,33 @@ export default function LandingPage() {
             {featured.map((p) => {
               const localized = localizePhrase(p, appLang);
               return (
-              <Link
-                key={p.slug}
-                href={`/learn/${p.slug}`}
-                className="group rounded-2xl border border-slate-800/80 bg-slate-950/50 p-4 transition hover:border-pink-500/30 hover:bg-slate-900/60"
-              >
-                <p className="font-wa-serif text-lg text-slate-100 group-hover:text-pink-100">
-                  {p.topic}
-                </p>
-                <p className="mt-1 text-[12px] text-slate-500">{localized.meaning}</p>
-                <p className="mt-2 line-clamp-2 text-[13px] leading-snug text-slate-400">
-                  {localized.nuance}
-                </p>
-              </Link>
-            );
+                <Link
+                  key={p.slug}
+                  href={`/learn/${p.slug}`}
+                  className={`p-4 transition hover:border-blue-300 hover:shadow-md ${mkt.card}`}
+                >
+                  <p className="text-lg font-semibold text-slate-900">{p.topic}</p>
+                  <p className={`mt-1 text-[12px] ${mkt.muted}`}>{localized.meaning}</p>
+                  <p className={`mt-2 line-clamp-2 text-[13px] leading-snug ${mkt.body}`}>
+                    {localized.nuance}
+                  </p>
+                </Link>
+              );
             })}
           </div>
         </section>
 
-        <section className="mt-20 rounded-3xl border border-pink-500/20 bg-gradient-to-br from-slate-950 via-slate-950 to-pink-950/30 p-8 text-center sm:p-12">
-          <h2 className="font-wa-serif text-2xl font-semibold text-slate-50 sm:text-3xl">
-            {m.ctaTitle}
-          </h2>
-          <p className="mx-auto mt-3 max-w-md text-sm text-slate-400">{m.ctaBody}</p>
+        <section className={`mt-20 ${mkt.footerBand}`}>
+          <h2 className={mkt.footerBandTitle}>{m.ctaTitle}</h2>
+          <p className={`mx-auto mt-3 max-w-md ${mkt.footerBandBody}`}>{m.ctaBody}</p>
           <Link
-            href="/login?intent=signup"
-            onClick={() =>
-              void logBetaEvent({
-                eventType: "signup_cta_click",
-                route: "/",
-                metadata: { source: "landing_footer" },
-              })
-            }
-            className="mt-6 inline-flex rounded-xl bg-gradient-to-r from-pink-500 to-pink-600 px-8 py-3.5 text-sm font-medium text-white shadow-lg hover:from-pink-400 hover:to-pink-500"
+            {...tryCtaProps}
+            className="mt-6 inline-flex rounded-lg bg-blue-500 px-8 py-3.5 text-sm font-semibold text-white hover:bg-blue-400"
           >
             {m.createAccount}
           </Link>
         </section>
       </main>
-    </div>
+    </MarketingShell>
   );
 }

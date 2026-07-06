@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Frensei: learn Japanese and culture with AI.",
     start_url: "/app",
     display: "standalone",
-    background_color: "#020617",
-    theme_color: "#020617",
+    background_color: "#f8fafc",
+    theme_color: "#2563eb",
     orientation: "portrait",
     icons: [
       {

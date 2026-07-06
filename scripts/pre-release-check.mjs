@@ -68,11 +68,10 @@ async function main() {
 
   try {
     const ja = await fetch(`${SITE}/ja/`);
-    const t = await ja.text();
-    if (ja.ok && t.includes("教科書の日本語ではなく")) pass("LP (JA)", `${SITE}/ja/`);
-    else fail("LP (JA)", `HTTP ${ja.status}`);
+    if (ja.status === 404 || ja.status === 410) pass("LP (JA removed)", `${SITE}/ja/ → HTTP ${ja.status}`);
+    else fail("LP (JA removed)", `Expected 404, got HTTP ${ja.status}`);
   } catch (e) {
-    fail("LP (JA)", String(e));
+    fail("LP (JA removed)", String(e));
   }
 
   try {

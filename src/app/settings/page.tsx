@@ -19,6 +19,7 @@ import PlanUsageClient from "./PlanUsageClient";
 import ProfileSettingsClient from "./ProfileSettingsClient";
 import { normalizeProfileIcon, PROFILE_ICON_DEFAULT } from "@/lib/profile/icon";
 import { saveLanguageAction } from "./actions";
+import { mkt } from "@/lib/ui/appTheme";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -225,45 +226,38 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div
-      className="min-h-screen bg-yomu-bg text-slate-100 antialiased"
-      style={{ background: "#020617" }}
-    >
+    <div className={mkt.page}>
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <header className="mb-6">
-          <h1 className="font-wa-serif text-lg font-semibold text-slate-50 sm:text-xl">
+          <h1 className={`text-lg font-semibold sm:text-xl ${mkt.heading}`}>
             {t(lang, "settingsTitle")}
           </h1>
-          <p className="mt-1 text-[11px] text-slate-400 sm:text-xs">
+          <p className={`mt-1 text-[11px] sm:text-xs ${mkt.muted}`}>
             {t(lang, "settingsDescription")}
           </p>
         </header>
 
         <section className="space-y-4">
-          {/* ログインユーザー */}
-          <section className="glass-panel rounded-3xl border border-slate-800/70 bg-slate-950/90 p-4 backdrop-blur-xl sm:p-5">
+          <section className={`p-4 sm:p-5 ${mkt.card}`}>
             <div className="mb-3 flex items-center gap-2">
-              <Mail className="h-4 w-4 text-wa-ruri" />
-              <span className="font-wa-serif text-[11px] font-semibold tracking-[0.18em] text-slate-400">
+              <Mail className={`h-4 w-4 ${mkt.accentIcon}`} />
+              <span className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${mkt.faint}`}>
                 {t(lang, "userSectionLabel")}
               </span>
             </div>
 
             <div className="space-y-1">
-              <p className="text-[11px] font-medium text-slate-400">
-                {t(lang, "emailLabel")}
-              </p>
-              <p className="break-all rounded-2xl border border-slate-800/70 bg-slate-900/50 px-3 py-2 text-[13px] text-slate-100">
+              <p className={`text-[11px] font-medium ${mkt.faint}`}>{t(lang, "emailLabel")}</p>
+              <p className={`break-all rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] ${mkt.heading}`}>
                 {user.email ?? "—"}
               </p>
             </div>
           </section>
 
-          {/* プロフィール */}
-          <section className="glass-panel rounded-3xl border border-slate-800/70 bg-slate-950/90 p-4 backdrop-blur-xl sm:p-5">
+          <section className={`p-4 sm:p-5 ${mkt.card}`}>
             <div className="mb-3 flex items-center gap-2">
-              <UserRound className="h-4 w-4 text-pink-300" />
-              <span className="font-wa-serif text-[11px] font-semibold tracking-[0.18em] text-slate-400">
+              <UserRound className={`h-4 w-4 ${mkt.accentIcon}`} />
+              <span className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${mkt.faint}`}>
                 {t(lang, "onboardingTitle")}
               </span>
             </div>
@@ -277,11 +271,10 @@ export default async function SettingsPage() {
             />
           </section>
 
-          {/* 学習データ */}
-          <section className="glass-panel rounded-3xl border border-slate-800/70 bg-slate-950/90 p-4 backdrop-blur-xl sm:p-5">
+          <section className={`p-4 sm:p-5 ${mkt.card}`}>
             <div className="mb-3 flex items-center gap-2">
-              <Activity className="h-4 w-4 text-wa-kinari" />
-              <span className="font-wa-serif text-[11px] font-semibold tracking-[0.18em] text-slate-400">
+              <Activity className={`h-4 w-4 ${mkt.accentIcon}`} />
+              <span className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${mkt.faint}`}>
                 {t(lang, "learningActivityTitle")}
               </span>
             </div>
@@ -292,29 +285,27 @@ export default async function SettingsPage() {
             />
           </section>
 
-          {/* プラン */}
-          <section className="glass-panel rounded-3xl border border-slate-800/70 bg-slate-950/90 p-4 backdrop-blur-xl sm:p-5">
+          <section className={`p-4 sm:p-5 ${mkt.card}`}>
             <div className="mb-3 flex items-center gap-2">
-              <Crown className="h-4 w-4 text-violet-300" />
-              <span className="font-wa-serif text-[11px] font-semibold tracking-[0.18em] text-slate-400">
+              <Crown className={`h-4 w-4 ${mkt.accentIcon}`} />
+              <span className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${mkt.faint}`}>
                 {t(lang, "planSectionTitle")}
               </span>
             </div>
             <PlanUsageClient lang={lang} />
           </section>
 
-          {/* AI お題生成 */}
-          <section className="glass-panel rounded-3xl border border-slate-800/70 bg-slate-950/90 p-4 backdrop-blur-xl sm:p-5">
+          <section className={`p-4 sm:p-5 ${mkt.card}`}>
             <div className="mb-3 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-violet-300" />
-              <span className="font-wa-serif text-[11px] font-semibold tracking-[0.18em] text-slate-400">
+              <Sparkles className={`h-4 w-4 ${mkt.accentIcon}`} />
+              <span className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${mkt.faint}`}>
                 {t(lang, "generatePromptSectionTitle")}
               </span>
-              <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-violet-500/25 bg-violet-500/10 px-2 py-0.5 text-[10px] text-violet-200">
+              <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] text-blue-700">
                 AI
               </span>
             </div>
-            <p className="mb-4 text-[11px] leading-relaxed text-slate-400">
+            <p className={`mb-4 text-[11px] leading-relaxed ${mkt.muted}`}>
               {t(lang, "generatePromptDescription")}
             </p>
             <GeneratePromptButton
@@ -325,14 +316,13 @@ export default async function SettingsPage() {
             />
           </section>
 
-          {/* 言語設定 */}
-          <section className="glass-panel rounded-3xl border border-slate-800/70 bg-slate-950/90 p-4 backdrop-blur-xl sm:p-5">
+          <section className={`p-4 sm:p-5 ${mkt.card}`}>
             <div className="mb-3 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-pink-300" />
-              <span className="font-wa-serif text-[11px] font-semibold tracking-[0.18em] text-slate-400">
+              <Sparkles className={`h-4 w-4 ${mkt.accentIcon}`} />
+              <span className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${mkt.faint}`}>
                 {t(lang, "languageTitle")}
               </span>
-              <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-pink-500/20 bg-pink-500/10 px-2 py-0.5 text-[10px] text-pink-200">
+              <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] text-blue-700">
                 {t(lang, "accentTag")}
               </span>
             </div>
@@ -345,13 +335,10 @@ export default async function SettingsPage() {
             />
           </section>
 
-          {/* 母国語（ユーザー要望によりUI非表示） */}
-
-          {/* 地域（Region） */}
-          <section className="glass-panel rounded-3xl border border-slate-800/70 bg-slate-950/90 p-4 backdrop-blur-xl sm:p-5">
+          <section className={`p-4 sm:p-5 ${mkt.card}`}>
             <div className="mb-3 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-wa-kinari" />
-              <span className="font-wa-serif text-[11px] font-semibold tracking-[0.18em] text-slate-400">
+              <Sparkles className={`h-4 w-4 ${mkt.accentIcon}`} />
+              <span className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${mkt.faint}`}>
                 {t(lang, "regionLabel")}
               </span>
             </div>
@@ -374,31 +361,24 @@ export default async function SettingsPage() {
                       <label
                         htmlFor={id}
                         className={[
-                          "cursor-pointer flex w-full items-center gap-2 rounded-2xl border px-3 py-2.5 text-[13px] transition",
-                          "border-slate-800/70 bg-[#020617] text-slate-300",
-                          "hover:border-wa-ruri/60",
-                          "peer-checked:border-pink-500/70 peer-checked:bg-pink-500/20 peer-checked:text-white",
+                          "flex w-full cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-[13px] transition",
+                          "border-slate-200 bg-white text-slate-700",
+                          "hover:border-blue-300",
+                          "peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-900",
                         ].join(" ")}
                       >
-                        <span className="truncate">
-                          {regionLabelForLang(r.value, lang)}
-                        </span>
+                        <span className="truncate">{regionLabelForLang(r.value, lang)}</span>
                       </label>
                     </div>
                   );
                 })}
               </div>
 
-              <button
-                type="submit"
-                className="btn-wa-hover btn-wa-hover-ruri inline-flex w-full items-center justify-center rounded-2xl bg-pink-500/90 px-4 py-3 text-[12px] font-medium text-white shadow-[0_18px_60px_rgba(236,72,153,0.25)] transition hover:bg-pink-400"
-              >
+              <button type="submit" className={mkt.ctaFull}>
                 {t(lang, "saveRegionButton")}
               </button>
             </form>
           </section>
-
-          {/* ログアウトボタンはユーザー要望により非表示 */}
         </section>
       </main>
     </div>

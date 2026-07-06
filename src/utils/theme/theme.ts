@@ -7,11 +7,11 @@ export function normalizeUiTheme(value: unknown): UiTheme {
 }
 
 export function getStoredUiTheme(): UiTheme {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "light";
   try {
     return normalizeUiTheme(window.localStorage.getItem(UI_THEME_STORAGE_KEY));
   } catch {
-    return "dark";
+    return "light";
   }
 }
 

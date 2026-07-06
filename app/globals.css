@@ -9,7 +9,7 @@
   --font-noto-sans: 'Noto Sans JP', system-ui, sans-serif;
   --wa-akane: #b94047;
   --wa-ruri: #2a5caa;
-  --yomu-bg: #020617;
+  --frensei-bg: #f8fafc;
 }
 
 @layer base {
@@ -81,11 +81,11 @@
   border-color: rgba(212, 212, 212, 0.95);
 }
 
-/* YomuPrototypePage 全体をライト時に白基調へ寄せる */
+/* FrenseiAppShell 全体をライト時に白基調へ寄せる */
 .frensei-theme-light :is(
     [class*="bg-slate-950"],
     [class*="bg-slate-900"],
-    [class*="bg-yomu-glass"],
+    [class*="bg-frensei-glass"],
     [class*="from-slate-950"],
     [class*="via-slate-950"],
     [class*="to-slate-950"]
@@ -107,4 +107,10 @@
 
 .frensei-theme-light :is([class*="text-slate-500"], [class*="text-slate-600"]) {
   color: rgb(115 115 115) !important;
+}
+
+/* Public marketing pages: light body behind footer */
+body.marketing-light-page {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
 }

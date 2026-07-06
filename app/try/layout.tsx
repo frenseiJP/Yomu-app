@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Try Frensei Free — 3 AI Chat Messages, No Sign-Up",
+  title: "Try 3 Free Messages — No Signup | Frensei",
   description:
-    "Try Frensei free: ask about Japanese phrases, culture, or get your Japanese polished. 3 messages, no account required.",
+    "Ask about Japanese phrases, culture, or paste your Japanese. 3 free messages, no account, no credit card.",
   alternates: { canonical: "/try" },
   openGraph: {
-    title: "Try Frensei Free — 3 Messages, No Sign-Up",
-    description: "Natural Japanese coaching in your browser. No account required.",
+    title: "Try 3 free messages — no signup",
+    description: "Natural Japanese AI coach. See the product in seconds.",
     url: "/try",
     images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Frensei" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Try Frensei Free",
-    description: "3 free AI chat messages. Natural Japanese coaching.",
+    title: "Try 3 free messages · Frensei",
+    description: "Natural Japanese coaching in your browser. No signup.",
     images: ["/opengraph-image"],
   },
 };

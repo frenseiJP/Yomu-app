@@ -45,7 +45,7 @@ async function main() {
           host: new URL(SITE).hostname,
           key: indexNowKey,
           keyLocation: `${SITE}/${indexNowKey}.txt`,
-          urlList: [SITE, `${SITE}/trial/`, `${SITE}/ja/`],
+          urlList: [SITE, `${SITE}/trial/`],
         }),
       });
       console.log(res.ok || res.status === 202 ? "✓ IndexNow submitted" : `✗ IndexNow HTTP ${res.status}`);

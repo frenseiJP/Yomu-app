@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Print UTM-tracked promo links for beta channels.
- * Marketing routes (/try, /trial, /launch, /ja, /learn) live on the Next app host.
+ * Marketing routes (/try, /trial, /launch, /learn) live on the Next app host.
  *
  * Usage: node scripts/promo-links.mjs
  */
@@ -45,8 +45,7 @@ const channels = [
   ["Product Hunt", APP, "/launch", "product_hunt", "launch"],
   ["Discord share", APP, "/try", "discord", "community"],
   ["Email signature", APP, "/try", "email", "signature"],
-  ["Japanese LP (app)", APP, "/ja", "twitter", "ja_lp"],
-  ["Japanese LP (static)", SITE, "/ja/", "twitter", "ja_lp_static"],
+  ["Japanese social (app)", APP, "/try", "twitter", "ja_app"],
   ["Phrase guide SEO", APP, "/learn", "google", "organic"],
 ];
 

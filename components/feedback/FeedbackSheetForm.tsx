@@ -5,6 +5,7 @@ import { logBetaEvent } from "@/lib/analytics/client";
 import type { FeedbackSource } from "@/lib/feedback/googleSheets";
 import { feedbackErrorMessage, getFeedbackCopy } from "@/lib/i18n/feedbackCopy";
 import { useAppLang } from "@/lib/i18n/useAppLang";
+import { mkt } from "@/lib/ui/appTheme";
 import { useVocabularyUserId } from "@/lib/vocabulary/useVocabularyUserId";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
@@ -15,7 +16,6 @@ type FeedbackSheetFormProps = {
   route?: string;
   source?: FeedbackSource;
   reportContext?: ReportContextSnapshot;
-  /** Skip outer card styling when embedded inside another section */
   embedded?: boolean;
 };
 
@@ -96,59 +96,47 @@ export default function FeedbackSheetForm({
   if (state === "success") {
     const successBlock = (
       <>
-        <h2 className="font-wa-serif text-lg font-bold text-emerald-100">{copy.thanksTitle}</h2>
-        <p className="mt-2 text-sm leading-relaxed text-emerald-50/90">{copy.thanksBody}</p>
-        <button
-          type="button"
-          onClick={() => setState("idle")}
-          className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-xl border border-emerald-400/50 bg-emerald-500/20 px-5 py-2.5 text-sm font-medium text-emerald-100 hover:bg-emerald-500/30"
-        >
+        <h2 className="text-lg font-bold text-emerald-800">{copy.thanksTitle}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-emerald-900">{copy.thanksBody}</p>
+        <button type="button" onClick={() => setState("idle")} className={`mt-5 ${mkt.secondaryBtn}`}>
           {copy.sendAnother}
         </button>
       </>
     );
 
     if (embedded) {
-      return (
-        <div className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 sm:p-5">
-          {successBlock}
-        </div>
-      );
+      return <div className={`mt-4 p-4 sm:p-5 ${mkt.alertSuccess}`}>{successBlock}</div>;
     }
 
-    return (
-      <section className="mt-6 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-6 sm:mt-8 sm:p-8">
-        {successBlock}
-      </section>
-    );
+    return <section className={`mt-6 p-6 sm:mt-8 sm:p-8 ${mkt.alertSuccess}`}>{successBlock}</section>;
   }
 
   const formBlock = (
     <>
       {!embedded ? (
         <>
-          <h2 className="font-wa-serif text-lg font-bold text-pink-200">{copy.formTitle}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-slate-300">{copy.formIntro}</p>
+          <h2 className={`text-lg font-bold ${mkt.accent}`}>{copy.formTitle}</h2>
+          <p className={`mt-2 text-sm leading-relaxed ${mkt.body}`}>{copy.formIntro}</p>
         </>
       ) : null}
 
       <form onSubmit={onSubmit} className={embedded ? "mt-4 space-y-3" : "mt-6 space-y-4"}>
         <label className="block">
-          <span className="text-xs font-medium text-slate-400">{copy.nameLabel}</span>
+          <span className={`text-xs font-medium ${mkt.muted}`}>{copy.nameLabel}</span>
           <input
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             maxLength={120}
-            className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-pink-500/60 focus:outline-none focus:ring-1 focus:ring-pink-500/40"
+            className={`mt-1.5 ${mkt.field}`}
             placeholder={copy.namePlaceholder}
             autoComplete="nickname"
           />
         </label>
 
         <label className="block">
-          <span className="text-xs font-medium text-slate-400">
-            {copy.commentLabel} <span className="text-pink-300">*</span>
+          <span className={`text-xs font-medium ${mkt.muted}`}>
+            {copy.commentLabel} <span className={mkt.accent}>*</span>
           </span>
           <textarea
             value={comment}
@@ -156,40 +144,22 @@ export default function FeedbackSheetForm({
             rows={embedded ? 5 : 7}
             maxLength={4000}
             required
-            className="mt-1.5 w-full resize-y rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-pink-500/60 focus:outline-none focus:ring-1 focus:ring-pink-500/40"
+            className={`mt-1.5 w-full resize-y ${mkt.field}`}
             placeholder={copy.commentPlaceholder}
           />
-          <span className="mt-1 block text-right text-[11px] text-slate-500">{comment.length} / 4000</span>
+          <span className={`mt-1 block text-right text-[11px] ${mkt.faint}`}>{comment.length} / 4000</span>
         </label>
 
-        {state === "error" && errorMessage ? (
-          <p className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-            {errorMessage}
-          </p>
-        ) : null}
+        {state === "error" && errorMessage ? <p className={mkt.alertError}>{errorMessage}</p> : null}
 
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className={`inline-flex min-h-[48px] w-full items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold transition sm:w-auto ${
-            canSubmit
-              ? "bg-pink-500 text-white shadow-[0_12px_36px_rgba(236,72,153,0.35)] hover:bg-pink-400"
-              : "cursor-not-allowed bg-slate-800 text-slate-500"
-          }`}
-        >
+        <button type="submit" disabled={!canSubmit} className={canSubmit ? mkt.ctaFull : `${mkt.ctaFull} opacity-50`}>
           {state === "submitting" ? copy.submitting : copy.submit}
         </button>
       </form>
     </>
   );
 
-  if (embedded) {
-    return formBlock;
-  }
+  if (embedded) return formBlock;
 
-  return (
-    <section className="mt-6 rounded-2xl border border-pink-500/35 bg-gradient-to-b from-pink-950/30 to-slate-950/80 p-5 sm:mt-8 sm:p-8">
-      {formBlock}
-    </section>
-  );
+  return <section className={`mt-6 p-5 sm:mt-8 sm:p-8 ${mkt.card}`}>{formBlock}</section>;
 }

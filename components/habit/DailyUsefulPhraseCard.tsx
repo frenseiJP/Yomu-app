@@ -22,10 +22,10 @@ export default function DailyUsefulPhraseCard({
   const card = compact
     ? ""
     : isLightTheme
-      ? "rounded-2xl border border-pink-100/80 bg-gradient-to-br from-white to-pink-50/40 p-4 shadow-sm"
-      : "rounded-2xl border border-pink-500/25 bg-gradient-to-br from-slate-950/90 to-pink-950/20 p-4 shadow-glass";
+      ? "rounded-2xl border border-blue-100 bg-gradient-to-br from-white to-blue-50/40 p-4 shadow-sm"
+      : "rounded-2xl border border-blue-500/25 bg-gradient-to-br from-slate-950/90 to-blue-950/20 p-4 shadow-glass";
 
-  const label = isLightTheme ? "text-pink-600/90" : "text-pink-300/90";
+  const label = isLightTheme ? "text-blue-600/90" : "text-blue-300/90";
   const phraseText = isLightTheme ? "text-neutral-900" : "text-slate-50";
   const sub = isLightTheme ? "text-neutral-500" : "text-slate-400";
   const sectionLabel = isLightTheme ? "text-neutral-500" : "text-slate-500";
@@ -68,8 +68,8 @@ export default function DailyUsefulPhraseCard({
       <button
         type="button"
         onClick={onPractice}
-        className={`btn-wa-hover btn-wa-hover-ruri mt-4 inline-flex min-h-[44px] w-full touch-manipulation items-center justify-center rounded-xl border border-wa-ruri/45 bg-wa-ruri/20 py-3 text-sm font-semibold hover:bg-wa-ruri/30 lg:mt-5 lg:min-h-[40px] ${
-          isLightTheme ? "text-neutral-900" : "text-slate-50"
+        className={`mt-4 inline-flex min-h-[44px] w-full touch-manipulation items-center justify-center rounded-xl border border-blue-300 bg-blue-50 py-3 text-sm font-semibold hover:bg-blue-100 lg:mt-5 lg:min-h-[40px] ${
+          isLightTheme ? "text-blue-900" : "text-slate-50"
         }`}
       >
         {copy?.phrasePractice ?? "Practice"}

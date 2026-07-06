@@ -1,71 +1,233 @@
 import type { Lang } from "@/src/utils/i18n/types";
 
+export type PricingPlan = {
+  name: string;
+  price: string;
+  period: string;
+  tag: string | null;
+  highlight: boolean;
+  bullets: string[];
+  href: string | null;
+  external?: boolean;
+};
+
 export type PricingCopy = {
   title: string;
-  betaDisclaimer: string;
-  free: string;
-  pro: string;
-  founder: string;
-  freeBullets: string[];
-  proBullets: string[];
-  founderBullets: string[];
-  cta: string;
+  subtitle: string;
+  lessonNote: string;
+  appSection: string;
+  lessonSection: string;
+  ctaApp: string;
+  ctaLesson: string;
   back: string;
-  betaPreview: string;
+  plans: {
+    free: PricingPlan;
+    pro: PricingPlan;
+    standard: PricingPlan;
+    intensive: PricingPlan;
+  };
 };
 
 const COPY: Record<Lang, PricingCopy> = {
   en: {
     title: "Pricing",
-    betaDisclaimer: "Payments are not active yet. This is beta pricing infrastructure.",
-    free: "Free",
-    pro: "Pro",
-    founder: "Founder",
-    betaPreview: "Beta preview",
-    freeBullets: ["15 chats / day", "Save 10 phrases / day", "Daily missions"],
-    proBullets: ["Unlimited chat", "Unlimited saves", "Advanced coaching"],
-    founderBullets: ["Everything in Pro", "Founder badge", "Early access"],
-    cta: "Coming soon",
+    subtitle: "App plans on Frensei. Live lessons include the Pro app free.",
+    lessonNote: "Lesson members get Pro included — no extra $12.99.",
+    appSection: "App",
+    lessonSection: "Live lessons",
+    ctaApp: "Open app",
+    ctaLesson: "Book free trial",
     back: "Back to app",
+    plans: {
+      free: {
+        name: "Free",
+        price: "$0",
+        period: "App basics",
+        tag: null,
+        highlight: false,
+        bullets: ["Limited AI chat", "Scene-based practice", "Daily missions"],
+        href: "/try",
+      },
+      pro: {
+        name: "Pro",
+        price: "$12.99",
+        period: "per month · app only",
+        tag: null,
+        highlight: true,
+        bullets: ["Full AI coach", "Unlimited chat & saves", "Cloud sync"],
+        href: "/app",
+      },
+      standard: {
+        name: "Standard",
+        price: "$79",
+        period: "per month · 50 min × 4",
+        tag: "Pro app included",
+        highlight: false,
+        bullets: ["4 lessons / month", "1-on-1 on Google Meet", "Phrases & role-play"],
+        href: "https://frensei.jp/trial/",
+        external: true,
+      },
+      intensive: {
+        name: "Intensive",
+        price: "$139",
+        period: "per month · 50 min × 8",
+        tag: "Pro app included",
+        highlight: false,
+        bullets: ["8 lessons / month", "2× per week pace", "Priority scheduling"],
+        href: "https://frensei.jp/trial/",
+        external: true,
+      },
+    },
   },
   ja: {
-    title: "プラン",
-    betaDisclaimer: "決済はまだ有効化されていません。ベータ中のプラン設計です。",
-    free: "無料",
-    pro: "Pro",
-    founder: "Founder",
-    betaPreview: "ベータプレビュー",
-    freeBullets: ["1日15チャット", "1日10フレーズ保存", "デイリーミッション"],
-    proBullets: ["チャット無制限", "保存無制限", "高度なコーチング"],
-    founderBullets: ["Pro のすべて", "Founder バッジ", "早期アクセス"],
-    cta: "近日公開",
+    title: "料金",
+    subtitle: "アプリプラン。レッスン受講者は Pro アプリ無料込み。",
+    lessonNote: "Standard / Intensive には Pro アプリが含まれます（+$12.99 不要）。",
+    appSection: "アプリ",
+    lessonSection: "ライブレッスン",
+    ctaApp: "アプリを開く",
+    ctaLesson: "無料体験を予約",
     back: "アプリに戻る",
+    plans: {
+      free: {
+        name: "Free",
+        price: "$0",
+        period: "基本機能",
+        tag: null,
+        highlight: false,
+        bullets: ["AIチャット（制限あり）", "シーン別練習", "デイリーミッション"],
+        href: "/try",
+      },
+      pro: {
+        name: "Pro",
+        price: "$12.99",
+        period: "月額 · アプリのみ",
+        tag: null,
+        highlight: true,
+        bullets: ["AIコーチフル機能", "チャット・保存無制限", "クラウド同期"],
+        href: "/app",
+      },
+      standard: {
+        name: "Standard",
+        price: "$79",
+        period: "月額 · 50分 × 4",
+        tag: "Pro 込み",
+        highlight: false,
+        bullets: ["月4回レッスン", "Google Meet マンツーマン", "フレーズ・ロールプレイ"],
+        href: "https://frensei.jp/trial/",
+        external: true,
+      },
+      intensive: {
+        name: "Intensive",
+        price: "$139",
+        period: "月額 · 50分 × 8",
+        tag: "Pro 込み",
+        highlight: false,
+        bullets: ["月8回レッスン", "週2回ペース", "優先予約"],
+        href: "https://frensei.jp/trial/",
+        external: true,
+      },
+    },
   },
   ko: {
     title: "요금제",
-    betaDisclaimer: "결제는 아직 활성화되지 않았습니다. 베타 요금제 설계입니다.",
-    free: "무료",
-    pro: "Pro",
-    founder: "Founder",
-    betaPreview: "베타 미리보기",
-    freeBullets: ["하루 15회 채팅", "하루 10개 표현 저장", "데일리 미션"],
-    proBullets: ["무제한 채팅", "무제한 저장", "고급 코칭"],
-    founderBullets: ["Pro 전체 기능", "Founder 배지", "얼리 액세스"],
-    cta: "곧 공개",
+    subtitle: "앱 요금제. 라이브 레슨 이용 시 Pro 앱 무료 포함.",
+    lessonNote: "Standard / Intensive 에는 Pro 앱이 포함됩니다.",
+    appSection: "앱",
+    lessonSection: "라이브 레슨",
+    ctaApp: "앱 열기",
+    ctaLesson: "무료 체험 예약",
     back: "앱으로 돌아가기",
+    plans: {
+      free: {
+        name: "Free",
+        price: "$0",
+        period: "기본 기능",
+        tag: null,
+        highlight: false,
+        bullets: ["제한된 AI 채팅", "상황별 연습", "데일리 미션"],
+        href: "/try",
+      },
+      pro: {
+        name: "Pro",
+        price: "$12.99",
+        period: "월 · 앱만",
+        tag: null,
+        highlight: true,
+        bullets: ["전체 AI 코치", "무제한 채팅·저장", "클라우드 동기화"],
+        href: "/app",
+      },
+      standard: {
+        name: "Standard",
+        price: "$79",
+        period: "월 · 50분 × 4",
+        tag: "Pro 포함",
+        highlight: false,
+        bullets: ["월 4회 레슨", "Google Meet 1:1", "표현·롤플레이"],
+        href: "https://frensei.jp/trial/",
+        external: true,
+      },
+      intensive: {
+        name: "Intensive",
+        price: "$139",
+        period: "월 · 50분 × 8",
+        tag: "Pro 포함",
+        highlight: false,
+        bullets: ["월 8회 레슨", "주 2회 페이스", "우선 예약"],
+        href: "https://frensei.jp/trial/",
+        external: true,
+      },
+    },
   },
   zh: {
-    title: "方案",
-    betaDisclaimer: "支付尚未启用。这是测试阶段的方案设计。",
-    free: "免费",
-    pro: "Pro",
-    founder: "Founder",
-    betaPreview: "测试预览",
-    freeBullets: ["每天 15 次聊天", "每天保存 10 条表达", "每日任务"],
-    proBullets: ["无限聊天", "无限保存", "高级教练"],
-    founderBullets: ["包含 Pro 全部功能", "Founder 徽章", "抢先体验"],
-    cta: "即将推出",
+    title: "定价",
+    subtitle: "应用方案。直播课学员免费包含 Pro 应用。",
+    lessonNote: "Standard / Intensive 已包含 Pro 应用，无需另付 $12.99。",
+    appSection: "应用",
+    lessonSection: "直播课",
+    ctaApp: "打开应用",
+    ctaLesson: "预约免费体验",
     back: "返回应用",
+    plans: {
+      free: {
+        name: "Free",
+        price: "$0",
+        period: "基础功能",
+        tag: null,
+        highlight: false,
+        bullets: ["有限 AI 聊天", "场景练习", "每日任务"],
+        href: "/try",
+      },
+      pro: {
+        name: "Pro",
+        price: "$12.99",
+        period: "每月 · 仅应用",
+        tag: null,
+        highlight: true,
+        bullets: ["完整 AI 教练", "无限聊天与保存", "云同步"],
+        href: "/app",
+      },
+      standard: {
+        name: "Standard",
+        price: "$79",
+        period: "每月 · 50分钟 × 4",
+        tag: "含 Pro",
+        highlight: false,
+        bullets: ["每月 4 次课", "Google Meet 一对一", "表达与角色扮演"],
+        href: "https://frensei.jp/trial/",
+        external: true,
+      },
+      intensive: {
+        name: "Intensive",
+        price: "$139",
+        period: "每月 · 50分钟 × 8",
+        tag: "含 Pro",
+        highlight: false,
+        bullets: ["每月 8 次课", "每周 2 次节奏", "优先预约"],
+        href: "https://frensei.jp/trial/",
+        external: true,
+      },
+    },
   },
 };
 

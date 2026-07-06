@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { mkt } from "@/lib/ui/appTheme";
 
 export default function Error({
   error,
@@ -15,23 +16,16 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#020617] px-4 text-center text-slate-100">
-      <h1 className="font-wa-serif text-xl font-semibold">Something went wrong</h1>
-      <p className="mt-2 max-w-md text-sm text-slate-400">
+    <div className={`flex min-h-screen flex-col items-center justify-center px-4 text-center ${mkt.page}`}>
+      <h1 className={`text-xl font-semibold ${mkt.heading}`}>Something went wrong</h1>
+      <p className={`mt-2 max-w-md text-sm ${mkt.muted}`}>
         Frensei hit an unexpected error. You can try again or return home.
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
-        <button
-          type="button"
-          onClick={() => reset()}
-          className="rounded-xl bg-pink-500/90 px-4 py-2 text-sm font-medium text-white hover:bg-pink-400"
-        >
+        <button type="button" onClick={() => reset()} className={mkt.cta}>
           Try again
         </button>
-        <Link
-          href="/app"
-          className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500"
-        >
+        <Link href="/app" className={mkt.secondaryBtn}>
           Go to app
         </Link>
       </div>

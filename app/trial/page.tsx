@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import CalendlyTrialEmbed from "@/components/marketing/CalendlyTrialEmbed";
+import MarketingShell, { mkt } from "@/components/marketing/MarketingShell";
 import { getTrialCopy } from "@/lib/i18n/trialCopy";
 import { getLangServer } from "@/src/utils/i18n/serverLang";
 
@@ -32,41 +33,39 @@ export default function TrialPage() {
   const calendlyConfigured = /calendly\.com\/[^/]+\/[^/]+/.test(CALENDLY_URL);
 
   return (
-    <div className="min-h-screen bg-[#020617] px-4 py-10 sm:px-6">
-      <div className="mx-auto w-full max-w-3xl">
-        <Link href="/" className="mb-8 inline-flex items-center gap-2 text-slate-400 hover:text-slate-200">
+    <MarketingShell>
+      <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
+        <Link href="/" className={`mb-8 inline-flex items-center gap-2 ${mkt.link}`}>
           <BookOpen className="h-4 w-4" />
           <span className="text-sm">Frensei</span>
         </Link>
 
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-pink-400/90">Beta</p>
-        <h1 className="mt-2 font-wa-serif text-3xl font-semibold text-slate-50 sm:text-4xl">
-          {copy.title}
-        </h1>
-        <p className="mt-2 text-sm text-slate-400">{copy.subtitle}</p>
-        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-300">{copy.body}</p>
+        <p className={mkt.badge}>Beta</p>
+        <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">{copy.title}</h1>
+        <p className={`mt-2 text-sm ${mkt.muted}`}>{copy.subtitle}</p>
+        <p className={`mt-4 max-w-2xl text-sm leading-relaxed ${mkt.body}`}>{copy.body}</p>
 
-        <section className="mt-10 rounded-2xl border border-slate-800 bg-slate-950/60 p-6">
-          <h2 className="font-wa-serif text-lg font-semibold text-slate-100">{copy.calendlyTitle}</h2>
-          <p className="mt-2 text-sm text-slate-400">{copy.calendlyBody}</p>
+        <section className={`mt-10 p-6 ${mkt.card}`}>
+          <h2 className="text-lg font-semibold text-slate-900">{copy.calendlyTitle}</h2>
+          <p className={`mt-2 text-sm ${mkt.body}`}>{copy.calendlyBody}</p>
           {calendlyConfigured ? (
             <CalendlyTrialEmbed url={CALENDLY_URL} ctaLabel={copy.calendlyCta} />
           ) : (
-            <p className="mt-4 text-sm text-amber-200/90">{copy.calendlyFallback}</p>
+            <p className="mt-4 text-sm font-medium text-amber-800">{copy.calendlyFallback}</p>
           )}
         </section>
 
-        <section className="mt-8 rounded-2xl border border-pink-500/25 bg-pink-500/8 p-6">
-          <h2 className="font-wa-serif text-lg font-semibold text-slate-100">{copy.tryChatTitle}</h2>
-          <p className="mt-2 text-sm text-slate-300">{copy.tryChatBody}</p>
+        <section className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 p-6">
+          <h2 className="text-lg font-semibold text-slate-900">{copy.tryChatTitle}</h2>
+          <p className={`mt-2 text-sm ${mkt.body}`}>{copy.tryChatBody}</p>
           <Link
             href="/try?utm_source=trial_page&utm_medium=cta&utm_campaign=beta"
-            className="mt-4 inline-flex rounded-xl bg-gradient-to-r from-wa-ruri to-wa-asagi px-5 py-3 text-sm font-medium text-white"
+            className={`mt-4 ${mkt.cta}`}
           >
             {copy.tryChatCta}
           </Link>
         </section>
       </div>
-    </div>
+    </MarketingShell>
   );
 }

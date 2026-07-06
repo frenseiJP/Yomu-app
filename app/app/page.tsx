@@ -1,10 +1,10 @@
-import YomuPrototypePage from "@/app/YomuPrototypePage";
+import FrenseiAppShell from "@/app/FrenseiAppShell";
 import OnboardingGate from "@/components/auth/OnboardingGate";
 
 export default function AppShellPage() {
   return (
     <OnboardingGate>
-      <YomuPrototypePage />
+      <FrenseiAppShell />
     </OnboardingGate>
   );
 }

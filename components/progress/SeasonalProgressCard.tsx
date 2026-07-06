@@ -89,7 +89,7 @@ export default function SeasonalProgressCard({
   state,
   compact = false,
   centered = false,
-  isLightTheme = false,
+  isLightTheme = true,
   thisWeekLabel = "This week",
   rhythmLabel = "Rhythm",
   seasonLabel,
