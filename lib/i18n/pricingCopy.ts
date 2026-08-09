@@ -17,26 +17,33 @@ export type PricingCopy = {
   lessonNote: string;
   appSection: string;
   lessonSection: string;
+  courseSection: string;
+  courseNote: string;
   ctaApp: string;
   ctaLesson: string;
+  ctaCourse: string;
   back: string;
   plans: {
     free: PricingPlan;
     pro: PricingPlan;
     standard: PricingPlan;
     intensive: PricingPlan;
+    course: PricingPlan;
   };
 };
 
 const COPY: Record<Lang, PricingCopy> = {
   en: {
     title: "Pricing",
-    subtitle: "App plans on Frensei. Live lessons include the Pro app free.",
+    subtitle: "App, live lessons, and the self-paced video course.",
     lessonNote: "Lesson members get Pro included — no extra $12.99.",
     appSection: "App",
     lessonSection: "Live lessons",
+    courseSection: "Video course",
+    courseNote: "Bought the course? Open the AI start guide after Gumroad.",
     ctaApp: "Open app",
     ctaLesson: "Book free trial",
+    ctaCourse: "See course plans",
     back: "Back to app",
     plans: {
       free: {
@@ -77,16 +84,33 @@ const COPY: Record<Lang, PricingCopy> = {
         href: "https://frensei.jp/trial/",
         external: true,
       },
+      course: {
+        name: "From Textbook to Tokyo",
+        price: "From $0",
+        period: "one-time on Gumroad · Free / $49 / $99",
+        tag: "TikTok course",
+        highlight: true,
+        bullets: [
+          "4-week video path",
+          "Frensei AI practice included (Core/VIP)",
+          "Buy on frensei.jp/learn",
+        ],
+        href: "https://frensei.jp/learn/?utm_source=app&utm_medium=pricing&utm_campaign=textbook_tokyo",
+        external: true,
+      },
     },
   },
   ja: {
     title: "料金",
-    subtitle: "アプリプラン。レッスン受講者は Pro アプリ無料込み。",
+    subtitle: "アプリ・ライブレッスン・動画講座。",
     lessonNote: "Standard / Intensive には Pro アプリが含まれます（+$12.99 不要）。",
     appSection: "アプリ",
     lessonSection: "ライブレッスン",
+    courseSection: "動画講座",
+    courseNote: "講座購入後は AI スタートガイドへ。",
     ctaApp: "アプリを開く",
     ctaLesson: "無料体験を予約",
+    ctaCourse: "講座プランを見る",
     back: "アプリに戻る",
     plans: {
       free: {
@@ -127,16 +151,29 @@ const COPY: Record<Lang, PricingCopy> = {
         href: "https://frensei.jp/trial/",
         external: true,
       },
+      course: {
+        name: "From Textbook to Tokyo",
+        price: "$0〜",
+        period: "Gumroad 買い切り · Free / $49 / $99",
+        tag: "動画講座",
+        highlight: true,
+        bullets: ["4週の動画カリキュラム", "Frensei AI 練習付き（Core/VIP）", "frensei.jp/learn で購入"],
+        href: "https://frensei.jp/learn/?utm_source=app&utm_medium=pricing&utm_campaign=textbook_tokyo",
+        external: true,
+      },
     },
   },
   ko: {
     title: "요금제",
-    subtitle: "앱 요금제. 라이브 레슨 이용 시 Pro 앱 무료 포함.",
+    subtitle: "앱, 라이브 레슨, 영상 코스.",
     lessonNote: "Standard / Intensive 에는 Pro 앱이 포함됩니다.",
     appSection: "앱",
     lessonSection: "라이브 레슨",
+    courseSection: "영상 코스",
+    courseNote: "코스 구매 후 AI 시작 가이드로 이동하세요.",
     ctaApp: "앱 열기",
     ctaLesson: "무료 체험 예약",
+    ctaCourse: "코스 요금 보기",
     back: "앱으로 돌아가기",
     plans: {
       free: {
@@ -177,16 +214,29 @@ const COPY: Record<Lang, PricingCopy> = {
         href: "https://frensei.jp/trial/",
         external: true,
       },
+      course: {
+        name: "From Textbook to Tokyo",
+        price: "$0~",
+        period: "Gumroad 일회 · Free / $49 / $99",
+        tag: "영상 코스",
+        highlight: true,
+        bullets: ["4주 영상 커리큘럼", "Frensei AI 연습 (Core/VIP)", "frensei.jp/learn 에서 구매"],
+        href: "https://frensei.jp/learn/?utm_source=app&utm_medium=pricing&utm_campaign=textbook_tokyo",
+        external: true,
+      },
     },
   },
   zh: {
     title: "定价",
-    subtitle: "应用方案。直播课学员免费包含 Pro 应用。",
+    subtitle: "应用、直播课与视频课程。",
     lessonNote: "Standard / Intensive 已包含 Pro 应用，无需另付 $12.99。",
     appSection: "应用",
     lessonSection: "直播课",
+    courseSection: "视频课程",
+    courseNote: "购买课程后请打开 AI 上手指南。",
     ctaApp: "打开应用",
     ctaLesson: "预约免费体验",
+    ctaCourse: "查看课程方案",
     back: "返回应用",
     plans: {
       free: {
@@ -225,6 +275,16 @@ const COPY: Record<Lang, PricingCopy> = {
         highlight: false,
         bullets: ["每月 8 次课", "每周 2 次节奏", "优先预约"],
         href: "https://frensei.jp/trial/",
+        external: true,
+      },
+      course: {
+        name: "From Textbook to Tokyo",
+        price: "从 $0",
+        period: "Gumroad 一次性 · Free / $49 / $99",
+        tag: "视频课",
+        highlight: true,
+        bullets: ["四周视频路径", "含 Frensei AI 练习（Core/VIP）", "在 frensei.jp/learn 购买"],
+        href: "https://frensei.jp/learn/?utm_source=app&utm_medium=pricing&utm_campaign=textbook_tokyo",
         external: true,
       },
     },

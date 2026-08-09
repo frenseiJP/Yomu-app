@@ -51,7 +51,7 @@ function PlanCard({ plan, ctaLabel }: { plan: PricingPlan; ctaLabel: string }) {
 export default function PricingPage() {
   const lang = getLangServer();
   const copy = getPricingCopy(lang);
-  const { free, pro, standard, intensive } = copy.plans;
+  const { free, pro, standard, intensive, course } = copy.plans;
 
   return (
     <MarketingShell>
@@ -60,6 +60,20 @@ export default function PricingPage() {
         <p className={`mt-2 text-sm ${mkt.body}`}>{copy.subtitle}</p>
 
         <h2 className={`mt-8 text-sm font-semibold uppercase tracking-wide ${mkt.muted}`}>
+          {copy.courseSection}
+        </h2>
+        <p className="mt-1 text-xs font-medium text-emerald-800">{copy.courseNote}</p>
+        <div className="mt-3 grid gap-4 sm:grid-cols-1">
+          <PlanCard plan={course} ctaLabel={copy.ctaCourse} />
+        </div>
+        <p className={`mt-3 text-sm ${mkt.body}`}>
+          Already purchased?{" "}
+          <Link href="/course" className={mkt.link}>
+            Open the course start guide →
+          </Link>
+        </p>
+
+        <h2 className={`mt-10 text-sm font-semibold uppercase tracking-wide ${mkt.muted}`}>
           {copy.appSection}
         </h2>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
