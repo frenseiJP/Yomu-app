@@ -73,14 +73,14 @@ export default function CourseBuyerPage() {
         </div>
 
         <p className={`mt-8 text-sm ${mkt.body}`}>
-          Still shopping?{" "}
+          Looking for lessons or the app?{" "}
           <a
             className={mkt.link}
-            href="https://frensei.jp/learn/?utm_source=app&utm_medium=course_page&utm_campaign=textbook_tokyo"
+            href="https://frensei.jp/?utm_source=app&utm_medium=course_page&utm_campaign=home"
             target="_blank"
             rel="noopener noreferrer"
           >
-            See course plans on frensei.jp/learn
+            Go to frensei.jp
           </a>
         </p>
         <Link href="/try" className={`mt-4 inline-flex text-sm ${mkt.link}`}>
